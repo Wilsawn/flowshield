@@ -42,21 +42,21 @@ A compliance layer that's invisible to users and drop-in for developers:
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│              LAYER 2: COMPLIANCE ENGINE (CADENCE)        │
-│  Credential Resource → Compliance Action → Flow Agent    │
-│                    → Rule Engine                         │
+│              LAYER 2: COMPLIANCE ENGINE (CADENCE)       │
+│  Credential Resource → Compliance Action → Flow Agent   │
+│                    → Rule Engine                        │
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│           LAYER 3: ZERO-KNOWLEDGE VERIFICATION           │
-│  ZK Verifier Contract → Client-Side Proof Generation     │
-│              → Trusted Verifier Bridge                   │
+│           LAYER 3: ZERO-KNOWLEDGE VERIFICATION          │
+│  ZK Verifier Contract → Client-Side Proof Generation    │
+│              → Trusted Verifier Bridge                  │
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│            LAYER 4: AI INTELLIGENCE (OFF-CHAIN)          │
-│  Regulatory Radar → Risk Scoring → Builder Copilot       │
-│                  → Anomaly Monitor                       │
+│            LAYER 4: AI INTELLIGENCE (OFF-CHAIN)         │
+│  Regulatory Radar → Risk Scoring → Builder Copilot      │
+│                  → Anomaly Monitor                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
