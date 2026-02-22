@@ -1,0 +1,27 @@
+{
+  "_comment": "Default compliance rules per jurisdiction. Loaded on startup, updated by Regulatory Radar agent.",
+  "EU": {
+    "min_age": "18",
+    "sanctions_screening": "true",
+    "kyc_required": "true",
+    "max_anonymous_tx": "1000",
+    "travel_rule_threshold": "1000",
+    "reverification_seconds": "2592000"
+  },
+  "US": {
+    "min_age": "18",
+    "sanctions_screening": "true",
+    "kyc_required": "true",
+    "max_anonymous_tx": "0",
+    "travel_rule_threshold": "3000",
+    "reverification_seconds": "2592000"
+  },
+  "CA": {
+    "min_age": "18",
+    "sanctions_screening": "true",
+    "kyc_required": "true",
+    "max_anonymous_tx": "0",
+    "travel_rule_threshold": "1000",
+    "reverification_seconds": "2592000"
+  }
+}
