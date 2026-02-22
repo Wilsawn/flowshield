@@ -8,12 +8,12 @@ FlowShield is a four-layer system. Each layer is independent but composable. The
 ┌─────────────────────────────────────────────────────────┐
 │                   LAYER 1: USER EXPERIENCE              │
 │                                                         │
-│  WebAuthn Passkey Onboarding                           │
-│  Consumer DeFi Interface (deposit, borrow, etc.)       │
-│  Protocol Operator Dashboard                           │
+│  WebAuthn Passkey Onboarding                            │
+│  Consumer DeFi Interface (deposit, borrow, etc.)        │
+│  Protocol Operator Dashboard                            │
 │                                                         │
 │  → All compliance friction is invisible to end users    │
-│  → Sponsored gas: users never pay for compliance txs   │
+│  → Sponsored gas: users never pay for compliance txs    │
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
@@ -53,7 +53,7 @@ FlowShield is a four-layer system. Each layer is independent but composable. The
 │                                                         │
 │  Trusted Verifier Bridge                                │
 │    → Off-chain regulated KYC provider                   │
-│    → Performs actual identity verification               │
+│    → Performs actual identity verification              │
 │    → Issues verifiable credential to user               │
 │    → FlowShield never stores this data                  │
 │                                                         │
