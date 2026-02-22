@@ -1,0 +1,11 @@
+{
+  "name": "flowshield",
+  "version": "0.1.0",
+  "description": "Privacy-preserving compliance infrastructure for DeFi on Flow",
+  "scripts": {
+    "emulator": "flow emulator start",
+    "deploy:emulator": "flow project deploy --network emulator",
+    "deploy:testnet": "flow project deploy --network testnet"
+  },
+  "license": "MIT"
+}
