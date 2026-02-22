@@ -1,0 +1,36 @@
+{
+  "contracts": {
+    "ComplianceCredential": "./cadence/contracts/ComplianceCredential.cdc",
+    "ComplianceAction": "./cadence/contracts/ComplianceAction.cdc",
+    "ComplianceAgent": "./cadence/contracts/ComplianceAgent.cdc",
+    "RuleEngine": "./cadence/contracts/RuleEngine.cdc",
+    "ZKVerifier": "./cadence/contracts/ZKVerifier.cdc",
+    "DemoLendingPool": "./cadence/contracts/DemoLendingPool.cdc"
+  },
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "testnet": "access.devnet.nodes.onflow.org:9000",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": {
+        "type": "file",
+        "location": "./emulator-account.pkey"
+      }
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": [
+        "ComplianceCredential",
+        "RuleEngine",
+        "ZKVerifier",
+        "ComplianceAction",
+        "ComplianceAgent",
+        "DemoLendingPool"
+      ]
+    }
+  }
+}
