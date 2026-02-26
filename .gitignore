@@ -34,3 +34,6 @@ npm-debug.log*
 
 # Testing
 coverage/
+
+flowshield-testnet.pkey
+flowshield-testnet2.pkey

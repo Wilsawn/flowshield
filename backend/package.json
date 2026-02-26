@@ -1,0 +1,21 @@
+{
+  "name": "flowshield-backend",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "FlowShield API server — connects AI agents to Flow blockchain",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js",
+    "dev": "node --watch api/server.js"
+  },
+  "dependencies": {
+    "@onflow/fcl": "^1.13.1",
+    "@onflow/types": "^1.4.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "elliptic": "^6.6.1",
+    "express": "^4.21.2",
+    "js-sha3": "^0.9.3"
+  },
+  "license": "MIT"
+}
