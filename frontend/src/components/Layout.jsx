@@ -83,11 +83,11 @@ export default function Layout() {
           Back to Home
         </NavLink>
         <a
-          href={backendStatus.address ? `https://www.flowdiver.io/account/${backendStatus.address.replace('0x','')}` : '#'}
+          href={backendStatus.address ? `https://testnet.flowscan.io/account/${backendStatus.address}` : '#'}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 px-3 py-2 mt-1 rounded-lg hover:bg-white/[0.03] transition-colors group"
-          title={backendStatus.address ? `View ${backendStatus.address} on FlowDiver` : ''}
+          title={backendStatus.address ? `View ${backendStatus.address} on Flowscan` : ''}
         >
           <div className={`h-7 w-7 rounded-full flex items-center justify-center ${backendStatus.connected ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-white/[0.04] border border-white/[0.06]'}`}>
             <span className={`w-2 h-2 rounded-full ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />

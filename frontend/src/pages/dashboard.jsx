@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, TrendingUp, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, FileCheck, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, Radio, ExternalLink, Code } from 'lucide-react'
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, TrendingUp, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, FileCheck, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, Radio, ExternalLink, Code, X, Info, CheckCircle2, XCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SpotlightCard from '@/components/ui/spotlight-card'
 import AnimatedTicker from '@/components/ui/animated-ticker'
@@ -23,6 +23,8 @@ export default function Dashboard() {
   const [renewing, setRenewing] = useState(false)
   const [renewed, setRenewed] = useState(false)
   const [onChainRules, setOnChainRules] = useState(null)
+  const [showRiskDetail, setShowRiskDetail] = useState(false)
+  const [showStatDetail, setShowStatDetail] = useState(null) // null | 'wallet' | 'deposited' | 'borrowed'
 
   const currentJurisdiction = getJurisdiction(jurisdictionCode)
 
@@ -268,12 +270,12 @@ export default function Dashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Wallet Balance', value: live.walletBalance ?? 0, icon: <Wallet className="w-4 h-4" />, sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'FLOW on testnet', subColor: 'text-white/25', prefix: '' },
-            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: 'Earning 4.2% APY', subColor: 'text-emerald-400/70' },
-            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: '2.8% interest rate', subColor: 'text-cyan-400/70' },
-            { label: 'Risk Score', value: live.riskScore ?? 0, icon: <TrendingUp className="w-4 h-4" />, sub: `Tier: ${live.riskTier || 'loading...'} · ${live.riskFactors?.length || 0} factors`, subColor: live.riskTier === 'compliant' ? 'text-emerald-400/70' : 'text-amber-400/70', noPrefix: true },
+            { label: 'Wallet Balance', value: live.walletBalance ?? 0, icon: <Wallet className="w-4 h-4" />, sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'FLOW on testnet', subColor: 'text-white/25', prefix: '', onClick: () => setShowStatDetail('wallet') },
+            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: 'Earning 4.2% APY', subColor: 'text-emerald-400/70', onClick: () => setShowStatDetail('deposited') },
+            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: '2.8% interest rate', subColor: 'text-cyan-400/70', onClick: () => setShowStatDetail('borrowed') },
+            { label: 'Risk Score', value: live.riskScore ?? 0, icon: <TrendingUp className="w-4 h-4" />, sub: `Tier: ${live.riskTier || 'loading...'} · ${live.riskFactors?.length || 0} factors`, subColor: live.riskTier === 'compliant' ? 'text-emerald-400/70' : 'text-amber-400/70', noPrefix: true, onClick: () => setShowRiskDetail(true) },
           ].map((stat, i) => (
-            <SpotlightCard key={i} className="p-5">
+            <SpotlightCard key={i} className="p-5 cursor-pointer hover:border-white/[0.1] transition-all" onClick={stat.onClick}>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[13px] text-white/35">{stat.label}</span>
                 <div className="text-white/20">{stat.icon}</div>
@@ -281,7 +283,10 @@ export default function Dashboard() {
               <p className="text-[1.75rem] font-bold tracking-tight">
                 {stat.noPrefix ? '' : (stat.prefix !== undefined ? stat.prefix : '$')}<AnimatedTicker value={stat.value} decimals={stat.decimals || 0} className="text-white" />
               </p>
-              <p className={`text-[11px] mt-1.5 ${stat.subColor}`}>{stat.sub}</p>
+              <div className="flex items-center justify-between mt-1.5">
+                <p className={`text-[11px] ${stat.subColor}`}>{stat.sub}</p>
+                <Info className="w-3 h-3 text-white/10" />
+              </div>
             </SpotlightCard>
           ))}
         </div>
@@ -598,6 +603,250 @@ export default function Dashboard() {
                     animate={{ width: `${(reVerifySteps.length / 5) * 100}%` }}
                     transition={{ duration: 0.4, ease: 'easeOut' }}
                   />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ─── RISK DETAIL MODAL ─── */}
+        <AnimatePresence>
+          {showRiskDetail && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowRiskDetail(false)}
+            >
+              <motion.div
+                className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-white">Risk Score Breakdown</h3>
+                    <p className="text-[12px] text-white/30 mt-0.5">How your score is calculated from on-chain data</p>
+                  </div>
+                  <button onClick={() => setShowRiskDetail(false)} className="text-white/20 hover:text-white/50 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="px-6 py-5">
+                  {/* Score gauge */}
+                  <div className="flex items-center gap-5 mb-6">
+                    <div className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center ${
+                      (live.riskScore ?? 0) <= 30 ? 'bg-emerald-500/10 border border-emerald-500/20' :
+                      (live.riskScore ?? 0) <= 70 ? 'bg-amber-500/10 border border-amber-500/20' :
+                      'bg-red-500/10 border border-red-500/20'
+                    }`}>
+                      <span className={`text-[24px] font-bold ${
+                        (live.riskScore ?? 0) <= 30 ? 'text-emerald-400' :
+                        (live.riskScore ?? 0) <= 70 ? 'text-amber-400' : 'text-red-400'
+                      }`}>{live.riskScore ?? 0}</span>
+                      <span className="text-[10px] text-white/25">/100</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-[14px] font-semibold ${
+                        live.riskTier === 'compliant' ? 'text-emerald-400' :
+                        live.riskTier === 'semi-compliant' ? 'text-amber-400' : 'text-red-400'
+                      }`}>{(live.riskTier || 'unknown').toUpperCase()}</p>
+                      <p className="text-[11px] text-white/30 mt-1">
+                        {live.riskTier === 'compliant' ? 'Your wallet passes all compliance checks. You can deposit, borrow, and use all DeFi features.' :
+                         live.riskTier === 'semi-compliant' ? 'Some risk factors detected. You can deposit but may be limited on borrows.' :
+                         'High risk detected. Some actions may be restricted until risk factors are resolved.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Tier legend */}
+                  <div className="grid grid-cols-3 gap-2 mb-5">
+                    {[
+                      { label: 'Compliant', range: '0–30', color: 'emerald' },
+                      { label: 'Semi-Compliant', range: '31–70', color: 'amber' },
+                      { label: 'Non-Compliant', range: '71–100', color: 'red' },
+                    ].map(t => (
+                      <div key={t.label} className={`px-3 py-2 rounded-lg border ${
+                        live.riskTier === t.label.toLowerCase().replace('-', '-') ? `border-${t.color}-500/30 bg-${t.color}-500/5` : 'border-white/[0.04] bg-white/[0.01]'
+                      }`}>
+                        <span className={`text-[10px] font-medium text-${t.color}-400`}>{t.label}</span>
+                        <span className="text-[9px] text-white/20 block">{t.range} pts</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Factor list */}
+                  <div className="space-y-1.5 mb-5">
+                    <p className="text-[10px] text-white/25 uppercase tracking-wider font-semibold mb-2">Risk Factors Checked</p>
+                    {[
+                      { id: 'account_age_7d', label: 'Account age < 7 days', points: 15, tip: 'Wait until your account is at least 7 days old' },
+                      { id: 'account_age_30d', label: 'Account age < 30 days', points: 8, tip: 'Older accounts are considered lower risk' },
+                      { id: 'high_volume_24h', label: 'High tx volume in 24h (>50)', points: 20, tip: 'Reduce transaction frequency or spread over multiple days' },
+                      { id: 'rapid_in_out', label: 'Rapid in-out pattern', points: 25, tip: 'Avoid sending and receiving large amounts in quick succession' },
+                      { id: 'flagged_contract', label: 'Flagged contract interaction', points: 30, tip: 'Avoid interacting with known flagged contracts' },
+                      { id: 'mixer_interaction', label: 'Mixer / privacy tool interaction', points: 35, tip: 'Mixer usage is flagged by most compliance frameworks' },
+                      { id: 'multi_funding', label: 'Multiple funding sources (>5)', points: 15, tip: 'Consolidate funding to fewer wallet sources' },
+                      { id: 'dormancy_spike', label: 'Dormant then suddenly active', points: 12, tip: 'Gradually increase activity after dormancy periods' },
+                    ].map(factor => {
+                      const isTriggered = live.riskFactors?.some(f => f.id === factor.id)
+                      return (
+                        <div key={factor.id} className={`flex items-start gap-3 p-2.5 rounded-lg ${isTriggered ? 'bg-amber-500/5 border border-amber-500/10' : 'bg-white/[0.01]'}`}>
+                          {isTriggered ? (
+                            <XCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400/50 shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[11px] font-medium ${isTriggered ? 'text-amber-400' : 'text-white/40'}`}>{factor.label}</span>
+                              <span className={`text-[10px] font-mono ${isTriggered ? 'text-amber-400/70' : 'text-white/15'}`}>+{factor.points} pts</span>
+                            </div>
+                            {isTriggered && (
+                              <p className="text-[10px] text-white/25 mt-0.5">Fix: {factor.tip}</p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <p className="text-[10px] text-white/30 leading-relaxed">
+                      Score is calculated from <strong className="text-white/50">public on-chain data only</strong> — no personal information is used. 
+                      Lower scores mean lower risk. The score updates automatically as your on-chain behavior changes.
+                      Data source: {live.sources?.risk || 'flow-testnet'}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ─── STAT DETAIL MODAL ─── */}
+        <AnimatePresence>
+          {showStatDetail && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowStatDetail(null)}
+            >
+              <motion.div
+                className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+                  <h3 className="text-[15px] font-semibold text-white">
+                    {showStatDetail === 'wallet' ? 'Wallet Balance' : showStatDetail === 'deposited' ? 'Deposits' : 'Borrows'}
+                  </h3>
+                  <button onClick={() => setShowStatDetail(null)} className="text-white/20 hover:text-white/50 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="px-6 py-5 space-y-4">
+                  {showStatDetail === 'wallet' && (<>
+                    <div className="text-center py-3">
+                      <p className="text-[32px] font-bold text-white">{(live.walletBalance ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">FLOW</span></p>
+                      <p className="text-[11px] text-white/25 mt-1 font-mono">{live.address}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Network</span>
+                        <span className="text-[11px] text-emerald-400 font-medium">Flow Testnet</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Account Age</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.accountAge ?? '—'} days</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Contracts Deployed</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.contractCount ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Signing Keys</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.keyCount ?? '—'}</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-white/20 leading-relaxed">
+                      This is your FLOW token balance on testnet. These are <strong className="text-white/40">free test tokens</strong> — not real cryptocurrency. 
+                      Your balance decreases slightly with each transaction (gas fees ~0.001 FLOW), but gas is sponsored so users pay nothing.
+                    </p>
+                    <a href={`https://testnet.flowscan.io/account/${live.address}`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-cyan-500/30 transition-colors">
+                      <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-[11px] text-cyan-400 font-medium">View on Flowscan</span>
+                    </a>
+                  </>)}
+
+                  {showStatDetail === 'deposited' && (<>
+                    <div className="text-center py-3">
+                      <p className="text-[32px] font-bold text-white">{(live.deposited ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
+                      <p className="text-[11px] text-emerald-400/70 mt-1">Earning 4.2% APY</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Pool Contract</span>
+                        <span className="text-[11px] text-white/70 font-medium font-mono">DemoLendingPool</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Pool Total Deposits</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.totalDeposits?.toLocaleString() ?? '—'} USDC</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Utilization Rate</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.utilizationRate?.toFixed(1) ?? '—'}%</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Gas Fees</span>
+                        <span className="text-[11px] text-emerald-400 font-medium">Sponsored (free for users)</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-white/20 leading-relaxed">
+                      <strong className="text-white/40">What is depositing?</strong> You supply liquidity to the DemoLendingPool smart contract. 
+                      Other users can borrow from the pool, and you earn interest (APY) on your deposits. Every deposit is compliance-checked 
+                      on-chain via ComplianceAction.verify() — this happens automatically and invisibly. Gas fees are sponsored by FlowShield.
+                    </p>
+                  </>)}
+
+                  {showStatDetail === 'borrowed' && (<>
+                    <div className="text-center py-3">
+                      <p className="text-[32px] font-bold text-white">{(live.borrowed ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
+                      <p className="text-[11px] text-cyan-400/70 mt-1">2.8% interest rate</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Max Borrow (75% LTV)</span>
+                        <span className="text-[11px] text-white/70 font-medium">${((live.deposited ?? 0) * 0.75).toFixed(0)} USDC</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Available Liquidity</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.availableLiquidity?.toLocaleString() ?? '—'} USDC</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Compliance Required</span>
+                        <span className="text-[11px] text-white/70 font-medium">Full (verifyFull)</span>
+                      </div>
+                      <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                        <span className="text-[11px] text-white/40">Gas Fees</span>
+                        <span className="text-[11px] text-emerald-400 font-medium">Sponsored (free for users)</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-white/20 leading-relaxed">
+                      <strong className="text-white/40">What is borrowing?</strong> You borrow from the pool using your deposits as collateral (75% loan-to-value ratio). 
+                      Borrowing requires <strong className="text-white/40">full compliance</strong> — ComplianceAction.verifyFull() is called on-chain, which checks 
+                      your credential tier is "compliant" (not just semi-compliant). Gas fees are sponsored by FlowShield — completely free for users.
+                    </p>
+                  </>)}
                 </div>
               </motion.div>
             </motion.div>

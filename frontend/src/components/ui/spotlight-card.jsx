@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
-export default function SpotlightCard({ children, className }) {
+export default function SpotlightCard({ children, className, onClick }) {
   const ref = useRef(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [opacity, setOpacity] = useState(0)
@@ -15,6 +15,7 @@ export default function SpotlightCard({ children, className }) {
   return (
     <div
       ref={ref}
+      onClick={onClick}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setOpacity(1)}
       onMouseLeave={() => setOpacity(0)}
