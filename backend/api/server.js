@@ -1,12 +1,77 @@
-// server.js
-// Express API server connecting agents to frontend.
-//
-// What to implement:
-// - POST /api/risk/score -> takes wallet address, returns risk score
-// - POST /api/copilot/chat -> takes message + history, returns copilot response
-// - GET /api/compliance/status/:address -> returns compliance status from Flow
-// - POST /api/radar/simulate -> triggers regulatory change demo scenario
-// - GET /health -> health check
-// - Use cors, express.json middleware
-// - Load env vars from .env
-// - Connect to Flow blockchain via @onflow/fcl for real data
+import express from 'express'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import * as fcl from '@onflow/fcl'
+
+import complianceRoutes from './routes/compliance.js'
+import riskRoutes from './routes/risk.js'
+import copilotRoutes from './routes/copilot.js'
+import kycRoutes from './routes/kyc.js'
+import chainRoutes from './routes/chain.js'
+import poolRoutes from './routes/pool.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Load .env from root project dir (for shared keys like VERIFF, CLAUDE)
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
+// Load backend-specific .env (overrides root if both exist)
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true })
+
+const app = express()
+// Always default to 3002 for backend (root .env PORT=3001 is for frontend)
+const PORT = process.env.BACKEND_PORT || 3002
+
+// ── Middleware ──
+app.use(cors({ origin: true }))
+app.use(express.json())
+
+// ── Configure FCL for Flow testnet ──
+const FLOW_NETWORK = process.env.FLOW_NETWORK || 'testnet'
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x93c691a98b975493'
+
+fcl.config()
+  .put('flow.network', FLOW_NETWORK)
+  .put('accessNode.api', FLOW_NETWORK === 'testnet'
+    ? 'https://rest-testnet.onflow.org'
+    : 'http://localhost:8888'
+  )
+  .put('0xComplianceCredential', CONTRACT_ADDRESS)
+  .put('0xComplianceAction', CONTRACT_ADDRESS)
+  .put('0xZKVerifier', CONTRACT_ADDRESS)
+  .put('0xRuleEngine', CONTRACT_ADDRESS)
+  .put('0xDemoLendingPool', CONTRACT_ADDRESS)
+  .put('0xComplianceAgent', CONTRACT_ADDRESS)
+
+// Make FCL and contract address available to routes
+app.locals.fcl = fcl
+app.locals.contractAddress = CONTRACT_ADDRESS
+
+// ── Routes ──
+app.use('/api/compliance', complianceRoutes)
+app.use('/api/risk', riskRoutes)
+app.use('/api/copilot', copilotRoutes)
+app.use('/api/kyc', kycRoutes)
+app.use('/api/chain', chainRoutes)
+app.use('/api/pool', poolRoutes)
+
+// ── Health check ──
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    network: FLOW_NETWORK,
+    contractAddress: CONTRACT_ADDRESS,
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// ── Start server ──
+app.listen(PORT, () => {
+  console.log(`[FlowShield API] Running on port ${PORT}`)
+  console.log(`[FlowShield API] Flow network: ${FLOW_NETWORK}`)
+  console.log(`[FlowShield API] Contract address: ${CONTRACT_ADDRESS}`)
+  console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`)
+})
+
+export default app
