@@ -1,0 +1,123 @@
+export const JURISDICTIONS = {
+  US: {
+    code: 'US',
+    name: 'United States',
+    flag: '🇺🇸',
+    regulator: 'FinCEN',
+    framework: 'Bank Secrecy Act',
+    travelRuleThreshold: 3000,
+    travelRuleCurrency: 'USD',
+    reVerifyDays: 30,
+    kycLevel: 'standard',
+    rules: [
+      'Travel Rule applies above $3,000',
+      'SAR filing for suspicious activity',
+      'OFAC sanctions screening required',
+      'FinCEN registration for MSBs',
+    ],
+    complianceChecks: [
+      { label: 'OFAC Sanctions List', status: 'clear' },
+      { label: 'FinCEN Travel Rule', status: 'active' },
+      { label: 'BSA/AML Screening', status: 'clear' },
+      { label: 'State Money Transmitter', status: 'exempt' },
+    ],
+  },
+  EU: {
+    code: 'EU',
+    name: 'European Union',
+    flag: '🇪🇺',
+    regulator: 'EBA / ESMA',
+    framework: 'MiCA (Markets in Crypto-Assets)',
+    travelRuleThreshold: 1000,
+    travelRuleCurrency: 'EUR',
+    reVerifyDays: 90,
+    kycLevel: 'enhanced',
+    rules: [
+      'MiCA compliance mandatory since Dec 2024',
+      'Travel Rule applies above €1,000',
+      'Enhanced due diligence for high-risk transfers',
+      'DORA operational resilience requirements',
+    ],
+    complianceChecks: [
+      { label: 'EU Sanctions List', status: 'clear' },
+      { label: 'MiCA Travel Rule', status: 'active' },
+      { label: 'AMLD6 AML Screening', status: 'clear' },
+      { label: 'DORA Resilience Check', status: 'active' },
+    ],
+  },
+  UK: {
+    code: 'UK',
+    name: 'United Kingdom',
+    flag: '🇬🇧',
+    regulator: 'FCA',
+    framework: 'Financial Services & Markets Act',
+    travelRuleThreshold: 1000,
+    travelRuleCurrency: 'GBP',
+    reVerifyDays: 60,
+    kycLevel: 'standard',
+    rules: [
+      'FCA registration required for crypto firms',
+      'Travel Rule applies above £1,000',
+      'Financial promotions regime for crypto',
+      'MLR 2017 AML compliance',
+    ],
+    complianceChecks: [
+      { label: 'HMT Sanctions List', status: 'clear' },
+      { label: 'FCA Travel Rule', status: 'active' },
+      { label: 'MLR 2017 AML Check', status: 'clear' },
+      { label: 'Financial Promotions', status: 'compliant' },
+    ],
+  },
+  SG: {
+    code: 'SG',
+    name: 'Singapore',
+    flag: '🇸🇬',
+    regulator: 'MAS',
+    framework: 'Payment Services Act',
+    travelRuleThreshold: 1500,
+    travelRuleCurrency: 'SGD',
+    reVerifyDays: 365,
+    kycLevel: 'standard',
+    rules: [
+      'MAS licensing under Payment Services Act',
+      'Travel Rule applies above S$1,500',
+      'Technology risk management guidelines',
+      'AML/CFT Notice PSN02',
+    ],
+    complianceChecks: [
+      { label: 'MAS Sanctions Screening', status: 'clear' },
+      { label: 'PSA Travel Rule', status: 'active' },
+      { label: 'PSN02 AML Check', status: 'clear' },
+      { label: 'Tech Risk Compliance', status: 'active' },
+    ],
+  },
+  CA: {
+    code: 'CA',
+    name: 'Canada',
+    flag: '🇨🇦',
+    regulator: 'FINTRAC',
+    framework: 'PCMLTFA',
+    travelRuleThreshold: 1000,
+    travelRuleCurrency: 'CAD',
+    reVerifyDays: 30,
+    kycLevel: 'standard',
+    rules: [
+      'FINTRAC registration as MSB',
+      'Travel Rule applies above CAD $1,000',
+      'Large transaction reporting at CAD $10,000',
+      'Suspicious transaction reports required',
+    ],
+    complianceChecks: [
+      { label: 'Canadian Sanctions List', status: 'clear' },
+      { label: 'FINTRAC Travel Rule', status: 'active' },
+      { label: 'PCMLTFA AML Screening', status: 'clear' },
+      { label: 'Large Transaction Reporting', status: 'monitoring' },
+    ],
+  },
+}
+
+export const JURISDICTION_LIST = Object.values(JURISDICTIONS)
+
+export function getJurisdiction(code) {
+  return JURISDICTIONS[code] || JURISDICTIONS.US
+}

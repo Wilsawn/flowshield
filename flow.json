@@ -1,18 +1,53 @@
 {
-  "contracts": {},
-  "networks": {
-    "emulator": "127.0.0.1:3569",
-    "testnet": "access.devnet.nodes.onflow.org:9000",
-    "mainnet": "access.mainnet.nodes.onflow.org:9000"
-  },
-  "accounts": {
-    "emulator-account": {
-      "address": "f8d6e0586b0a20c7",
-      "key": {
-        "type": "file",
-        "location": "./emulator-account.pkey"
-      }
-    }
-  },
-  "deployments": {}
+	"contracts": {
+		"ComplianceCredential": "./cadence/contracts/ComplianceCredential.cdc",
+		"ZKVerifier": "./cadence/contracts/ZKVerifier.cdc",
+		"ComplianceAction": "./cadence/contracts/ComplianceAction.cdc",
+		"RuleEngine": "./cadence/contracts/RuleEngine.cdc",
+		"DemoLendingPool": "./cadence/contracts/DemoLendingPool.cdc",
+		"ComplianceAgent": "./cadence/contracts/ComplianceAgent.cdc"
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "./emulator-account.pkey"
+			}
+		},
+		"flowshield-testnet": {
+			"address": "93c691a98b975493",
+			"key": {
+				"type": "file",
+				"location": "flowshield-testnet2.pkey"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"ComplianceCredential",
+				"ZKVerifier",
+				"ComplianceAction",
+				"RuleEngine",
+				"DemoLendingPool",
+				"ComplianceAgent"
+			]
+		},
+		"testnet": {
+			"flowshield-testnet": [
+				"ComplianceCredential",
+				"ZKVerifier",
+				"ComplianceAction",
+				"RuleEngine",
+				"DemoLendingPool",
+				"ComplianceAgent"
+			]
+		}
+	}
 }
