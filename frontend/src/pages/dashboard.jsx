@@ -11,8 +11,14 @@ import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
 
 export default function Dashboard() {
-  const live = useDashboardData()
-  const chain = useChainData()
+  const [walletAddr] = useState(() => {
+    try {
+      const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
+      return w.addr || null
+    } catch { return null }
+  })
+  const live = useDashboardData(walletAddr)
+  const chain = useChainData(walletAddr)
   const [depositAmount, setDepositAmount] = useState('')
   const [borrowAmount, setBorrowAmount] = useState('')
   const [verifying, setVerifying] = useState(null) // null | { action, amount }
@@ -471,7 +477,6 @@ export default function Dashboard() {
                 { label: 'Contracts Deployed', value: live.contractCount != null ? `${live.contractCount}` : '—', dot: 'bg-cyan-400' },
                 { label: 'Signing Keys', value: live.keyCount != null ? `${live.keyCount}` : '—', dot: 'bg-white/30' },
                 { label: 'Funding Sources', value: live.fundingSources != null ? `${live.fundingSources}` : '—', dot: live.fundingSources > 3 ? 'bg-amber-400' : 'bg-emerald-400' },
-                { label: 'Risk Factors', value: live.riskFactors?.length > 0 ? live.riskFactors.map(f => f.label).join(', ') : 'None detected', dot: live.riskFactors?.length > 0 ? 'bg-amber-400' : 'bg-emerald-400' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-2.5 -mx-2.5 rounded-lg hover:bg-white/[0.02] transition-colors">
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.dot}`} />
@@ -479,6 +484,23 @@ export default function Dashboard() {
                   <span className="text-[12px] text-white/70 font-medium text-right">{item.value}</span>
                 </div>
               ))}
+              {/* Risk Factors — shown as individual pills, not a comma blob */}
+              <div className="p-2.5 -mx-2.5 rounded-lg hover:bg-white/[0.02] transition-colors">
+                <div className="flex items-center gap-3 mb-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${live.riskFactors?.length > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                  <span className="text-[12px] text-white/40 flex-1">Risk Factors</span>
+                  <span className="text-[12px] text-white/70 font-medium">{live.riskFactors?.length > 0 ? `${live.riskFactors.length} detected` : 'None detected'}</span>
+                </div>
+                {live.riskFactors?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 ml-[18px] mt-1">
+                    {live.riskFactors.map((f, fi) => (
+                      <span key={fi} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400/80 border border-amber-500/15">
+                        +{f.points} {f.label?.length > 40 ? f.label.slice(0, 37) + '...' : f.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             {live.lastUpdated && (
               <p className="text-[10px] text-white/35 mt-4 text-center">

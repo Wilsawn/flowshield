@@ -188,7 +188,11 @@ export default function PricingSection() {
 
               <div className="mb-3">
                 <span className="text-[28px] font-bold text-white">{tier.price}</span>
-                <span className="text-[13px] text-white/30">{tier.period}</span>
+                {tier.period === 'forever' ? (
+                  <span className="block text-[12px] text-white/25 mt-0.5">Free forever</span>
+                ) : (
+                  <span className="text-[13px] text-white/30 ml-1">{tier.period}</span>
+                )}
               </div>
 
               <p className="text-[12px] text-white/30 mb-5 leading-relaxed">{tier.description}</p>

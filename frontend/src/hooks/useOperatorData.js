@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
-export default function useOperatorData() {
+export default function useOperatorData(walletAddress) {
   const [data, setData] = useState({
     // Risk monitoring
     riskScore: null,
@@ -23,7 +23,7 @@ export default function useOperatorData() {
   })
 
   const fetchAll = useCallback(async () => {
-    const address = '0x93c691a98b975493'
+    const address = walletAddress || '0x93c691a98b975493'
     let riskData = null
     let monitorData = null
     let jurisdictionData = {}
@@ -67,7 +67,7 @@ export default function useOperatorData() {
         }
       })
     } catch (err) {
-      // API fetch error — will use fallback data
+      // API fetch error — data will show as defaults
     }
 
     // Merge monitor activity data into walletData for display
@@ -93,9 +93,9 @@ export default function useOperatorData() {
       loading: false,
       lastUpdated: new Date(),
       isLive,
-      address: '0x93c691a98b975493',
+      address: walletAddress || '0x93c691a98b975493',
     })
-  }, [])
+  }, [walletAddress])
 
   useEffect(() => {
     fetchAll()

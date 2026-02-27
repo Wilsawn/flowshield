@@ -22,7 +22,13 @@ const impactColors = {
 }
 
 export default function OperatorDashboard() {
-  const live = useOperatorData()
+  const [walletAddr] = useState(() => {
+    try {
+      const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
+      return w.addr || null
+    } catch { return null }
+  })
+  const live = useOperatorData(walletAddr)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
   const [cycleResults, setCycleResults] = useState(null)
   const [auditLog, setAuditLog] = useState([])
@@ -77,12 +83,12 @@ export default function OperatorDashboard() {
       fetch(`${API}/api/risk/monitor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: '0x93c691a98b975493' }),
+        body: JSON.stringify({ address: live.address || '0x93c691a98b975493' }),
       }).then(r => r.json()),
       fetch(`${API}/api/risk/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: '0x93c691a98b975493' }),
+        body: JSON.stringify({ address: live.address || '0x93c691a98b975493' }),
       }).then(r => r.json()),
     ])
     const results = {
@@ -143,7 +149,7 @@ export default function OperatorDashboard() {
       {/* Stats Overview — Real from Flow testnet */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 0 },
+          { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
           { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
           { label: 'Contracts', value: live.walletData?.contractCount ?? 0, icon: <ShieldAlert className="w-4 h-4" />, color: 'text-cyan-400', sub: `${live.walletData?.keyCount ?? 0} signing keys` },
           { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
