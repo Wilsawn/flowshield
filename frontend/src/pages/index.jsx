@@ -9,6 +9,7 @@ import AnimatedTicker from '@/components/ui/animated-ticker'
 import Marquee from '@/components/ui/marquee'
 import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
+import ProductShowcase from '@/components/ProductShowcase'
 
 const fade = {
   hidden: { opacity: 0, y: 24 },
@@ -17,10 +18,30 @@ const fade = {
 
 export default function LandingPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [redirectTarget, setRedirectTarget] = useState('/dashboard')
   const navigate = useNavigate()
 
+  const isLoggedIn = () => {
+    try {
+      const stored = localStorage.getItem('flowshield_user')
+      return stored && JSON.parse(stored).email
+    } catch { return false }
+  }
+
+  const handleLaunch = () => {
+    if (isLoggedIn()) { navigate('/dashboard'); return }
+    setRedirectTarget('/dashboard')
+    setShowOnboarding(true)
+  }
+
+  const handleNavigate = (path) => {
+    if (isLoggedIn()) { navigate(path); return }
+    setRedirectTarget(path)
+    setShowOnboarding(true)
+  }
+
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={() => navigate('/dashboard')} onBack={() => setShowOnboarding(false)} />
+    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={() => setShowOnboarding(false)} />
   }
 
   return (
@@ -34,18 +55,18 @@ export default function LandingPage() {
             <span className="text-[15px] font-semibold tracking-tight">FlowShield</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
-            <button onClick={() => navigate('/copilot')} className="text-[13px] text-white/40 hover:text-white transition-colors">Copilot</button>
-            <button onClick={() => navigate('/operator')} className="text-[13px] text-white/40 hover:text-white transition-colors">Operator</button>
-            <button onClick={() => navigate('/dashboard')} className="text-[13px] text-white/40 hover:text-white transition-colors">Dashboard</button>
+            <button onClick={() => handleNavigate('/copilot')} className="text-[13px] text-white/40 hover:text-white transition-colors">Copilot</button>
+            <button onClick={() => handleNavigate('/operator')} className="text-[13px] text-white/40 hover:text-white transition-colors">Operator</button>
+            <button onClick={() => handleNavigate('/dashboard')} className="text-[13px] text-white/40 hover:text-white transition-colors">Dashboard</button>
             <button
-              onClick={() => setShowOnboarding(true)}
+              onClick={handleLaunch}
               className="text-[13px] font-medium px-5 py-2 rounded-full bg-white text-[#060a13] hover:bg-white/90 transition-colors"
             >
               Launch App
             </button>
           </div>
           <button
-            onClick={() => setShowOnboarding(true)}
+            onClick={handleLaunch}
             className="md:hidden text-[13px] font-medium px-5 py-2 rounded-full bg-white text-[#060a13] hover:bg-white/90 transition-colors"
           >
             Launch App
@@ -89,14 +110,14 @@ export default function LandingPage() {
             variants={fade} initial="hidden" animate="show" custom={0.24}
           >
             <button
-              onClick={() => setShowOnboarding(true)}
+              onClick={handleLaunch}
               className="group px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_50px_rgba(52,211,153,0.25)] transition-all duration-500"
             >
               Try the Demo
               <span className="inline-block ml-2 group-hover:translate-x-0.5 transition-transform">→</span>
             </button>
             <button
-              onClick={() => navigate('/copilot')}
+              onClick={() => handleNavigate('/copilot')}
               className="px-8 py-3.5 rounded-full border border-white/[0.08] text-[14px] text-white/50 hover:text-white hover:border-white/[0.15] transition-all duration-300"
             >
               Builder Copilot
@@ -109,7 +130,7 @@ export default function LandingPage() {
       <section className="relative z-10 border-y border-white/[0.04] py-5">
         <Marquee speed={35}>
           {['Flow Actions', 'Scheduled Transactions', 'Flow Agents', 'WebAuthn / Passkeys', 'Cadence Resources', 'Sponsored Transactions', 'ZK Proofs', 'Compliance Credentials'].map((item) => (
-            <span key={item} className="text-[13px] text-white/20 font-medium tracking-wide whitespace-nowrap flex items-center gap-2">
+            <span key={item} className="text-[13px] text-white/40 font-medium tracking-wide whitespace-nowrap flex items-center gap-2">
               <span className="w-1 h-1 rounded-full bg-emerald-400/40" />
               {item}
             </span>
@@ -137,10 +158,59 @@ export default function LandingPage() {
                 <p className="text-[2.4rem] sm:text-[3.2rem] font-bold tracking-tight bg-gradient-to-b from-white to-white/30 bg-clip-text text-transparent">
                   {s.prefix}<AnimatedTicker value={s.val} suffix={s.suffix} />
                 </p>
-                <p className="text-[13px] text-white/25 mt-2 tracking-wide">{s.label}</p>
+                <p className="text-[13px] text-white/45 mt-2 tracking-wide">{s.label}</p>
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── TRUST BAR ─── */}
+      <section className="relative z-10 py-12 border-b border-white/[0.04]">
+        <div className="max-w-[1080px] mx-auto px-6">
+          <p className="text-[10px] text-white/40 uppercase tracking-[0.25em] font-semibold text-center mb-8">Compliance Standards Supported</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+            {[
+              { label: 'FinCEN', sub: 'BSA / AML' },
+              { label: 'MiCA', sub: 'EU Regulation' },
+              { label: 'FCA', sub: 'UK Framework' },
+              { label: 'FINTRAC', sub: 'Canada MSB' },
+              { label: 'FATF', sub: 'Travel Rule' },
+              { label: 'MAS', sub: 'Singapore PSA' },
+            ].map((std) => (
+              <div key={std.label} className="text-center group">
+                <p className="text-[14px] font-bold text-white/40 group-hover:text-white/60 transition-colors">{std.label}</p>
+                <p className="text-[9px] text-white/35 mt-0.5">{std.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── PRODUCT SHOWCASE (Interactive Flow Canvas) ─── */}
+      <section className="relative z-10 py-20 md:py-32">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <motion.p
+            className="text-[11px] font-semibold text-emerald-400/70 uppercase tracking-[0.25em] mb-4 text-center"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+          >See it in action</motion.p>
+          <motion.h2
+            className="text-[2rem] md:text-[2.8rem] font-bold tracking-[-0.02em] leading-[1.1] text-center mb-4"
+            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          >
+            One platform, every compliance layer.
+          </motion.h2>
+          <motion.p
+            className="text-[13px] text-white/40 text-center mb-12"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+          >
+            Drag the nodes around · Scroll to zoom · See how it all connects
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
+          >
+            <ProductShowcase />
+          </motion.div>
         </div>
       </section>
 
@@ -161,7 +231,7 @@ export default function LandingPage() {
               >
                 From sign-up to
                 <br />
-                <span className="text-white/20">compliant transaction.</span>
+                compliant transaction.
               </motion.h2>
 
               <div className="space-y-6">
@@ -181,7 +251,7 @@ export default function LandingPage() {
                     <span className="text-[13px] font-mono text-emerald-400/40 pt-1 shrink-0">{step.n}</span>
                     <div>
                       <h4 className="text-[15px] font-semibold mb-1 text-white/90">{step.t}</h4>
-                      <p className="text-[14px] text-white/30 leading-relaxed">{step.d}</p>
+                      <p className="text-[14px] text-white/45 leading-relaxed">{step.d}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -240,7 +310,7 @@ export default function LandingPage() {
             <p className="text-[11px] font-semibold text-emerald-400/70 uppercase tracking-[0.25em] mb-5">Built on Flow Primitives</p>
             <h2 className="text-[2.8rem] md:text-[3.2rem] font-bold tracking-[-0.02em]">
               What your protocol
-              <span className="text-white/20"> gets out of the box.</span>
+               gets out of the box.
             </h2>
           </motion.div>
 
@@ -265,7 +335,7 @@ export default function LandingPage() {
                     {f.icon}
                   </div>
                   <h3 className="text-[15px] font-semibold mb-2 text-white/90">{f.title}</h3>
-                  <p className="text-[13px] text-white/30 leading-relaxed">{f.desc}</p>
+                  <p className="text-[13px] text-white/45 leading-relaxed">{f.desc}</p>
                 </SpotlightCard>
               </motion.div>
             ))}
@@ -283,9 +353,9 @@ export default function LandingPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-[2.2rem] font-bold tracking-tight mb-4">
-              Integrate in <span className="text-white/20">one line of Cadence.</span>
+              Integrate in one line of Cadence.
             </h2>
-            <p className="text-[15px] text-white/30">This is everything your protocol needs to add.</p>
+            <p className="text-[15px] text-white/45">This is everything your protocol needs to add.</p>
           </motion.div>
 
           <motion.div
@@ -299,7 +369,7 @@ export default function LandingPage() {
               <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
               <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
               <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
-              <span className="text-[11px] text-white/20 ml-3 font-mono">FlowShield.cdc</span>
+              <span className="text-[11px] text-white/40 ml-3 font-mono">FlowShield.cdc</span>
             </div>
             <div className="p-6 font-mono text-[13px] leading-[1.8] text-white/50">
               <span className="text-white/20">// Import FlowShield and check compliance</span>
@@ -339,7 +409,7 @@ export default function LandingPage() {
             </span>
           </motion.h2>
           <motion.p
-            className="text-[15px] text-white/30 mb-12 max-w-md mx-auto"
+            className="text-[15px] text-white/45 mb-12 max-w-md mx-auto"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -355,13 +425,13 @@ export default function LandingPage() {
             transition={{ delay: 0.2 }}
           >
             <button
-              onClick={() => setShowOnboarding(true)}
+              onClick={handleLaunch}
               className="px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_50px_rgba(52,211,153,0.25)] transition-all duration-500"
             >
               Try the Demo →
             </button>
             <button
-              onClick={() => navigate('/copilot')}
+              onClick={() => handleNavigate('/copilot')}
               className="px-8 py-3.5 rounded-full border border-white/[0.08] text-[14px] text-white/50 hover:text-white hover:border-white/[0.15] transition-all duration-300"
             >
               Builder Copilot
@@ -380,34 +450,44 @@ export default function LandingPage() {
                 <FlowShieldLogo size={20} />
                 <span className="text-[14px] font-semibold text-white/60">FlowShield</span>
               </div>
-              <p className="text-[12px] text-white/20 leading-relaxed max-w-[240px]">
+              <p className="text-[12px] text-white/40 leading-relaxed max-w-[240px]">
                 Privacy-preserving compliance infrastructure for DeFi on Flow.
               </p>
             </div>
 
             {/* Product */}
             <div>
-              <p className="text-[10px] text-white/25 uppercase tracking-[0.2em] font-semibold mb-4">Product</p>
+              <p className="text-[10px] text-white/45 uppercase tracking-[0.2em] font-semibold mb-4">Product</p>
               <div className="flex flex-col gap-2.5">
-                <button onClick={() => navigate('/dashboard')} className="text-[13px] text-white/25 hover:text-white/50 transition-colors text-left">Dashboard</button>
-                <button onClick={() => navigate('/copilot')} className="text-[13px] text-white/25 hover:text-white/50 transition-colors text-left">Builder Copilot</button>
-                <button onClick={() => navigate('/operator')} className="text-[13px] text-white/25 hover:text-white/50 transition-colors text-left">Operator</button>
+                <button onClick={() => handleNavigate('/dashboard')} className="text-[13px] text-white/45 hover:text-white/70 transition-colors text-left">Dashboard</button>
+                <button onClick={() => handleNavigate('/copilot')} className="text-[13px] text-white/45 hover:text-white/70 transition-colors text-left">Builder Copilot</button>
+                <button onClick={() => handleNavigate('/operator')} className="text-[13px] text-white/45 hover:text-white/70 transition-colors text-left">Operator</button>
               </div>
             </div>
 
             {/* Legal */}
             <div>
-              <p className="text-[10px] text-white/25 uppercase tracking-[0.2em] font-semibold mb-4">Legal</p>
+              <p className="text-[10px] text-white/45 uppercase tracking-[0.2em] font-semibold mb-4">Legal</p>
               <div className="flex flex-col gap-2.5">
-                <button onClick={() => navigate('/privacy')} className="text-[13px] text-white/25 hover:text-white/50 transition-colors text-left">Privacy Policy</button>
-                <button onClick={() => navigate('/terms')} className="text-[13px] text-white/25 hover:text-white/50 transition-colors text-left">Terms of Service</button>
+                <button onClick={() => navigate('/privacy')} className="text-[13px] text-white/45 hover:text-white/70 transition-colors text-left">Privacy Policy</button>
+                <button onClick={() => navigate('/terms')} className="text-[13px] text-white/45 hover:text-white/70 transition-colors text-left">Terms of Service</button>
               </div>
             </div>
           </div>
 
           <div className="border-t border-white/[0.04] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-[11px] text-white/10">&copy; {new Date().getFullYear()} FlowShield. All rights reserved.</p>
-            <p className="text-[11px] text-white/10">Built on Flow Blockchain</p>
+            <p className="text-[11px] text-white/35">&copy; {new Date().getFullYear()} FlowShield. All rights reserved.</p>
+            <p className="text-[11px] text-white/35">Built on Flow Blockchain</p>
+          </div>
+
+          {/* Giant brand text */}
+          <div
+            className="mt-12 -mb-4 select-none pointer-events-none"
+            style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
+          >
+            <h2 className="text-[clamp(5rem,15vw,12rem)] font-black tracking-[-0.04em] leading-[0.85] text-center text-emerald-400/[0.12]">
+              FlowShield
+            </h2>
           </div>
         </div>
       </footer>

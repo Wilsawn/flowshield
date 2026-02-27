@@ -193,7 +193,7 @@ router.post('/deposit', async (req, res) => {
         data: e.data,
       })) || [],
       blockHeight: txResult.blockHeight,
-      explorerUrl: `https://www.flowdiver.io/tx/${txId}`,
+      explorerUrl: `https://testnet.flowscan.io/tx/${txId}`,
       source: 'flow-testnet',
     })
   } catch (err) {
@@ -251,7 +251,7 @@ router.post('/borrow', async (req, res) => {
         data: e.data,
       })) || [],
       blockHeight: txResult.blockHeight,
-      explorerUrl: `https://www.flowdiver.io/tx/${txId}`,
+      explorerUrl: `https://testnet.flowscan.io/tx/${txId}`,
       source: 'flow-testnet',
     })
   } catch (err) {

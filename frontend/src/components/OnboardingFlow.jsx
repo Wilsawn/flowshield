@@ -163,6 +163,16 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setCurrentVerifyStep(5)
     await new Promise((r) => setTimeout(r, 600))
 
+    // Store user session in localStorage so sidebar/dashboard show the real user
+    const userSession = {
+      email,
+      jurisdiction,
+      displayName: email.split('@')[0],
+      createdAt: new Date().toISOString(),
+      authMethod: 'passkey',
+    }
+    localStorage.setItem('flowshield_user', JSON.stringify(userSession))
+
     setStep('complete')
   }
 

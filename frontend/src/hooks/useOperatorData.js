@@ -76,6 +76,9 @@ export default function useOperatorData() {
       ...(monitorData?.activity || {}),
     }
 
+    // Check if monitor is using live data
+    if (monitorData?.activity?.source === 'flow-testnet-live') isLive = true
+
     setData({
       riskScore: riskData?.score ?? null,
       riskTier: riskData?.tier || null,
@@ -84,6 +87,8 @@ export default function useOperatorData() {
       anomalies: monitorData?.anomalies || [],
       anomalyCount: monitorData?.anomalyCount ?? monitorData?.anomalies?.length ?? 0,
       monitorRiskLevel: monitorData?.highestSeverity || monitorData?.riskLevel || null,
+      monitorSummary: monitorData?.summary || null,
+      analysisSource: monitorData?.analysisSource || null,
       jurisdictionRules: jurisdictionData,
       loading: false,
       lastUpdated: new Date(),
@@ -94,8 +99,7 @@ export default function useOperatorData() {
 
   useEffect(() => {
     fetchAll()
-    const interval = setInterval(fetchAll, 30000)
-    return () => clearInterval(interval)
+    // No auto-refresh — operator triggers updates manually via "Run Monitoring Cycle"
   }, [fetchAll])
 
   return { ...data, refresh: fetchAll }

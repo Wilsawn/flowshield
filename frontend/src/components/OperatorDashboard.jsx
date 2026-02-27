@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { ShieldCheck, ShieldAlert, ShieldX, RefreshCw, AlertTriangle, Clock, Globe, Loader2, Radio, Zap, TrendingDown, Scan, Wallet } from 'lucide-react'
+import { ShieldCheck, ShieldAlert, ShieldX, RefreshCw, AlertTriangle, Clock, Globe, Loader2, Radio, Zap, TrendingDown, Scan, Wallet, Calendar } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SpotlightCard from '@/components/ui/spotlight-card'
 import AnimatedTicker from '@/components/ui/animated-ticker'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import useOperatorData from '@/hooks/useOperatorData'
+import RegulatoryRadar from '@/components/RegulatoryRadar'
+import FlowAutomation from '@/components/FlowAutomation'
 
 const severityColors = {
   success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -22,9 +24,7 @@ const impactColors = {
 export default function OperatorDashboard() {
   const live = useOperatorData()
   const [isRunningCycle, setIsRunningCycle] = useState(false)
-  const [isSimulating, setIsSimulating] = useState(false)
   const [cycleResults, setCycleResults] = useState(null)
-  const [simulateResult, setSimulateResult] = useState(null)
   const [auditLog, setAuditLog] = useState([])
 
   const addAuditEntry = (type, detail, severity) => {
@@ -35,34 +35,85 @@ export default function OperatorDashboard() {
     }, ...prev].slice(0, 10))
   }
 
+  const [demoActive, setDemoActive] = useState(false)
+
+  const handleSimulateThreat = async () => {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+    try {
+      const res = await fetch(`${API}/api/risk/monitor/simulate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      setDemoActive(true)
+      addAuditEntry('threat', `${data.injectedCount} anomaly pattern(s) detected — flagged by AI monitor`, 'danger')
+      // Auto-refresh all panels so Risk Analysis, Anomaly Monitor, and Compliance Agent update
+      await live.refresh()
+      // Auto-run monitoring cycle so Compliance Controls shows the results immediately
+      await autoRunCycle()
+    } catch (err) {
+      addAuditEntry('error', `Simulation failed: ${err.message}`, 'danger')
+    }
+  }
+
+  const handleClearThreat = async () => {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+    try {
+      await fetch(`${API}/api/risk/monitor/clear`, { method: 'POST' })
+      setDemoActive(false)
+      addAuditEntry('resolve', 'Threats investigated and cleared by compliance operator', 'success')
+      await live.refresh()
+      await autoRunCycle()
+    } catch (err) {
+      addAuditEntry('error', `Clear failed: ${err.message}`, 'danger')
+    }
+  }
+
+  // Shared cycle runner — used by both manual button and auto-refresh
+  const runCycleInternal = async (silent = false) => {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+    const [monitorRes, riskRes] = await Promise.all([
+      fetch(`${API}/api/risk/monitor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: '0x93c691a98b975493' }),
+      }).then(r => r.json()),
+      fetch(`${API}/api/risk/score`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: '0x93c691a98b975493' }),
+      }).then(r => r.json()),
+    ])
+    const results = {
+      riskScore: riskRes.score,
+      riskTier: riskRes.tier,
+      anomalies: monitorRes.anomalyCount,
+      txAnalyzed: monitorRes.activity?.txCount24h || 0,
+      largestTx: monitorRes.activity?.largestTx || 0,
+      riskFactors: riskRes.factors?.length || 0,
+      source: monitorRes.activity?.source || 'unknown',
+    }
+    setCycleResults(results)
+    if (!silent) {
+      addAuditEntry('monitor', `Cycle complete: risk=${riskRes.score}, anomalies=${monitorRes.anomalyCount}, factors=${riskRes.factors?.length || 0}`, 'success')
+    }
+    return results
+  }
+
+  // Auto-run cycle (silent — no audit log spam)
+  const autoRunCycle = async () => {
+    setIsRunningCycle(true)
+    try { await runCycleInternal(true) } catch { /* silent */ }
+    setIsRunningCycle(false)
+  }
+
   const handleRunCycle = async () => {
     setIsRunningCycle(true)
     setCycleResults(null)
     addAuditEntry('monitor', 'Monitoring cycle initiated by operator', 'info')
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
-      const [monitorRes, riskRes] = await Promise.all([
-        fetch(`${API}/api/risk/monitor`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: '0x93c691a98b975493' }),
-        }).then(r => r.json()),
-        fetch(`${API}/api/risk/score`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: '0x93c691a98b975493' }),
-        }).then(r => r.json()),
-      ])
-      setCycleResults({
-        riskScore: riskRes.score,
-        riskTier: riskRes.tier,
-        anomalies: monitorRes.anomalyCount,
-        txAnalyzed: monitorRes.activity?.txCount24h || 0,
-        largestTx: monitorRes.activity?.largestTx || 0,
-        riskFactors: riskRes.factors?.length || 0,
-        source: monitorRes.activity?.source || 'unknown',
-      })
-      addAuditEntry('monitor', `Cycle complete: risk=${riskRes.score}, anomalies=${monitorRes.anomalyCount}, txs=${monitorRes.activity?.txCount24h}`, 'success')
+      await runCycleInternal(false)
       live.refresh()
     } catch (err) {
       addAuditEntry('error', `Monitoring cycle failed: ${err.message}`, 'danger')
@@ -71,29 +122,12 @@ export default function OperatorDashboard() {
     setIsRunningCycle(false)
   }
 
-  const handleSimulateChange = async () => {
-    setIsSimulating(true)
-    setSimulateResult(null)
-    const scenarios = ['eu_mica_update', 'us_genius_act', 'ca_fintrac_update', 'sg_mas_defi']
-    const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)]
-    addAuditEntry('simulation', `Regulatory scenario triggered: ${randomScenario}`, 'warning')
-    try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
-      const res = await fetch(`${API}/api/copilot/radar/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: randomScenario }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setSimulateResult(data)
-        addAuditEntry('simulation', `Impact analysis complete for ${randomScenario}: ${data.summary || 'Processed'}`, 'success')
-      }
-    } catch (err) {
-      addAuditEntry('error', `Simulation failed: ${err.message}`, 'danger')
-    }
-    setIsSimulating(false)
+  // Called by RegulatoryRadar after approving a gap — auto-refresh everything
+  const handleRadarRefresh = async () => {
+    await live.refresh()
+    await autoRunCycle()
   }
+
 
   return (
     <div className="space-y-6">
@@ -239,24 +273,10 @@ export default function OperatorDashboard() {
             </div>
           )}
 
-          {/* Simulate result */}
-          <AnimatePresence>
-            {simulateResult && (
-              <motion.div
-                className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04]"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <p className="text-[12px] text-amber-400 font-medium mb-1">Regulatory Simulation Result</p>
-                <p className="text-[11px] text-white/40 leading-relaxed">{simulateResult.summary || simulateResult.scenario || JSON.stringify(simulateResult).slice(0, 200)}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </SpotlightCard>
 
-      {/* Anomaly Monitor — Real from Flow testnet */}
+      {/* Anomaly Monitor — AI-powered via Claude */}
       <SpotlightCard className="p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
@@ -266,22 +286,55 @@ export default function OperatorDashboard() {
               {live.anomalyCount > 0 ? `${live.anomalyCount} detected` : 'All clear'}
             </span>
           </div>
-          {live.isLive && <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">LIVE</span>}
+          <div className="flex items-center gap-2">
+            {live.analysisSource && (
+              <span className={`text-[9px] px-2 py-0.5 rounded-md font-medium ${live.analysisSource === 'claude-ai' ? 'bg-violet-500/10 text-violet-400' : 'bg-white/[0.04] text-white/30'}`}>
+                {live.analysisSource === 'claude-ai' ? 'AI AGENT' : 'RULE-BASED'}
+              </span>
+            )}
+            {live.isLive && <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">LIVE</span>}
+          </div>
         </div>
+
+        {/* AI Summary */}
+        {live.monitorSummary && (
+          <p className="text-[11px] text-white/30 mb-4 leading-relaxed">{live.monitorSummary}</p>
+        )}
+
         <div className="space-y-2">
           {live.anomalies?.length > 0 ? live.anomalies.map((anomaly, i) => (
             <motion.div
               key={i}
-              className={`p-3.5 rounded-xl border ${anomaly.severity === 'high' ? 'border-red-500/20 bg-red-500/[0.04]' : 'border-amber-500/20 bg-amber-500/[0.04]'}`}
+              className={`p-3.5 rounded-xl border ${anomaly.severity === 'high' ? 'border-red-500/20 bg-red-500/[0.04]' : anomaly.severity === 'medium' ? 'border-amber-500/20 bg-amber-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: i * 0.1 }}
             >
               <div className="flex items-start gap-3">
-                <span className={`w-2 h-2 rounded-full block shrink-0 mt-1 ${anomaly.severity === 'high' ? 'bg-red-400 animate-pulse' : 'bg-amber-400'}`} />
+                <span className={`w-2 h-2 rounded-full block shrink-0 mt-1 ${anomaly.severity === 'high' ? 'bg-red-400 animate-pulse' : anomaly.severity === 'medium' ? 'bg-amber-400' : 'bg-white/30'}`} />
                 <div className="flex-1 min-w-0">
-                  <span className="text-[12px] font-medium text-white/70">{anomaly.type || anomaly.label || 'Anomaly'}</span>
-                  <p className="text-[11px] text-white/35 leading-relaxed mt-0.5">{anomaly.detail || anomaly.description || JSON.stringify(anomaly)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-medium text-white/70">{anomaly.label || 'Anomaly'}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${anomaly.severity === 'high' ? 'bg-red-500/10 text-red-400' : anomaly.severity === 'medium' ? 'bg-amber-500/10 text-amber-400' : 'bg-white/[0.04] text-white/30'}`}>{anomaly.severity}</span>
+                  </div>
+                  <p className="text-[11px] text-white/35 leading-relaxed mt-0.5">{anomaly.detail || `Detected at ${anomaly.timestamp ? new Date(anomaly.timestamp).toLocaleTimeString() : 'now'}`}</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-[9px] text-white/15">
+                      Source: {anomaly.id === 'whale_transfer' ? 'Transfer pattern analysis' : anomaly.id === 'bot' ? 'Transaction frequency monitor' : anomaly.id === 'sleeper' ? 'Activity gap detection' : 'AI Anomaly Monitor'}
+                    </span>
+                    <a
+                      href={`https://testnet.flowscan.io/account/${live.monitorAddress || '0x93c691a98b975493'}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[9px] text-cyan-400/40 hover:text-cyan-400 transition-colors"
+                    >
+                      <Globe className="w-2.5 h-2.5" />
+                      Flowscan
+                    </a>
+                    <span className="text-[9px] text-white/10">
+                      {anomaly.severity === 'high' ? 'Action: Investigate immediately' : anomaly.severity === 'medium' ? 'Action: Monitor closely' : 'Action: No action needed'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -293,10 +346,10 @@ export default function OperatorDashboard() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
                 {[
-                  { label: 'Txs Analyzed', value: live.walletData?.txCount24h ?? '—' },
-                  { label: 'In/Out Ratio', value: live.walletData?.inOutRatio != null ? `${(live.walletData.inOutRatio * 100).toFixed(0)}%` : '—' },
-                  { label: 'Round Amounts', value: live.walletData?.roundAmountRatio != null ? `${(live.walletData.roundAmountRatio * 100).toFixed(0)}%` : '—' },
-                  { label: 'New Counterparties', value: live.walletData?.newCounterparties24h ?? '—' },
+                  { label: 'Balance', value: live.walletData?.balance != null ? `${Number(live.walletData.balance).toFixed(2)} FLOW` : '—' },
+                  { label: 'Lifetime Txs', value: live.walletData?.sequenceNumber ?? '—' },
+                  { label: 'Keys', value: live.walletData?.keyCount ?? '—' },
+                  { label: 'Contracts', value: live.walletData?.contractCount ?? '—' },
                 ].map((m, i) => (
                   <div key={i}>
                     <span className="text-white/20">{m.label}</span>
@@ -309,7 +362,17 @@ export default function OperatorDashboard() {
         </div>
       </SpotlightCard>
 
-      {/* Controls */}
+      {/* Regulatory Radar — Full 4-Step Workflow */}
+      <SpotlightCard className="p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <h3 className="text-[15px] font-semibold text-white/90">Regulatory Radar</h3>
+          <span className="text-[9px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-medium">AI AGENT</span>
+        </div>
+        <RegulatoryRadar onAuditEntry={addAuditEntry} onRefresh={handleRadarRefresh} />
+      </SpotlightCard>
+
+      {/* Controls + Agent Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SpotlightCard className="p-6">
           <div className="flex items-center gap-2 mb-5">
@@ -325,14 +388,23 @@ export default function OperatorDashboard() {
               {isRunningCycle ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
               {isRunningCycle ? 'Running Cycle...' : 'Run Monitoring Cycle'}
             </button>
-            <button
-              onClick={handleSimulateChange}
-              disabled={isSimulating}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] text-[12px] font-medium text-amber-400/70 hover:text-amber-400 hover:border-amber-500/30 transition-all disabled:opacity-40"
-            >
-              {isSimulating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-              {isSimulating ? 'Simulating...' : 'Simulate Regulatory Change'}
-            </button>
+            {!demoActive ? (
+              <button
+                onClick={handleSimulateThreat}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/20 bg-red-500/[0.04] text-[12px] font-medium text-red-400/70 hover:text-red-400 hover:border-red-500/30 transition-all"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Simulate Threat
+              </button>
+            ) : (
+              <button
+                onClick={handleClearThreat}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] text-[12px] font-medium text-emerald-400/70 hover:text-emerald-400 hover:border-emerald-500/30 transition-all"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Clear Threat
+              </button>
+            )}
           </div>
           <AnimatePresence>
             {cycleResults && !cycleResults.error && (
@@ -379,10 +451,10 @@ export default function OperatorDashboard() {
           <div className="space-y-3">
             {[
               { label: 'Monitoring Status', value: live.isLive ? 'Active' : 'Connecting...', dot: live.isLive ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse' },
-              { label: 'Risk Level', value: live.monitorRiskLevel || '—', dot: live.monitorRiskLevel === 'low' ? 'bg-emerald-400' : 'bg-amber-400' },
+              { label: 'Risk Level', value: live.monitorRiskLevel === 'none' ? 'Clear' : live.monitorRiskLevel || '—', dot: !live.monitorRiskLevel || live.monitorRiskLevel === 'none' ? 'bg-emerald-400' : live.monitorRiskLevel === 'low' ? 'bg-emerald-400' : 'bg-amber-400' },
               { label: 'Anomalies Detected', value: `${live.anomalyCount}`, dot: live.anomalyCount > 0 ? 'bg-red-400 animate-pulse' : 'bg-emerald-400' },
               { label: 'Data Source', value: live.isLive ? 'Flow Testnet' : 'Offline', dot: live.isLive ? 'bg-cyan-400' : 'bg-white/30' },
-              { label: 'Auto-Refresh', value: '30s interval', dot: 'bg-cyan-400 animate-pulse' },
+              { label: 'Refresh', value: demoActive ? 'Auto — updates on each action' : 'Manual — Run Monitoring Cycle', dot: 'bg-cyan-400' },
             ].map((row, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -398,6 +470,16 @@ export default function OperatorDashboard() {
           </p>
         </SpotlightCard>
       </div>
+
+      {/* Flow Automation — Scheduled Transactions, Flow Agents, Flow Actions */}
+      <SpotlightCard className="p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Calendar className="w-4 h-4 text-violet-400" />
+          <h3 className="text-[15px] font-semibold text-white/90">Flow Automation</h3>
+          <span className="text-[9px] px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 font-medium">FLOW PRIMITIVES</span>
+        </div>
+        <FlowAutomation onAuditEntry={addAuditEntry} />
+      </SpotlightCard>
 
       {/* Audit Log — Real-time from operator actions */}
       <SpotlightCard className="p-6">

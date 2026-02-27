@@ -227,7 +227,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-cyan-400 font-medium">View on FlowDiver</p>
+                    <p className="text-[11px] text-cyan-400 font-medium">View on Flowscan</p>
                     <p className="text-[9px] text-white/20 font-mono truncate">{txResult.transactionId}</p>
                   </div>
                 </a>

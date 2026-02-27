@@ -31,7 +31,7 @@
 3. Show **Account Info** panel: "These numbers — account age, transactions, contracts deployed — are all queried live from Flow testnet right now."
 4. Click **"Show compliance layer"**
 5. Show the on-chain status cards: Credential status, Risk score, Jurisdiction rules
-6. Scroll to **Deployed Contracts**: "These are our 6 real Cadence smart contracts deployed on Flow testnet. You can click this FlowDiver link to verify them yourself."
+6. Scroll to **Deployed Contracts**: "These are our 6 real Cadence smart contracts deployed on Flow testnet. You can click this Flowscan link to verify them yourself."
 7. Scroll to **On-Chain Rules**: "These rules are read directly from our RuleEngine contract. The travel rule threshold, KYC level — all stored on-chain."
 
 ## 4. Jurisdiction Change Scenario (45 sec)
@@ -71,7 +71,7 @@
 
 If live demo fails:
 - Have screen recording ready
-- Have FlowDiver tab open showing deployed contracts
+- Have Flowscan tab open showing deployed contracts
 - Have `curl` commands ready to show real API responses:
   ```bash
   curl http://localhost:3002/api/chain/account/0x93c691a98b975493
@@ -83,7 +83,7 @@ If live demo fails:
 
 | Question | Answer |
 |---|---|
-| "Is this actually on-chain?" | "Yes — 6 contracts on Flow testnet at 0x93c691a98b975493. Click the FlowDiver link to verify." |
+| "Is this actually on-chain?" | "Yes — 6 contracts on Flow testnet at 0x93c691a98b975493. Click the Flowscan link to verify." |
 | "How is this different from zkMe/zkPass?" | "Those are identity-only. FlowShield is full-stack compliance infrastructure — credentials, rule engine, autonomous monitoring, and one-line DeFi integration via Flow Actions." |
 | "What's the gas cost?" | "Zero for users — we use Flow's Sponsored Transactions. The protocol pays." |
 | "Can this work cross-chain?" | "The ZK verification layer is portable. The Cadence contracts are Flow-native, but the architecture supports FlowEVM bridging." |

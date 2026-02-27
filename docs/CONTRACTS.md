@@ -14,7 +14,6 @@ All contracts deployed to: **`0x93c691a98b975493`**
 | ComplianceAgent | `0x93c691a98b975493` | Autonomous monitoring agent |
 
 ### Verify on Block Explorers
-- **FlowDiver:** https://www.flowdiver.io/account/93c691a98b975493?tab=deployments
 - **Flowscan:** https://testnet.flowscan.io/account/0x93c691a98b975493
 
 ## Emulator

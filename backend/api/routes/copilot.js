@@ -2,8 +2,55 @@
 // Builder Copilot + Regulatory Radar API routes.
 
 import { Router } from 'express'
-import { chat } from '../../agents/builder-copilot.js'
-import { simulateRegulatoryChange, getScenarios, parseRegulation } from '../../agents/regulatory-radar.js'
+import { chat, scanCode } from '../../agents/builder-copilot.js'
+import { scanForGaps, parseRegulation } from '../../agents/regulatory-radar.js'
+import { logAudit, storeScanResult, fireWebhooks } from '../../lib/supabase.js'
+import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps } from '../../lib/demo-state.js'
+import elliptic from 'elliptic'
+import pkg from 'js-sha3'
+const { sha3_256 } = pkg
+const EC = elliptic.ec
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ec = new EC('p256')
+
+// ── Load private key (same key as pool.js) ──
+let PRIVATE_KEY = null
+try {
+  const pkeyPath = path.resolve(__dirname, '../../../flowshield-testnet2.pkey')
+  let raw = fs.readFileSync(pkeyPath, 'utf8').trim()
+  if (raw.startsWith('0x')) raw = raw.slice(2)
+  PRIVATE_KEY = raw
+} catch {
+  // pkey not available — will fall back to simulated
+}
+
+function signWithKey(privateKey, message) {
+  const key = ec.keyFromPrivate(Buffer.from(privateKey, 'hex'))
+  const digest = sha3_256(Buffer.from(message, 'hex'))
+  const sig = key.sign(Buffer.from(digest, 'hex'))
+  const n = 32
+  const r = sig.r.toArrayLike(Buffer, 'be', n)
+  const s = sig.s.toArrayLike(Buffer, 'be', n)
+  return Buffer.concat([r, s]).toString('hex')
+}
+
+function serverAuthorization(fcl, address, keyIndex = 0) {
+  return (account) => ({
+    ...account,
+    tempId: `${address}-${keyIndex}`,
+    addr: fcl.sansPrefix(address),
+    keyId: keyIndex,
+    signingFunction: async (signable) => ({
+      addr: fcl.withPrefix(address),
+      keyId: keyIndex,
+      signature: signWithKey(PRIVATE_KEY, signable.message),
+    }),
+  })
+}
 
 const router = Router()
 
@@ -11,15 +58,16 @@ const router = Router()
 const sessions = new Map()
 
 // POST /api/copilot/chat — Send message to Builder Copilot
+// Accepts optional `context` for personalized responses based on user's on-chain state.
 router.post('/chat', async (req, res) => {
-  const { message, sessionId = 'default' } = req.body
+  const { message, sessionId = 'default', context = null } = req.body
   if (!message) {
     return res.status(400).json({ error: 'message is required' })
   }
 
   try {
     const history = sessions.get(sessionId) || []
-    const result = await chat(message, history)
+    const result = await chat(message, history, context)
     sessions.set(sessionId, result.conversationHistory)
 
     res.json({
@@ -32,27 +80,84 @@ router.post('/chat', async (req, res) => {
   }
 })
 
-// POST /api/radar/simulate — Trigger a regulatory change demo scenario
-router.post('/radar/simulate', (req, res) => {
-  const { scenario } = req.body
-  if (!scenario) {
-    return res.status(400).json({
-      error: 'scenario is required',
-      availableScenarios: getScenarios(),
+// POST /api/copilot/scan-code — Analyze code for compliance issues
+router.post('/scan-code', async (req, res) => {
+  const { code, language = 'cadence', context = '' } = req.body
+  if (!code) {
+    return res.status(400).json({ error: 'code is required' })
+  }
+
+  try {
+    const result = await scanCode(code, language, context)
+    logAudit({
+      action: 'scan-code',
+      agent: 'copilot',
+      detail: { language, codeLength: code.length, source: result.source },
+      severity: 'info',
     })
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-
-  const result = simulateRegulatoryChange(scenario)
-  if (result.error) {
-    return res.status(400).json(result)
-  }
-
-  res.json(result)
 })
 
-// GET /api/radar/scenarios — List available demo scenarios
-router.get('/radar/scenarios', (req, res) => {
-  res.json({ scenarios: getScenarios() })
+// POST /api/radar/scan — AI scans real on-chain rules and compares against real regulations
+// Reads current RuleEngine state, sends to Claude, returns compliance gaps.
+// When demo mode is active, injects simulated regulatory gaps on top of real results.
+router.post('/radar/scan', async (req, res) => {
+  try {
+    const fcl = req.app.locals.fcl
+    const contractAddress = req.app.locals.contractAddress
+    const result = await scanForGaps(fcl, contractAddress)
+
+    // Inject demo radar gaps when demo mode is active
+    // Transform demo gap format to match the real gap structure the frontend expects
+    const demoGaps = getDemoRadarGaps()
+    if (demoGaps && demoGaps.length > 0) {
+      const normalizedDemoGaps = demoGaps.map(g => ({
+        jurisdiction: g.jurisdiction,
+        title: `${g.jurisdiction} — ${g.label}`,
+        severity: g.severity,
+        summary: g.summary,
+        regulatoryBasis: g.regulatoryBasis,
+        ruleKey: g.ruleKey,
+        currentOnChain: { [g.ruleKey]: g.currentValue },
+        requiredRules: { [g.ruleKey]: g.requiredValue },
+        effectiveDate: 'now',
+        demoGap: true,
+      }))
+      result.gaps = [...(result.gaps || []), ...normalizedDemoGaps]
+      // Remove affected jurisdictions from compliant list
+      const affectedJurisdictions = [...new Set(demoGaps.map(g => g.jurisdiction))]
+      result.compliantJurisdictions = (result.compliantJurisdictions || []).filter(
+        j => !affectedJurisdictions.includes(j)
+      )
+      result.overallAssessment = `${result.gaps.length} compliance gap(s) detected across ${affectedJurisdictions.join(', ')} — triggered by anomaly patterns requiring regulatory review.`
+      result.demoMode = true
+    }
+
+    // Log to Supabase (non-blocking)
+    logAudit({
+      action: 'scan',
+      agent: 'radar',
+      detail: { gapsCount: result.gaps?.length || 0, compliant: result.compliantJurisdictions, demoMode: !!demoGaps?.length },
+      severity: result.gaps?.length > 0 ? 'warning' : 'info',
+    })
+    storeScanResult({
+      scanType: 'radar',
+      result,
+      gapsCount: result.gaps?.length || 0,
+      source: result.source || 'compliance-checklist+ai',
+    })
+    if (result.gaps?.length > 0) {
+      fireWebhooks('gap', { gaps: result.gaps, compliant: result.compliantJurisdictions })
+    }
+
+    res.json(result)
+  } catch (err) {
+    console.error('[Radar] Scan failed:', err.message)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // POST /api/radar/parse — Parse custom regulatory text (uses Claude if available)
@@ -68,6 +173,151 @@ router.post('/radar/parse', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
+})
+
+// POST /api/radar/approve — Approve drafted rules and push on-chain (REAL transaction)
+// Demo gaps are resolved IN-MEMORY only (no on-chain push) to avoid creating real compliance issues.
+// Real gaps (from actual scans) push to RuleEngine.setRule() on-chain as before.
+router.post('/radar/approve', async (req, res) => {
+  const { jurisdiction, rules } = req.body
+  if (!jurisdiction || !rules) {
+    return res.status(400).json({ error: 'jurisdiction and rules are required' })
+  }
+
+  // ── Check if this is a demo gap — resolve in-memory only ────────────────
+  const ruleKeys = Object.keys(rules)
+  const demoResolved = ruleKeys.map(key => resolveDemoGap(jurisdiction, key)).filter(Boolean)
+
+  if (demoResolved.length > 0) {
+    const txHash = Array.from({ length: 64 }, () =>
+      '0123456789abcdef'[Math.floor(Math.random() * 16)]
+    ).join('')
+    const last = demoResolved[demoResolved.length - 1]
+    console.log(`[Radar] Demo gap resolved in-memory: ${jurisdiction} (${ruleKeys.join(', ')}) — ${last.remainingGaps} gaps, ${last.remainingThreats} anomalies left`)
+    return res.json({
+      success: true,
+      simulated: true,
+      txHash,
+      rulesApplied: Object.entries(rules).map(([key, value]) => ({ jurisdiction, key, value: String(value) })),
+      jurisdiction,
+      timestamp: new Date().toISOString(),
+      message: `Demo gap resolved — ${last.remainingGaps} gap(s) remaining`,
+      demoState: { remainingGaps: last.remainingGaps, remainingThreats: last.remainingThreats },
+    })
+  }
+
+  // ── Real gap — push on-chain ────────────────────────────────────────────
+  const fcl = req.app.locals.fcl
+  const address = req.app.locals.contractAddress
+
+  if (!PRIVATE_KEY || !fcl) {
+    console.warn('[Radar] No private key — using simulated approve')
+    const txHash = Array.from({ length: 64 }, () =>
+      '0123456789abcdef'[Math.floor(Math.random() * 16)]
+    ).join('')
+    return res.json({
+      success: true,
+      simulated: true,
+      txHash,
+      rulesApplied: Object.entries(rules).map(([key, value]) => ({ jurisdiction, key, value: String(value) })),
+      jurisdiction,
+      timestamp: new Date().toISOString(),
+      message: `Simulated — private key not available`,
+    })
+  }
+
+  try {
+    const authz = serverAuthorization(fcl, address)
+    const ruleEntries = Object.entries(rules)
+
+    // Send one transaction per rule update (RuleEngine.setRule)
+    const results = []
+    for (const [key, value] of ruleEntries) {
+      const txId = await fcl.mutate({
+        cadence: `
+          import RuleEngine from 0x${fcl.sansPrefix(address)}
+
+          transaction(jurisdiction: String, key: String, value: String) {
+            let admin: &RuleEngine.Admin
+            prepare(signer: auth(Storage) &Account) {
+              self.admin = signer.storage.borrow<&RuleEngine.Admin>(
+                from: RuleEngine.AdminStoragePath
+              ) ?? panic("Could not borrow RuleEngine Admin")
+            }
+            execute {
+              self.admin.setRule(jurisdiction: jurisdiction, key: key, value: value)
+            }
+          }
+        `,
+        args: (arg, t) => [
+          arg(jurisdiction, t.String),
+          arg(key, t.String),
+          arg(String(value), t.String),
+        ],
+        proposer: authz,
+        payer: authz,
+        authorizations: [authz],
+        limit: 999,
+      })
+
+      const txResult = await fcl.tx(txId).onceSealed()
+      results.push({
+        jurisdiction,
+        key,
+        value: String(value),
+        txId,
+        status: txResult.status,
+        blockHeight: txResult.blockHeight,
+      })
+      console.log(`[Radar] Rule updated on-chain: ${jurisdiction}.${key} = ${value} (tx: ${txId})`)
+    }
+
+    const lastResult = results[results.length - 1]
+
+    res.json({
+      success: true,
+      simulated: false,
+      txHash: lastResult.txId,
+      blockHeight: lastResult.blockHeight,
+      rulesApplied: results.map(r => ({ jurisdiction: r.jurisdiction, key: r.key, value: r.value, txId: r.txId })),
+      jurisdiction,
+      timestamp: new Date().toISOString(),
+      explorerUrl: `https://testnet.flowscan.io/tx/${lastResult.txId}`,
+      message: `${results.length} rule(s) updated for ${jurisdiction} on-chain via RuleEngine.setRule`,
+    })
+  } catch (err) {
+    console.error('[Radar] On-chain push failed:', err.message)
+    res.status(500).json({ error: err.message, source: 'flow-testnet' })
+  }
+})
+
+// POST /api/radar/approve-all — Resolve ALL remaining demo gaps at once (in-memory only)
+// Demo gaps are never pushed on-chain — they only exist in the demo simulation state.
+router.post('/radar/approve-all', async (req, res) => {
+  const demoGaps = getDemoRadarGaps()
+  if (!demoGaps || demoGaps.length === 0) {
+    return res.json({ success: true, message: 'No demo gaps to resolve', resolvedGaps: 0, resolvedThreats: 0 })
+  }
+
+  const gapSummary = demoGaps.map(g => ({ jurisdiction: g.jurisdiction, key: g.ruleKey, value: g.requiredValue }))
+
+  // Clear all demo state (gaps + linked anomalies)
+  const cleared = resolveAllDemoGaps()
+
+  logAudit({
+    action: 'approve-all',
+    agent: 'radar',
+    detail: { rulesApplied: gapSummary.length, ...cleared },
+    severity: 'info',
+  })
+
+  res.json({
+    success: true,
+    simulated: true,
+    rulesApplied: gapSummary,
+    ...cleared,
+    message: `Applied ${gapSummary.length} fix(es) — all gaps and anomalies resolved`,
+  })
 })
 
 export default router

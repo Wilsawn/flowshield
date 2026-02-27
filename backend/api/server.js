@@ -11,6 +11,9 @@ import copilotRoutes from './routes/copilot.js'
 import kycRoutes from './routes/kyc.js'
 import chainRoutes from './routes/chain.js'
 import poolRoutes from './routes/pool.js'
+import adminRoutes from './routes/admin.js'
+import { requireApiKey, rateLimit } from '../lib/middleware.js'
+import { getSupabase } from '../lib/supabase.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -26,6 +29,7 @@ const PORT = process.env.BACKEND_PORT || 3002
 // ── Middleware ──
 app.use(cors({ origin: true }))
 app.use(express.json())
+app.use(rateLimit({ windowMs: 60000, max: 200 }))
 
 // ── Configure FCL for Flow testnet ──
 const FLOW_NETWORK = process.env.FLOW_NETWORK || 'testnet'
@@ -55,6 +59,7 @@ app.use('/api/copilot', copilotRoutes)
 app.use('/api/kyc', kycRoutes)
 app.use('/api/chain', chainRoutes)
 app.use('/api/pool', poolRoutes)
+app.use('/api/admin', adminRoutes)
 
 // ── Health check ──
 app.get('/health', (req, res) => {
@@ -71,7 +76,8 @@ app.listen(PORT, () => {
   console.log(`[FlowShield API] Running on port ${PORT}`)
   console.log(`[FlowShield API] Flow network: ${FLOW_NETWORK}`)
   console.log(`[FlowShield API] Contract address: ${CONTRACT_ADDRESS}`)
-  console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`)
+  console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`) 
+  console.log(`[FlowShield API] Supabase: ${getSupabase() ? 'connected ✓' : 'not configured (local mode)'}`)
 })
 
 export default app

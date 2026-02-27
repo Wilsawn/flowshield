@@ -119,11 +119,60 @@ What are you building? I can give you specific integration code.`,
 }
 
 /**
+ * Build a context-aware system prompt by injecting the user's current on-chain state.
+ */
+function buildSystemPrompt(context) {
+  if (!context) return SYSTEM_PROMPT
+
+  const parts = [SYSTEM_PROMPT, '\n\n--- CURRENT USER CONTEXT (live on-chain data) ---']
+
+  if (context.riskScore != null) {
+    parts.push(`\nRisk Score: ${context.riskScore}/100 (Tier: ${context.riskTier || 'unknown'})`)
+  }
+  if (context.riskFactors?.length > 0) {
+    parts.push(`Active Risk Factors:\n${context.riskFactors.map(f => `  - ${f.label || f.id} (+${f.points} pts)`).join('\n')}`)
+  }
+  if (context.anomalyCount > 0) {
+    parts.push(`Anomalies Detected: ${context.anomalyCount}`)
+    if (context.anomalies?.length > 0) {
+      parts.push(`Active Anomalies:\n${context.anomalies.map(a => `  - [${a.severity}] ${a.title || a.id}: ${a.description || ''}`).join('\n')}`)
+    }
+  }
+  if (context.complianceStatus) {
+    parts.push(`Compliance Status: ${context.complianceStatus}`)
+  }
+  if (context.jurisdiction) {
+    parts.push(`Current Jurisdiction: ${context.jurisdiction}`)
+  }
+  if (context.demoMode) {
+    parts.push(`Demo Mode: ACTIVE — anomalies and gaps are simulated for testing`)
+  }
+  if (context.walletBalance != null) {
+    parts.push(`Wallet Balance: ${context.walletBalance} FLOW`)
+  }
+  if (context.deposited != null) {
+    parts.push(`Total Deposited: $${context.deposited}`)
+  }
+  if (context.borrowed != null) {
+    parts.push(`Total Borrowed: $${context.borrowed}`)
+  }
+
+  parts.push('\nUse this context to give personalized, specific advice. Reference exact numbers and factors. If risk factors are active, proactively explain what they mean and how to resolve them.')
+  parts.push('--- END CONTEXT ---')
+
+  return parts.join('\n')
+}
+
+/**
  * Chat with the Builder Copilot
  * Uses Claude API if available, falls back to pattern-matched responses
+ * @param {string} userMessage - The user's message
+ * @param {Array} conversationHistory - Previous messages
+ * @param {Object} context - Optional live context (risk score, anomalies, etc.)
  */
-export async function chat(userMessage, conversationHistory = []) {
+export async function chat(userMessage, conversationHistory = [], context = null) {
   const apiKey = process.env.CLAUDE_API_KEY
+  const systemPrompt = buildSystemPrompt(context)
 
   // Try Claude API first
   if (apiKey) {
@@ -136,7 +185,7 @@ export async function chat(userMessage, conversationHistory = []) {
         { role: 'user', content: userMessage },
       ]
 
-      const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20250929'
+      const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -147,7 +196,7 @@ export async function chat(userMessage, conversationHistory = []) {
         body: JSON.stringify({
           model,
           max_tokens: 2048,
-          system: SYSTEM_PROMPT,
+          system: systemPrompt,
           messages,
         }),
       })
@@ -196,4 +245,107 @@ export async function chat(userMessage, conversationHistory = []) {
   }
 }
 
-export { SYSTEM_PROMPT, FALLBACK_RESPONSES }
+const CODE_SCAN_PROMPT = `You are the FlowShield Codebase Compliance Scanner — an expert at analyzing smart contract code (Cadence, Solidity, or any DeFi protocol code) for compliance gaps.
+
+When given code, analyze it for:
+
+1. **KYC/AML Integration** — Does the code verify user identity before financial operations? Look for compliance checks, KYC gates, or FlowShield integration.
+2. **Travel Rule Compliance** — Are large transfers (>$1000 EU, >$3000 US) flagged or reported? Is there threshold checking?
+3. **Sanctions Screening** — Is there any mechanism to check against sanctioned addresses or entities?
+4. **Access Controls** — Are admin functions properly gated? Are there appropriate role-based permissions?
+5. **Fund Flow Tracking** — Can deposits, withdrawals, and transfers be traced for audit purposes?
+6. **Privacy Protections** — Is PII handled correctly? Are ZK proofs used instead of storing identity on-chain?
+7. **Rate Limiting / Anti-Abuse** — Are there mechanisms to prevent wash trading, flash loan attacks, or rapid in-out patterns?
+8. **Jurisdiction Awareness** — Does the code handle different regulatory requirements per jurisdiction?
+
+For each issue found, provide:
+- **Severity**: critical / high / medium / low
+- **Location**: which function or section
+- **Issue**: what's wrong
+- **Fix**: how to fix it, with code example if applicable (use FlowShield integration where possible)
+
+If the code is already well-compliant, say so and suggest optimizations.
+
+FlowShield integration is always: \`import ComplianceAction from 0x93c691a98b975493\` then \`ComplianceAction.verify(address)\` before operations.
+
+Be specific, actionable, and reference exact line numbers or function names from the provided code.`
+
+/**
+ * Scan code for compliance issues
+ * @param {string} code - The source code to analyze
+ * @param {string} language - The programming language (cadence, solidity, etc.)
+ * @param {string} context - Optional additional context about the project
+ */
+export async function scanCode(code, language = 'cadence', context = '') {
+  const apiKey = process.env.CLAUDE_API_KEY
+
+  const userMessage = `Analyze this ${language} code for compliance issues:\n\n\`\`\`${language}\n${code}\n\`\`\`${context ? `\n\nAdditional context: ${context}` : ''}`
+
+  if (apiKey) {
+    try {
+      const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 3000,
+          system: CODE_SCAN_PROMPT,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        return { analysis: data.content[0].text, source: 'claude-ai' }
+      }
+    } catch (err) {
+      console.warn('[Copilot] Code scan Claude error:', err.message)
+    }
+  }
+
+  // Fallback: deterministic pattern-based analysis
+  const issues = []
+  const codeLower = code.toLowerCase()
+
+  if (!codeLower.includes('complianceaction') && !codeLower.includes('compliance') && !codeLower.includes('kyc')) {
+    issues.push({ severity: 'critical', location: 'Global', issue: 'No compliance/KYC integration detected', fix: 'Add `import ComplianceAction from 0x93c691a98b975493` and call `ComplianceAction.verify(address)` before all financial operations.' })
+  }
+  if ((codeLower.includes('deposit') || codeLower.includes('transfer') || codeLower.includes('withdraw')) && !codeLower.includes('verify')) {
+    issues.push({ severity: 'high', location: 'Financial operations', issue: 'Financial operations lack verification gates', fix: 'Wrap deposit/transfer/withdraw functions with `assert(ComplianceAction.verify(user), message: "Compliance required")`' })
+  }
+  if (!codeLower.includes('threshold') && !codeLower.includes('travel') && !codeLower.includes('limit')) {
+    issues.push({ severity: 'medium', location: 'Global', issue: 'No travel rule threshold checking', fix: 'Check transfer amounts against jurisdiction thresholds: `RuleEngine.getTravelRuleThreshold(jurisdiction)`' })
+  }
+  if (!codeLower.includes('sanction') && !codeLower.includes('blocked') && !codeLower.includes('deny')) {
+    issues.push({ severity: 'medium', location: 'Global', issue: 'No sanctions screening', fix: 'Add sanctions check: FlowShield handles this automatically via `ComplianceAction.verify()` which checks against sanctions lists.' })
+  }
+  if (!codeLower.includes('admin') && !codeLower.includes('owner') && !codeLower.includes('auth')) {
+    issues.push({ severity: 'low', location: 'Global', issue: 'No explicit access controls detected', fix: 'Use Cadence\'s `access(all)` and `auth()` annotations for proper access control.' })
+  }
+  if (!codeLower.includes('emit') && !codeLower.includes('event') && !codeLower.includes('log')) {
+    issues.push({ severity: 'low', location: 'Global', issue: 'No event emissions for audit trail', fix: 'Emit events for all financial operations to enable audit logging.' })
+  }
+
+  const score = issues.length === 0 ? 100 : Math.max(0, 100 - issues.reduce((sum, i) => sum + ({ critical: 30, high: 20, medium: 10, low: 5 }[i.severity] || 0), 0))
+
+  let analysis = `## Compliance Scan Results\n\n**Compliance Score: ${score}/100** ${score >= 80 ? '✓ Good' : score >= 50 ? '⚠ Needs Work' : '✗ Critical Issues'}\n\n`
+  if (issues.length === 0) {
+    analysis += 'No compliance issues detected. Your code appears well-integrated with compliance checks.\n'
+  } else {
+    analysis += `**${issues.length} issue(s) found:**\n\n`
+    issues.forEach((issue, i) => {
+      analysis += `### ${i + 1}. [${issue.severity.toUpperCase()}] ${issue.issue}\n`
+      analysis += `**Location:** ${issue.location}\n`
+      analysis += `**Fix:** ${issue.fix}\n\n`
+    })
+  }
+
+  return { analysis, source: 'deterministic-scanner', score, issues }
+}
+
+export { SYSTEM_PROMPT, FALLBACK_RESPONSES, CODE_SCAN_PROMPT }

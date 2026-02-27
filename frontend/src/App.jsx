@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import LandingPage from './pages/index'
 import Dashboard from './pages/dashboard'
@@ -7,6 +7,14 @@ import OperatorPage from './pages/operator'
 import PrivacyPolicy from './pages/privacy'
 import TermsOfService from './pages/terms'
 
+function RequireAuth({ children }) {
+  try {
+    const stored = localStorage.getItem('flowshield_user')
+    if (stored && JSON.parse(stored).email) return children
+  } catch { /* ignore */ }
+  return <Navigate to="/" replace />
+}
+
 export default function App() {
   return (
     <Routes>
@@ -14,9 +22,9 @@ export default function App() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route element={<Layout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/copilot" element={<CopilotPage />} />
-        <Route path="/operator" element={<OperatorPage />} />
+        <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/copilot" element={<RequireAuth><CopilotPage /></RequireAuth>} />
+        <Route path="/operator" element={<RequireAuth><OperatorPage /></RequireAuth>} />
       </Route>
     </Routes>
   )

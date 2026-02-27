@@ -1,146 +1,210 @@
 // anomaly-monitor.js
-// Post-verification behavioral monitoring. Rule-based, no API needed.
-// Flags wallets exhibiting suspicious patterns after KYC verification.
-
-const ANOMALY_TYPES = [
-  {
-    id: 'high_frequency',
-    label: 'Unusually high transaction frequency',
-    severity: 'medium',
-    check: (a) => a.txCount1h > 20,
-  },
-  {
-    id: 'large_volume',
-    label: 'Single large transaction exceeds threshold',
-    severity: 'high',
-    check: (a) => a.largestTx > 10000,
-  },
-  {
-    id: 'rapid_transfer',
-    label: 'Rapid in-out transfer pattern',
-    severity: 'high',
-    check: (a) => a.inOutRatio > 0.9 && a.txCount1h > 5,
-  },
-  {
-    id: 'dormancy_spike',
-    label: 'Dormant account suddenly active',
-    severity: 'medium',
-    check: (a) => a.daysSinceLastTx > 90 && a.txCount24h > 10,
-  },
-  {
-    id: 'flagged_contract',
-    label: 'Interaction with flagged contract',
-    severity: 'high',
-    check: (a) => a.flaggedContractInteractions > 0,
-  },
-  {
-    id: 'split_pattern',
-    label: 'Transaction splitting pattern detected',
-    severity: 'medium',
-    check: (a) => a.splitPatternScore > 0.7,
-  },
-  {
-    id: 'counterparty_spike',
-    label: 'Unusual number of new counterparties',
-    severity: 'low',
-    check: (a) => a.newCounterparties24h > 15,
-  },
-  {
-    id: 'round_amounts',
-    label: 'Suspiciously round transaction amounts',
-    severity: 'low',
-    check: (a) => a.roundAmountRatio > 0.8 && a.txCount24h > 5,
-  },
-]
+// Hybrid AI behavioral monitoring agent (same pattern as regulatory radar):
+//   1. Deterministic thresholds detect anomalies (same data = same result)
+//   2. Claude AI enriches descriptions (cannot add/remove anomalies)
+//   3. Thresholds set for REAL usage — normal testnet activity won't flag
+//
+// Your wallet: 200K FLOW, 6 contracts, 39 txs, 1 key = ALL NORMAL. Zero anomalies.
 
 const SEVERITY_ORDER = { low: 1, medium: 2, high: 3 }
 
-const ACTIONS = {
-  low: 'monitor',
-  medium: 're-verify',
-  high: 'flag-and-review',
+/**
+ * Gather real on-chain data for an address from Flow
+ */
+async function gatherOnChainData(address, fcl) {
+  try {
+    const account = await fcl.account(address)
+    return {
+      address,
+      balance: parseFloat(account.balance) / 100000000, // Convert from UFix64 storage
+      keyCount: account.keys?.length || 0,
+      sequenceNumber: account.keys?.[0]?.sequenceNumber || 0,
+      contractCount: Object.keys(account.contracts || {}).length,
+      contracts: Object.keys(account.contracts || {}),
+      network: 'testnet',
+      source: 'flow-testnet-live',
+    }
+  } catch (err) {
+    console.warn(`[AnomalyMonitor] Could not fetch on-chain data for ${address}:`, err.message)
+    return {
+      address,
+      balance: null,
+      keyCount: null,
+      sequenceNumber: null,
+      contractCount: null,
+      network: 'testnet',
+      source: 'unavailable',
+      error: err.message,
+    }
+  }
 }
 
 /**
- * Detect anomalies in wallet activity data
- * @param {object} activity - Wallet activity metrics
- * @returns {{ anomalyCount, highestSeverity, recommendedAction, anomalies }}
+ * Deterministic anomaly detection — fixed thresholds.
+ * Same wallet data = same anomalies. No randomness.
+ *
+ * Thresholds are set for REAL usage — testnet operator accounts with
+ * high balances and multiple contracts are NORMAL and won't flag.
+ * Only genuinely suspicious patterns trigger anomalies.
  */
-export function detectAnomalies(activity) {
-  const anomalies = []
-  let highestSeverity = 'low'
+const ANOMALY_RULES = [
+  {
+    id: 'high_frequency',
+    label: 'Automated transaction pattern',
+    severity: 'medium',
+    check: (d) => d.sequenceNumber > 500,
+    detail: (d) => `${d.sequenceNumber} lifetime transactions — consistent with bot/automated activity`,
+  },
+  {
+    id: 'extreme_balance',
+    label: 'Extremely large balance',
+    severity: 'high',
+    check: (d) => d.balance > 1000000, // > 1M FLOW is genuinely unusual
+    detail: (d) => `${d.balance.toFixed(2)} FLOW — exceeds 1M threshold, requires review`,
+  },
+  {
+    id: 'multi_key_risk',
+    label: 'Excessive signing keys',
+    severity: 'medium',
+    check: (d) => d.keyCount > 5,
+    detail: (d) => `${d.keyCount} keys on account — potential shared access or key management issue`,
+  },
+  {
+    id: 'dormant_reactivation',
+    label: 'Dormant account suddenly active',
+    severity: 'medium',
+    check: (d) => d.sequenceNumber === 0 && d.balance > 10000,
+    detail: (d) => `Account funded with ${d.balance.toFixed(2)} FLOW but zero transactions — potential sleeper account`,
+  },
+]
 
-  for (const type of ANOMALY_TYPES) {
+function detectAnomalies(walletData) {
+  const anomalies = []
+
+  if (walletData.source === 'unavailable') {
+    return {
+      anomalies: [],
+      summary: 'Could not fetch on-chain data. Monitor will retry on next cycle.',
+      recommendation: 'none',
+    }
+  }
+
+  for (const rule of ANOMALY_RULES) {
     try {
-      if (type.check(activity)) {
+      if (rule.check(walletData)) {
         anomalies.push({
-          id: type.id,
-          label: type.label,
-          severity: type.severity,
+          id: rule.id,
+          label: rule.label,
+          detail: rule.detail(walletData),
+          severity: rule.severity,
           timestamp: new Date().toISOString(),
         })
-        if (SEVERITY_ORDER[type.severity] > SEVERITY_ORDER[highestSeverity]) {
-          highestSeverity = type.severity
-        }
       }
-    } catch {
-      // Skip if activity data is incomplete
+    } catch { /* skip if data missing */ }
+  }
+
+  let highestSeverity = 'none'
+  for (const a of anomalies) {
+    if (SEVERITY_ORDER[a.severity] > (SEVERITY_ORDER[highestSeverity] || 0)) {
+      highestSeverity = a.severity
     }
   }
 
+  const ACTIONS = { low: 'monitor', medium: 're-verify', high: 'flag-and-review' }
   return {
-    anomalyCount: anomalies.length,
-    highestSeverity: anomalies.length > 0 ? highestSeverity : 'none',
-    recommendedAction: anomalies.length > 0 ? ACTIONS[highestSeverity] : 'none',
     anomalies,
+    summary: anomalies.length > 0
+      ? `${anomalies.length} anomaly pattern(s) detected that require attention.`
+      : 'No suspicious activity detected. Account behavior is within normal parameters.',
+    recommendation: anomalies.length > 0 ? ACTIONS[highestSeverity] : 'none',
+    highestSeverity,
   }
 }
 
 /**
- * Fetch activity data for a single address and detect anomalies
- * In production: query a Flow indexer for real transaction history
- * For now: uses deterministic mock based on address
+ * Claude AI enrichment for anomaly descriptions (same pattern as regulatory radar).
+ * Claude CANNOT add or remove anomalies — only improve descriptions.
+ */
+async function enrichAnomaliesWithClaude(anomalies, walletData) {
+  const apiKey = process.env.CLAUDE_API_KEY
+  if (!apiKey || anomalies.length === 0) return anomalies
+
+  try {
+    const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        system: `You are a blockchain compliance analyst. You will receive anomalies detected on a Flow wallet. For each anomaly, write a better 1-2 sentence "detail" explaining the risk.
+
+RULES:
+- Do NOT add new anomalies. Do NOT remove any.
+- ONLY improve the "detail" field.
+- Return ONLY a JSON array: [{"index": 0, "detail": "improved detail"}, ...]`,
+        messages: [{
+          role: 'user',
+          content: `Wallet: ${JSON.stringify({ address: walletData.address, balance: walletData.balance, keyCount: walletData.keyCount, sequenceNumber: walletData.sequenceNumber, contractCount: walletData.contractCount })}\n\nAnomalies:\n${JSON.stringify(anomalies.map((a, i) => ({ index: i, id: a.id, label: a.label, detail: a.detail })), null, 2)}`,
+        }],
+      }),
+    })
+
+    if (!res.ok) return anomalies
+
+    const data = await res.json()
+    const text = data.content[0].text
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (!jsonMatch) return anomalies
+
+    const enrichments = JSON.parse(jsonMatch[0])
+    const enriched = [...anomalies]
+    for (const e of enrichments) {
+      if (typeof e.index === 'number' && e.detail && enriched[e.index]) {
+        enriched[e.index].detail = e.detail
+      }
+    }
+    console.log(`[AnomalyMonitor] Claude enriched ${enrichments.length} anomaly descriptions`)
+    return enriched
+  } catch (err) {
+    console.warn('[AnomalyMonitor] Claude enrichment failed (using base descriptions):', err.message)
+    return anomalies
+  }
+}
+
+/**
+ * Monitor a single address — hybrid pattern:
+ *   1. Gather real on-chain data
+ *   2. Deterministic anomaly detection (fixed thresholds)
+ *   3. Claude AI enriches descriptions (cannot add/remove anomalies)
+ *
+ * Same wallet data always produces the same anomaly list.
  */
 export async function monitorAddress(address, fcl) {
-  let activity
-  try {
-    // Try to get real account data from Flow
-    const account = await fcl.account(address)
-    const seqNum = account.keys?.[0]?.sequenceNumber || 0
+  // 1. Gather real on-chain data
+  const walletData = await gatherOnChainData(address, fcl)
+  console.log(`[AnomalyMonitor] On-chain: balance=${walletData.balance}, seq=${walletData.sequenceNumber}, keys=${walletData.keyCount}, contracts=${walletData.contractCount}`)
 
-    activity = {
-      address,
-      txCount1h: Math.min(seqNum % 25, 25),
-      txCount24h: Math.min(seqNum % 60, 60),
-      largestTx: (seqNum * 17) % 15000,
-      inOutRatio: (seqNum % 100) / 100,
-      daysSinceLastTx: seqNum > 0 ? 1 : 120,
-      flaggedContractInteractions: 0,
-      splitPatternScore: (seqNum % 50) / 100,
-      newCounterparties24h: seqNum % 20,
-      roundAmountRatio: (seqNum % 30) / 100,
-      source: 'flow-testnet',
-    }
-  } catch {
-    // Mock fallback
-    const hash = address.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-    activity = {
-      address,
-      txCount1h: hash % 25,
-      txCount24h: hash % 50,
-      largestTx: (hash * 7) % 15000,
-      inOutRatio: (hash % 100) / 100,
-      daysSinceLastTx: hash % 120,
-      flaggedContractInteractions: hash % 19 === 0 ? 1 : 0,
-      splitPatternScore: (hash % 80) / 100,
-      newCounterparties24h: hash % 20,
-      roundAmountRatio: (hash % 60) / 100,
-      source: 'mock-fallback',
-    }
+  // 2. Deterministic anomaly detection
+  const detection = detectAnomalies(walletData)
+  console.log(`[AnomalyMonitor] Deterministic: ${detection.anomalies.length} anomalies`)
+
+  // 3. Claude AI enriches descriptions (cannot add/remove)
+  const enrichedAnomalies = await enrichAnomaliesWithClaude(detection.anomalies, walletData)
+
+  return {
+    anomalyCount: enrichedAnomalies.length,
+    highestSeverity: detection.highestSeverity,
+    recommendedAction: detection.recommendation,
+    summary: detection.summary,
+    anomalies: enrichedAnomalies,
+    activity: walletData,
+    analysisSource: enrichedAnomalies.length > 0 ? 'checklist+ai' : 'checklist',
   }
-
-  const result = detectAnomalies(activity)
-  return { ...result, activity }
 }
 
 /**
@@ -162,4 +226,4 @@ export async function runMonitoringCycle(addresses, fcl) {
   }
 }
 
-export { ANOMALY_TYPES }
+export { ANOMALY_RULES }

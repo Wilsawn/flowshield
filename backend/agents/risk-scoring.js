@@ -80,7 +80,7 @@ export async function fetchWalletData(address, fcl) {
       rapidInOut: false,
       flaggedContracts: 0,
       mixerInteractions: 0,
-      fundingSources: contractCount > 3 ? 6 : 1,
+      fundingSources: 1, // On-chain: can't determine funding sources without indexer
       dormancySpike: false,
       keyCount: account.keys?.length || 0,
       contractCount,
