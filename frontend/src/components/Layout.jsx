@@ -201,9 +201,9 @@ export default function Layout() {
                 href="https://flow.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-gradient-to-r from-emerald-500/[0.04] to-cyan-500/[0.04] border border-white/[0.03] hover:border-emerald-500/15 transition-all group"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-gradient-to-r from-emerald-500/[0.08] to-cyan-500/[0.08] border border-white/[0.06] hover:border-emerald-500/20 transition-all group"
               >
-                <span className="text-[9px] text-white/20 group-hover:text-white/35 transition-colors font-medium tracking-wide">POWERED BY</span>
+                <span className="text-[9px] text-white/40 group-hover:text-white/60 transition-colors font-medium tracking-wide">POWERED BY</span>
                 <span className="text-[10px] font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">FLOW</span>
               </a>
             </motion.div>

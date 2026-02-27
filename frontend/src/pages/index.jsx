@@ -441,16 +441,16 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FOOTER ─── */}
-      <footer className="relative z-10 border-t border-white/[0.04] mt-8">
+      <footer className="relative z-10 border-t border-white/[0.08] mt-8">
         <div className="max-w-[1080px] mx-auto px-6 pt-14 pb-10">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-14">
             {/* Brand */}
             <div>
               <div className="flex items-center gap-2.5 mb-3">
                 <FlowShieldLogo size={20} />
-                <span className="text-[14px] font-semibold text-white/60">FlowShield</span>
+                <span className="text-[14px] font-semibold text-white/80">FlowShield</span>
               </div>
-              <p className="text-[12px] text-white/40 leading-relaxed max-w-[240px]">
+              <p className="text-[12px] text-white/55 leading-relaxed max-w-[240px]">
                 Privacy-preserving compliance infrastructure for DeFi on Flow.
               </p>
             </div>
@@ -475,9 +475,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="border-t border-white/[0.04] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-[11px] text-white/35">&copy; {new Date().getFullYear()} FlowShield. All rights reserved.</p>
-            <p className="text-[11px] text-white/35">Built on Flow Blockchain</p>
+          <div className="border-t border-white/[0.08] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-[11px] text-white/50">&copy; {new Date().getFullYear()} FlowShield. All rights reserved.</p>
+            <p className="text-[11px] text-white/50">Built on Flow Blockchain</p>
           </div>
 
           {/* Giant brand text */}
@@ -485,7 +485,7 @@ export default function LandingPage() {
             className="mt-12 -mb-4 select-none pointer-events-none"
             style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
           >
-            <h2 className="text-[clamp(5rem,15vw,12rem)] font-black tracking-[-0.04em] leading-[0.85] text-center text-emerald-400/[0.12]">
+            <h2 className="text-[clamp(5rem,15vw,12rem)] font-black tracking-[-0.04em] leading-[0.85] text-center text-emerald-400/[0.25]">
               FlowShield
             </h2>
           </div>
