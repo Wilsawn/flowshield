@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import GlowOrbs from '@/components/GlowOrbs'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/copilot', label: 'Builder Copilot', icon: MessageSquare },
   { to: '/operator', label: 'Operator', icon: Settings },
+  { to: '/pricing', label: 'API Pricing', icon: Coins },
 ]
 
 export default function Layout() {

@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import SpotlightCard from '@/components/ui/spotlight-card'
 import AnimatedTicker from '@/components/ui/animated-ticker'
 import VerificationPanel from '@/components/VerificationPanel'
+import WalletButton from '@/components/WalletButton'
+import ZKProofBadge from '@/components/ZKProofBadge'
 import { JURISDICTIONS, JURISDICTION_LIST, getJurisdiction } from '@/data/jurisdictions'
 import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
@@ -189,6 +191,8 @@ export default function Dashboard() {
                 <span className="text-[10px] font-medium text-emerald-400/70">Live · Flow Testnet</span>
               </div>
             )}
+            {/* Connect Wallet — real FCL Discovery */}
+            <WalletButton />
             {/* Jurisdiction Selector */}
             <div className="relative" ref={jurisdictionRef}>
               <button
@@ -288,6 +292,11 @@ export default function Dashboard() {
               {f.label}
             </motion.div>
           ))}
+        </div>
+
+        {/* ZK Proof Badge — shows proof details from onboarding */}
+        <div className="mb-6">
+          <ZKProofBadge />
         </div>
 
         {/* Credential Expiration Banner */}
