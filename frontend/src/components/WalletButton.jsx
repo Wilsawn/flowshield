@@ -2,11 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, LogOut, ShieldCheck, ShieldX, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
 
-const FLOW_NETWORK = import.meta.env.VITE_FLOW_NETWORK || 'testnet'
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x93c691a98b975493'
-const DISCOVERY_URL = FLOW_NETWORK === 'testnet'
-  ? 'https://fcl-discovery.onflow.org/testnet/authn'
-  : 'https://fcl-discovery.onflow.org/authn'
 
 export default function WalletButton() {
   const [walletUser, setWalletUser] = useState(null)
@@ -44,31 +40,8 @@ export default function WalletButton() {
 
   const handleConnect = () => {
     setShowDiscovery(true)
-    setConnecting(true)
   }
 
-  // Listen for FCL Discovery postMessage responses (from iframe)
-  useEffect(() => {
-    if (!showDiscovery) return
-    const handleMessage = (event) => {
-      try {
-        const data = event.data
-        if (data?.type === 'FCL:VIEW:RESPONSE' || data?.addr || data?.address) {
-          const addr = data.addr || data.address || data?.data?.addr
-          if (addr) {
-            const user = { loggedIn: true, addr }
-            setWalletUser(user)
-            localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-            checkComplianceStatus(addr)
-            setShowDiscovery(false)
-            setConnecting(false)
-          }
-        }
-      } catch { /* ignore */ }
-    }
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [showDiscovery])
 
   const handleManualConnect = () => {
     const addr = manualAddr.trim()
@@ -158,14 +131,41 @@ export default function WalletButton() {
                   </button>
                 </div>
 
-                {/* FCL Discovery iframe */}
-                <div className="h-[340px] bg-white rounded-sm mx-3 mt-3 overflow-hidden">
-                  <iframe
-                    src={DISCOVERY_URL}
-                    title="Flow Wallet Discovery"
-                    className="w-full h-full border-0"
-                    allow="publickey-credentials-get *"
-                  />
+                {/* Quick connect — demo account */}
+                <div className="px-4 pt-4 space-y-2">
+                  <button
+                    onClick={() => {
+                      const user = { loggedIn: true, addr: CONTRACT_ADDRESS }
+                      setWalletUser(user)
+                      localStorage.setItem('flowshield_wallet', JSON.stringify(user))
+                      checkComplianceStatus(user.addr)
+                      setShowDiscovery(false)
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08] hover:border-emerald-500/30 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-[13px] font-medium text-emerald-400/90">FlowShield Demo Account</p>
+                      <p className="text-[10px] text-white/30 font-mono">0x93c6...5493 · Credentials + Contracts deployed</p>
+                    </div>
+                  </button>
+
+                  <a
+                    href={`https://testnet.flowscan.io/account/${CONTRACT_ADDRESS}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center">
+                      <ExternalLink className="w-4 h-4 text-white/40" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[13px] font-medium text-white/70 group-hover:text-white/90">View on Flowscan</p>
+                      <p className="text-[10px] text-white/30">Verify contracts and credentials on-chain</p>
+                    </div>
+                  </a>
                 </div>
 
                 {/* Divider */}

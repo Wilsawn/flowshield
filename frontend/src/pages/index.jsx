@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck, Fingerprint, Zap, ArrowUpRight, Code2, Globe, Bot, Eye } from 'lucide-react'
+import { ShieldCheck, Fingerprint, Zap, ArrowUpRight, Code2, Globe, Bot, Eye, Lock, Scale, Cpu, Workflow } from 'lucide-react'
 import { motion } from 'framer-motion'
 import DisplayCards from '@/components/ui/display-cards'
 import AuroraBackground from '@/components/ui/aurora-background'
@@ -138,52 +138,64 @@ export default function LandingPage() {
         </Marquee>
       </section>
 
-      {/* ─── METRICS ─── */}
+      {/* ─── METRICS + TRUST ─── */}
       <section className="relative z-10 py-20">
         <div className="max-w-[1080px] mx-auto px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+          {/* Stats in glass cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-16">
             {[
-              { val: 0, prefix: '', suffix: '%', label: 'Identity data on-chain' },
-              { val: 2, prefix: '<', suffix: 's', label: 'Verification time' },
-              { val: 1, prefix: '', suffix: ' line', label: 'Protocol integration' },
+              { val: 7, suffix: '', label: 'Cadence Contracts', sub: 'Deployed on Flow testnet', color: 'from-emerald-500/20 to-emerald-500/5', accent: 'text-emerald-400', dot: 'bg-emerald-400' },
+              { val: 5, suffix: '', label: 'Jurisdictions', sub: 'US · EU · UK · SG · CA', color: 'from-cyan-500/20 to-cyan-500/5', accent: 'text-cyan-400', dot: 'bg-cyan-400' },
+              { val: 0, suffix: '%', label: 'Identity On-Chain', sub: 'Only math proofs and booleans', color: 'from-violet-500/20 to-violet-500/5', accent: 'text-violet-400', dot: 'bg-violet-400' },
             ].map((s, i) => (
               <motion.div
                 key={i}
-                className="text-center"
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <p className="text-[2.4rem] sm:text-[3.2rem] font-bold tracking-tight bg-gradient-to-b from-white to-white/30 bg-clip-text text-transparent">
-                  {s.prefix}<AnimatedTicker value={s.val} suffix={s.suffix} />
-                </p>
-                <p className="text-[13px] text-white/45 mt-2 tracking-wide">{s.label}</p>
+                <SpotlightCard className="p-6 text-center group">
+                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-b ${s.color} mb-4`}>
+                    <p className={`text-[1.8rem] font-bold tracking-tight ${s.accent}`}>
+                      <AnimatedTicker value={s.val} suffix={s.suffix} />
+                    </p>
+                  </div>
+                  <p className="text-[14px] font-semibold text-white/80 mb-1">{s.label}</p>
+                  <p className="text-[11px] text-white/35">{s.sub}</p>
+                </SpotlightCard>
               </motion.div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ─── TRUST BAR ─── */}
-      <section className="relative z-10 py-12 border-b border-white/[0.04]">
-        <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-[10px] text-white/40 uppercase tracking-[0.25em] font-semibold text-center mb-8">Compliance Standards Supported</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {[
-              { label: 'FinCEN', sub: 'BSA / AML' },
-              { label: 'MiCA', sub: 'EU Regulation' },
-              { label: 'FCA', sub: 'UK Framework' },
-              { label: 'FINTRAC', sub: 'Canada MSB' },
-              { label: 'FATF', sub: 'Travel Rule' },
-              { label: 'MAS', sub: 'Singapore PSA' },
-            ].map((std) => (
-              <div key={std.label} className="text-center group">
-                <p className="text-[14px] font-bold text-white/40 group-hover:text-white/60 transition-colors">{std.label}</p>
-                <p className="text-[9px] text-white/35 mt-0.5">{std.sub}</p>
-              </div>
-            ))}
-          </div>
+          {/* Compliance standards — compact pill row */}
+          <motion.div
+            className="flex flex-col items-center gap-4"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-semibold">Compliance frameworks</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {[
+                { label: 'FinCEN', sub: 'BSA/AML' },
+                { label: 'MiCA', sub: 'EU' },
+                { label: 'FCA', sub: 'UK' },
+                { label: 'FINTRAC', sub: 'Canada' },
+                { label: 'FATF', sub: 'Travel Rule' },
+                { label: 'MAS', sub: 'Singapore' },
+              ].map((std) => (
+                <span
+                  key={std.label}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[11px] font-medium text-white/40 hover:text-white/60 hover:border-white/[0.1] transition-all cursor-default"
+                >
+                  <span className="font-bold text-white/55">{std.label}</span>
+                  <span className="text-white/20">·</span>
+                  <span>{std.sub}</span>
+                </span>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -193,18 +205,18 @@ export default function LandingPage() {
           <motion.p
             className="text-[11px] font-semibold text-emerald-400/70 uppercase tracking-[0.25em] mb-4 text-center"
             initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          >See it in action</motion.p>
+          >Architecture</motion.p>
           <motion.h2
             className="text-[2rem] md:text-[2.8rem] font-bold tracking-[-0.02em] leading-[1.1] text-center mb-4"
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           >
-            One platform, every compliance layer.
+            See how the pieces connect.
           </motion.h2>
           <motion.p
             className="text-[13px] text-white/40 text-center mb-12"
             initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
           >
-            Drag the nodes around · Scroll to zoom · See how it all connects
+            Drag the nodes around · Scroll to zoom · Click to explore
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
@@ -307,35 +319,98 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <p className="text-[11px] font-semibold text-emerald-400/70 uppercase tracking-[0.25em] mb-5">Built on Flow Primitives</p>
+            <p className="text-[11px] font-semibold text-emerald-400/70 uppercase tracking-[0.25em] mb-5">Under the hood</p>
             <h2 className="text-[2.8rem] md:text-[3.2rem] font-bold tracking-[-0.02em]">
-              What your protocol
-               gets out of the box.
+              Every layer, purpose-built.
             </h2>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: <Eye className="w-5 h-5" />, title: 'Zero-Knowledge Proofs', desc: 'Your users prove compliance without revealing personal information. Proofs are generated on the client and the chain only stores a boolean result.' },
-              { icon: <Fingerprint className="w-5 h-5" />, title: 'Passkey Onboarding', desc: 'Account creation through WebAuthn. Your users tap a fingerprint or scan their face. The Flow account is created and funded behind the scenes.' },
-              { icon: <Bot className="w-5 h-5" />, title: 'AI Regulatory Radar', desc: 'An AI agent monitors regulatory changes across MiCA, FATF, FinCEN, and FINTRAC. When a rule changes, your on-chain policy adapts automatically.' },
-              { icon: <Zap className="w-5 h-5" />, title: 'Flow Actions', desc: 'Attach a compliance pre-check to any transaction using Flow Actions. The check runs before every deposit, borrow, or swap.' },
-              { icon: <Globe className="w-5 h-5" />, title: 'Multi-Jurisdiction', desc: 'Supports EU, US, and Canada with configurable travel rule thresholds, re-verification windows, and jurisdiction-specific logic.' },
-              { icon: <Code2 className="w-5 h-5" />, title: 'Builder Copilot', desc: 'Describe your protocol in plain language. The copilot generates compliance configuration, Cadence contracts, and regulatory guidance.' },
+              {
+                icon: <Lock className="w-5 h-5" />,
+                title: 'Zero-Knowledge Proofs',
+                stat: 'Groth16',
+                statLabel: 'proof system',
+                accent: 'from-emerald-500 to-emerald-400',
+                iconClass: 'bg-emerald-500/[0.08] text-emerald-400/70 group-hover:bg-emerald-500/[0.15] group-hover:text-emerald-400',
+                statClass: 'text-emerald-400/80',
+                desc: 'Groth16 circuit generates a client-side proof. The chain receives a boolean — never identity data. Verified via FlowEVM bridge.',
+              },
+              {
+                icon: <Fingerprint className="w-5 h-5" />,
+                title: 'Passkey Onboarding',
+                stat: '<2s',
+                statLabel: 'sign-up time',
+                accent: 'from-cyan-500 to-cyan-400',
+                iconClass: 'bg-cyan-500/[0.08] text-cyan-400/70 group-hover:bg-cyan-500/[0.15] group-hover:text-cyan-400',
+                statClass: 'text-cyan-400/80',
+                desc: 'WebAuthn creates a Flow account with one biometric tap. Gas is sponsored. No seed phrases, no extensions, no friction.',
+              },
+              {
+                icon: <Cpu className="w-5 h-5" />,
+                title: 'AI Regulatory Radar',
+                stat: '5',
+                statLabel: 'jurisdictions monitored',
+                accent: 'from-violet-500 to-violet-400',
+                iconClass: 'bg-violet-500/[0.08] text-violet-400/70 group-hover:bg-violet-500/[0.15] group-hover:text-violet-400',
+                statClass: 'text-violet-400/80',
+                desc: 'Claude AI enriches deterministic gap detection across FinCEN, MiCA, FCA, MAS, and FINTRAC. Fix a rule on-chain, the gap disappears.',
+              },
+              {
+                icon: <Zap className="w-5 h-5" />,
+                title: 'Flow Actions',
+                stat: 'Pre-check',
+                statLabel: 'every transaction',
+                accent: 'from-amber-500 to-amber-400',
+                iconClass: 'bg-amber-500/[0.08] text-amber-400/70 group-hover:bg-amber-500/[0.15] group-hover:text-amber-400',
+                statClass: 'text-amber-400/80',
+                desc: 'Attach ComplianceAction.verify() as a pre-check to any transaction. Runs before every deposit, borrow, or swap automatically.',
+              },
+              {
+                icon: <Scale className="w-5 h-5" />,
+                title: 'Multi-Jurisdiction Rules',
+                stat: 'On-chain',
+                statLabel: 'rule engine',
+                accent: 'from-rose-500 to-rose-400',
+                iconClass: 'bg-rose-500/[0.08] text-rose-400/70 group-hover:bg-rose-500/[0.15] group-hover:text-rose-400',
+                statClass: 'text-rose-400/80',
+                desc: 'On-chain RuleEngine stores per-jurisdiction rules — travel rule thresholds, KYC levels, re-verification windows. All configurable via governance.',
+              },
+              {
+                icon: <Bot className="w-5 h-5" />,
+                title: 'Builder Copilot',
+                stat: 'AI',
+                statLabel: 'powered assistant',
+                accent: 'from-blue-500 to-blue-400',
+                iconClass: 'bg-blue-500/[0.08] text-blue-400/70 group-hover:bg-blue-500/[0.15] group-hover:text-blue-400',
+                statClass: 'text-blue-400/80',
+                desc: 'Ask anything about compliance integration. Get Cadence code, regulatory guidance, and risk score explanations in plain language.',
+              },
             ].map((f, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05, duration: 0.5 }}
+                transition={{ delay: i * 0.06, duration: 0.5 }}
               >
-                <SpotlightCard className="p-8 h-full group">
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-emerald-400/70 mb-5 group-hover:bg-emerald-500/10 group-hover:text-emerald-400 transition-colors duration-500">
-                    {f.icon}
+                <SpotlightCard className="p-0 h-full group">
+                  {/* Colored accent line */}
+                  <div className={`h-[2px] bg-gradient-to-r ${f.accent} opacity-40 group-hover:opacity-80 transition-opacity duration-500`} />
+                  <div className="p-7">
+                    <div className="flex items-start justify-between mb-5">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-500 ${f.iconClass}`}>
+                        {f.icon}
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-[18px] font-bold ${f.statClass}`}>{f.stat}</p>
+                        <p className="text-[9px] text-white/25 uppercase tracking-wider">{f.statLabel}</p>
+                      </div>
+                    </div>
+                    <h3 className="text-[15px] font-semibold mb-2.5 text-white/90">{f.title}</h3>
+                    <p className="text-[13px] text-white/40 leading-relaxed">{f.desc}</p>
                   </div>
-                  <h3 className="text-[15px] font-semibold mb-2 text-white/90">{f.title}</h3>
-                  <p className="text-[13px] text-white/45 leading-relaxed">{f.desc}</p>
                 </SpotlightCard>
               </motion.div>
             ))}
@@ -345,7 +420,7 @@ export default function LandingPage() {
 
       {/* ─── CODE PREVIEW ─── */}
       <section className="relative z-10 py-16 md:py-32">
-        <div className="max-w-[720px] mx-auto px-6">
+        <div className="max-w-[820px] mx-auto px-6">
           <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
@@ -353,42 +428,78 @@ export default function LandingPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-[2.2rem] font-bold tracking-tight mb-4">
-              Integrate in one line of Cadence.
+              One import. That's it.
             </h2>
-            <p className="text-[15px] text-white/45">This is everything your protocol needs to add.</p>
+            <p className="text-[15px] text-white/45 max-w-md mx-auto">This is a real lending pool contract on Flow testnet. The highlighted line is the only change you make.</p>
           </motion.div>
 
           <motion.div
-            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            <div className="flex items-center gap-1.5 px-5 py-3.5 border-b border-white/[0.04]">
-              <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
-              <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
-              <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
-              <span className="text-[11px] text-white/40 ml-3 font-mono">FlowShield.cdc</span>
-            </div>
-            <div className="p-6 font-mono text-[13px] leading-[1.8] text-white/50">
-              <span className="text-white/20">// Import FlowShield and check compliance</span>
-              <br />
-              <span className="text-cyan-400/80">import</span>{' '}
-              <span className="text-emerald-400">FlowShield</span>{' '}
-              <span className="text-cyan-400/80">from</span>{' '}
-              <span className="text-amber-400/80">0xFlowShield</span>
-              <br /><br />
-              <span className="text-white/20">// Check before any DeFi action</span>
-              <br />
-              <span className="text-cyan-400/80">let</span> ok ={' '}
-              <span className="text-emerald-400">FlowShield</span>
-              <span className="text-white/40">.isCompliant</span>(addr)
-              <br /><br />
-              <span className="text-white/20">// Returns true if user holds a valid credential</span>
-              <br />
-              <span className="text-white/20">// Identity data never reaches the chain</span>
-            </div>
+            <SpotlightCard className="p-0 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.04]">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/30" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500/30" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/30" />
+                  <span className="text-[11px] text-white/40 ml-3 font-mono">LendingPool.cdc</span>
+                </div>
+                <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400/60 font-medium">LIVE ON TESTNET</span>
+              </div>
+              <div className="p-6 font-mono text-[13px] leading-[1.9] text-white/50 overflow-x-auto">
+                <span className="text-white/20">// 1. Import the compliance engine</span>
+                <br />
+                <span className="text-cyan-400/80">import</span>{' '}
+                <span className="text-emerald-400">ComplianceAction</span>{' '}
+                <span className="text-cyan-400/80">from</span>{' '}
+                <span className="text-amber-400/80">0x93c691a98b975493</span>
+                <br /><br />
+                <span className="text-white/20">// 2. Check compliance before any DeFi action</span>
+                <br />
+                <span className="text-cyan-400/80">access(all) fun</span>{' '}
+                <span className="text-white/70">deposit</span>
+                <span className="text-white/30">(user: Address, amount: UFix64) {'{'}</span>
+                <br />
+                <span className="text-white/30">{'    '}</span>
+                <span className="text-cyan-400/80">let</span>{' '}
+                <span className="text-white/70">ok</span>{' '}
+                <span className="text-white/30">= </span>
+                <span className="text-emerald-400">ComplianceAction</span>
+                <span className="text-white/60">.verify</span>
+                <span className="text-white/30">(user)</span>
+                {'  '}
+                <span className="text-emerald-400/50 text-[11px]">{'// ← this is it'}</span>
+                <br />
+                <span className="text-white/30">{'    '}assert(ok, message: </span>
+                <span className="text-amber-400/70">"Not compliant"</span>
+                <span className="text-white/30">)</span>
+                <br />
+                <span className="text-white/30">{'    '}{'// ... your deposit logic'}</span>
+                <br />
+                <span className="text-white/30">{'}'}</span>
+              </div>
+              {/* What happens under the hood */}
+              <div className="border-t border-white/[0.04] px-6 py-4">
+                <p className="text-[10px] text-white/25 uppercase tracking-wider font-semibold mb-3">What happens on-chain</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Checks ZK credential', color: 'bg-emerald-500/10 text-emerald-400/60 border-emerald-500/15' },
+                    { label: 'Validates jurisdiction', color: 'bg-cyan-500/10 text-cyan-400/60 border-cyan-500/15' },
+                    { label: 'Verifies not expired', color: 'bg-amber-500/10 text-amber-400/60 border-amber-500/15' },
+                    { label: 'Collects 0.001 FLOW fee', color: 'bg-violet-500/10 text-violet-400/60 border-violet-500/15' },
+                    { label: 'Returns boolean', color: 'bg-white/[0.04] text-white/40 border-white/[0.06]' },
+                  ].map((step, si) => (
+                    <span key={si} className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-md border font-medium ${step.color}`}>
+                      <span className="w-1 h-1 rounded-full bg-current opacity-60" />
+                      {step.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </SpotlightCard>
           </motion.div>
         </div>
       </section>

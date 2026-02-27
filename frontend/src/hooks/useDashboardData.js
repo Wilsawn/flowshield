@@ -116,6 +116,8 @@ export default function useDashboardData(address) {
 
   useEffect(() => {
     fetchAll()
+    const interval = setInterval(fetchAll, 30000)
+    return () => clearInterval(interval)
   }, [fetchAll])
 
   return { ...data, refresh: fetchAll }

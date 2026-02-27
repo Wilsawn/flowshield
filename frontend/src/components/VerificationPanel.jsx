@@ -4,7 +4,19 @@ import { ShieldCheck, Fingerprint, Zap, FileCheck, Loader2, CheckCircle2, X, Ext
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
-export default function VerificationPanel({ isOpen, onClose, action = 'deposit', amount = '0', onComplete }) {
+function friendlyError(raw) {
+  if (!raw) return 'Transaction failed'
+  if (raw.includes('Exceeds maximum borrow') || raw.includes('Exceeds borrow limit')) return 'Borrow amount exceeds your 75% LTV limit. Try a smaller amount.'
+  if (raw.includes('Insufficient liquidity')) return 'Not enough liquidity in the pool for this amount.'
+  if (raw.includes('not compliant') || raw.includes('Not compliant')) return 'Compliance check failed. Your credential may be expired.'
+  // Strip Cadence noise, show the assertion message
+  const assertMatch = raw.match(/assertion failed:\s*(.+?)(?:\n|$)/)
+  if (assertMatch) return assertMatch[1].trim()
+  // Fallback: truncate long errors
+  return raw.length > 120 ? raw.slice(0, 120) + '...' : raw
+}
+
+export default function VerificationPanel({ isOpen, onClose, action = 'deposit', amount = '0', onComplete, clientError }) {
   const [steps, setSteps] = useState([])
   const [txResult, setTxResult] = useState(null)
   const [error, setError] = useState(null)
@@ -40,6 +52,14 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
 
     if (startedRef.current) return
     startedRef.current = true
+
+    // Client-side validation error — show immediately, no transaction
+    if (clientError) {
+      addStep('Compliance credential verified', 'Credential active', 'done')
+      addStep('Pre-check failed', clientError, 'error')
+      setError(clientError)
+      return
+    }
 
     const runTransaction = async () => {
       try {
@@ -108,8 +128,9 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           setCompleted(true)
           setTimeout(() => onComplete?.(), 2000)
         } else {
-          setError(txData.error || 'Transaction failed')
-          updateLastStep('Transaction failed', txData.error || 'Unknown error', 'error')
+          const friendly = friendlyError(txData.error)
+          setError(friendly)
+          updateLastStep('Transaction failed', friendly, 'error')
         }
       } catch (err) {
         setError(err.message)
@@ -118,7 +139,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
     }
 
     runTransaction()
-  }, [isOpen, action, amount, onComplete])
+  }, [isOpen, action, amount, onComplete, clientError])
 
   if (!isOpen) return null
 

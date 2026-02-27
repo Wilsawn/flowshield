@@ -162,8 +162,14 @@ export default function Dashboard() {
     setVerifying({ action: 'deposit', amount: depositAmount })
   }
 
+  const maxBorrowRemaining = Math.max(0, ((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100) - (live.borrowed ?? 0))
+
   const handleBorrow = () => {
     if (!borrowAmount || parseFloat(borrowAmount) <= 0) return
+    if (parseFloat(borrowAmount) > maxBorrowRemaining) {
+      setVerifying({ action: 'borrow', amount: borrowAmount, error: `Exceeds borrow limit. Max remaining: $${maxBorrowRemaining.toFixed(0)} USDC (75% LTV)` })
+      return
+    }
     setVerifying({ action: 'borrow', amount: borrowAmount })
   }
 
@@ -172,6 +178,9 @@ export default function Dashboard() {
     if (verifying?.action === 'borrow') setBorrowAmount('')
     // Refresh live data to show updated pool stats from chain
     live.refresh?.()
+    chain.refresh?.()
+    // Second refresh after 3s to catch chain indexing lag
+    setTimeout(() => { live.refresh?.(); chain.refresh?.() }, 3000)
     setTimeout(() => setVerifying(null), 600)
   }
 
@@ -322,8 +331,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Wallet Balance', value: chain.account?.balance ?? live.walletBalance ?? 0, icon: <Wallet className="w-4 h-4" />, sub: chain.account ? `${chain.account.address?.slice(0,6)}...${chain.account.address?.slice(-4)} · FLOW` : 'Loading from chain...', subColor: 'text-white/40', prefix: '', decimals: 2, onClick: () => setShowStatDetail('wallet') },
-            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: live.baseAPYPercent != null ? `Earning ${live.baseAPYPercent}% APY` : 'Loading APY from chain...', subColor: 'text-emerald-400/70', onClick: () => setShowStatDetail('deposited') },
-            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: live.borrowRatePercent != null ? `${live.borrowRatePercent}% interest rate` : 'Loading rate from chain...', subColor: 'text-cyan-400/70', onClick: () => setShowStatDetail('borrowed') },
+            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: live.baseAPYPercent != null ? `USDC · Earning ${live.baseAPYPercent}% APY` : 'Loading pool from chain...', subColor: 'text-emerald-400/70', onClick: () => setShowStatDetail('deposited') },
+            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: live.borrowRatePercent != null ? `USDC · ${live.borrowRatePercent}% interest` : 'Loading pool from chain...', subColor: 'text-cyan-400/70', onClick: () => setShowStatDetail('borrowed') },
             { label: 'Risk Score', value: live.riskScore ?? 0, icon: <TrendingUp className="w-4 h-4" />, sub: `Tier: ${live.riskTier || 'loading...'} · ${live.riskFactors?.length || 0} factors`, subColor: live.riskTier === 'compliant' ? 'text-emerald-400/70' : 'text-amber-400/70', noPrefix: true, onClick: () => setShowRiskDetail(true) },
           ].map((stat, i) => (
             <SpotlightCard key={i} className="p-5 cursor-pointer hover:border-white/[0.1] transition-all" onClick={stat.onClick}>
@@ -389,7 +398,10 @@ export default function Dashboard() {
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                 <ArrowDownToLine className="w-4 h-4 text-emerald-400" />
               </div>
-              <h3 className="text-[15px] font-semibold">Deposit</h3>
+              <div>
+                <h3 className="text-[15px] font-semibold">Deposit</h3>
+                <p className="text-[10px] text-white/25">Into DemoLendingPool</p>
+              </div>
             </div>
             <div className="space-y-3">
               <div className="relative">
@@ -406,18 +418,14 @@ export default function Dashboard() {
                 </span>
               </div>
               <button
-                onClick={() => {
-                  if (!depositAmount || Number(depositAmount) <= 0) return
-                  live.deposit(Number(depositAmount))
-                  setDepositAmount('')
-                }}
+                onClick={handleDeposit}
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-[13px] font-semibold text-white hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-300 disabled:opacity-30"
                 disabled={!depositAmount || Number(depositAmount) <= 0}
               >
                 Deposit
               </button>
               <p className="text-[11px] text-white/40 text-center">
-                Compliance verified automatically. Zero gas fees.
+                Compliance verified on-chain. Gas sponsored.
               </p>
             </div>
           </SpotlightCard>
@@ -428,7 +436,10 @@ export default function Dashboard() {
               <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
                 <ArrowUpFromLine className="w-4 h-4 text-cyan-400" />
               </div>
-              <h3 className="text-[15px] font-semibold">Borrow</h3>
+              <div>
+                <h3 className="text-[15px] font-semibold">Borrow</h3>
+                <p className="text-[10px] text-white/25">From DemoLendingPool</p>
+              </div>
             </div>
             <div className="space-y-3">
               <div className="relative">
@@ -445,18 +456,14 @@ export default function Dashboard() {
                 </span>
               </div>
               <button
-                onClick={() => {
-                  if (!borrowAmount || Number(borrowAmount) <= 0) return
-                  live.borrow(Number(borrowAmount))
-                  setBorrowAmount('')
-                }}
+                onClick={handleBorrow}
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 text-[13px] font-semibold text-white hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] transition-all duration-300 disabled:opacity-30"
                 disabled={!borrowAmount || Number(borrowAmount) <= 0}
               >
                 Borrow
               </button>
               <p className="text-[11px] text-white/40 text-center">
-                Max borrow: ${((live.deposited ?? 0) * (live.maxLTVPercent ?? 0) / 100).toFixed(0)} ({live.maxLTVPercent ?? '—'}% LTV)
+                Remaining: <span className="text-white/60 font-medium">${maxBorrowRemaining.toFixed(0)}</span> of ${((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100).toFixed(0)} ({live.maxLTVPercent ?? 75}% LTV)
               </p>
             </div>
           </SpotlightCard>
@@ -1015,6 +1022,7 @@ export default function Dashboard() {
           action={verifying?.action || 'deposit'}
           amount={verifying?.amount || '0'}
           onComplete={handleVerificationComplete}
+          clientError={verifying?.error || null}
         />
 
       </div>
