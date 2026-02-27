@@ -33,16 +33,17 @@ That's it. No KYC forms, no identity storage, no compliance logic in your contra
 
 ## Smart Contracts
 
-All six contracts are deployed on **Flow Testnet** at [`0x93c691a98b975493`](https://testnet.flowscan.io/account/0x93c691a98b975493).
+All seven contracts are deployed on **Flow Testnet** at [`0x93c691a98b975493`](https://testnet.flowscan.io/account/0x93c691a98b975493).
 
 | Contract | Purpose |
 |---|---|
 | **ComplianceCredential** | Cadence Resource stored in user accounts — credential ownership |
 | **ZKVerifier** | Validates zero-knowledge proofs from trusted verifiers |
-| **ComplianceAction** | Flow Actions primitive — one-line compliance check for DeFi |
+| **ComplianceAction** | Flow Actions primitive — compliance check + per-verification fee collection |
 | **RuleEngine** | Per-jurisdiction rules (US, EU, UK, SG, CA) stored on-chain |
 | **DemoLendingPool** | Reference lending pool with compliance-gated deposit and borrow |
 | **ComplianceAgent** | Flow Agent for autonomous credential monitoring |
+| **Governance** | Multi-sig M-of-N proposal system for admin operations |
 
 ## Flow Primitives
 
@@ -80,16 +81,17 @@ Frontend runs on `localhost:3001`, backend on `localhost:3002`.
 ```
 flowshield/
 ├── cadence/
-│   ├── contracts/        6 Cadence smart contracts (deployed to testnet)
+│   ├── contracts/        7 Cadence smart contracts (deployed to testnet)
 │   ├── scripts/          Read-only queries (check_compliance, get_risk_score)
 │   ├── transactions/     State-changing ops (verify_and_mint, deposit, revoke)
 │   └── tests/            Contract test suites
 ├── backend/
 │   ├── agents/           AI + rule-based agents (risk, copilot, radar, anomaly)
 │   ├── api/              Express server + REST routes
-│   └── lib/              Supabase, middleware, demo state
+│   └── lib/              Supabase, middleware, subscription tiers, demo state
 ├── evm/
-│   └── contracts/        Solidity Groth16 verifier for FlowEVM (BN256 pairing)
+│   ├── contracts/        Solidity Groth16 verifier for FlowEVM (BN256 pairing)
+│   └── circuits/         circom ZK circuit for compliance proof generation
 ├── frontend/
 │   ├── src/components/   React UI (dashboard, copilot, radar, onboarding)
 │   ├── src/hooks/        Data hooks (useChainData, useDashboardData, useRiskScore)
@@ -110,21 +112,23 @@ flowshield/
 | `POST` | `/api/copilot/chat` | Builder Copilot AI assistant |
 | `POST` | `/api/copilot/radar/scan` | Regulatory Radar — scan on-chain rules |
 | `POST` | `/api/copilot/radar/fix` | Push approved rule fixes on-chain |
+| `GET` | `/api/subscription/pricing` | Subscription tier pricing |
+| `POST` | `/api/subscription/register` | Register protocol, get API key |
+| `POST` | `/api/subscription/mint` | Mint compliance credential (ZK proof → Cadence) |
+| `GET` | `/api/subscription/fees` | On-chain fee schedule from ComplianceAction |
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────┐
 │  User Experience                                  │
-│  React · Vite · TailwindCSS · Framer Motion       │
+│  React · Vite · TailwindCSS · FCL Wallet          │
 ├──────────────────────────────────────────────────┤
 │  Compliance Engine (On-Chain Cadence)             │
-│  ComplianceCredential · ComplianceAction          │
-│  RuleEngine · DemoLendingPool · ComplianceAgent   │
+│  7 contracts · Fee treasury · Multi-sig governance │
 ├──────────────────────────────────────────────────┤
-│  Zero-Knowledge Verification                      │
-│  Client-side proof generation → On-chain verify   │
-│  Identity data NEVER on-chain                     │
+│  Zero-Knowledge Verification (Cross-VM)           │
+│  circom → snarkjs (browser) → FlowEVM Groth16     │
 ├──────────────────────────────────────────────────┤
 │  AI Intelligence (Off-Chain)                      │
 │  Risk Scoring · Anomaly Monitor                   │
@@ -138,9 +142,11 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical deep-div
 
 | Layer | Technologies |
 |---|---|
-| **Blockchain** | Flow Testnet, Cadence 1.0, FCL |
+| **Blockchain** | Flow Testnet, Cadence 1.0, FCL, FlowEVM |
+| **Smart Contracts** | 7 Cadence + 1 Solidity (Groth16 verifier) |
+| **ZK Proofs** | circom circuits, snarkjs, Groth16/BN256 pairing |
 | **Frontend** | React 19, Vite, TailwindCSS, Framer Motion, React Flow |
-| **Backend** | Node.js, Express |
+| **Backend** | Node.js, Express, subscription tier system |
 | **AI** | Claude AI (Haiku 4.5) for Copilot and Regulatory Radar |
 | **Identity** | Veriff KYC, WebAuthn/Passkeys, Zero-Knowledge Proofs |
 | **Infrastructure** | Supabase (audit trail), Vercel (deployment) |

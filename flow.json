@@ -5,7 +5,8 @@
 		"ComplianceAction": "./cadence/contracts/ComplianceAction.cdc",
 		"RuleEngine": "./cadence/contracts/RuleEngine.cdc",
 		"DemoLendingPool": "./cadence/contracts/DemoLendingPool.cdc",
-		"ComplianceAgent": "./cadence/contracts/ComplianceAgent.cdc"
+		"ComplianceAgent": "./cadence/contracts/ComplianceAgent.cdc",
+		"Governance": "./cadence/contracts/Governance.cdc"
 	},
 	"networks": {
 		"emulator": "127.0.0.1:3569",
@@ -36,7 +37,8 @@
 				"ComplianceAction",
 				"RuleEngine",
 				"DemoLendingPool",
-				"ComplianceAgent"
+				"ComplianceAgent",
+				"Governance"
 			]
 		},
 		"testnet": {
@@ -46,7 +48,8 @@
 				"ComplianceAction",
 				"RuleEngine",
 				"DemoLendingPool",
-				"ComplianceAgent"
+				"ComplianceAgent",
+				"Governance"
 			]
 		}
 	}
