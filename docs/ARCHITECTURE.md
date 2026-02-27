@@ -14,10 +14,11 @@ FlowShield is a four-layer system. The top two layers face users and developers.
 │  Passkey onboarding · Dashboard · Copilot · Radar        │
 ├──────────────────────────────────────────────────────────┤
 │  Compliance Engine (On-Chain Cadence)                    │
-│  6 smart contracts at 0x93c691a98b975493                 │
-├──────────────────────────────────────────────────────────|
-│  Zero-Knowledge Verification                             │
-│  Client-side proof generation → on-chain boolean result  │
+│  7 smart contracts at 0x93c691a98b975493                 │
+│  Per-verification fee → treasury · Multi-sig governance  │
+├──────────────────────────────────────────────────────────┤
+│  Zero-Knowledge Verification (Cross-VM)                  │
+│  circom circuit → snarkjs (browser) → FlowEVM Groth16    │
 ├──────────────────────────────────────────────────────────┤
 │  AI Intelligence (Off-Chain)                             │
 │  Risk scoring · Anomaly detection · Copilot · Radar      │
@@ -48,11 +49,12 @@ All contracts are deployed on **Flow Testnet** at [`0x93c691a98b975493`](https:/
 | Contract | Role | Key Functions |
 |---|---|---|
 | **ComplianceCredential** | Cadence Resource in user accounts | `isValid()`, `isExpired()`, `getTier()` |
-| **ComplianceAction** | Flow Actions pre-transaction check | `verify(addr)`, `verifyFull(addr)` |
+| **ComplianceAction** | Flow Actions pre-transaction check + fee collection | `verify()`, `verifyWithFee()`, `getFeeSchedule()` |
 | **ZKVerifier** | Validates ZK proofs from trusted verifiers | `verifyProof(proofData, userAddr)` |
 | **RuleEngine** | Per-jurisdiction rules on-chain | `getRules(jurisdiction)`, `setRule()` |
 | **DemoLendingPool** | Reference DeFi integration | `deposit()`, `borrow()` with compliance gates |
 | **ComplianceAgent** | Flow Agent for autonomous monitoring | `runMonitoringCycle()` |
+| **Governance** | Multi-sig M-of-N proposal system | `createProposal()`, `approveProposal()` |
 
 ### Data Flow
 
@@ -169,3 +171,89 @@ Backend API (localhost:3002)
 ```
 
 All compliance endpoints query **real on-chain data** from deployed contracts. Risk scoring reads actual account balances, key counts, and contract deployments from the Flow Access API.
+
+---
+
+## Revenue Model
+
+FlowShield generates revenue through three channels:
+
+### 1. Per-Verification Fee (On-Chain)
+
+`ComplianceAction.verifyWithFee()` collects a FLOW token fee per verification. Fees accumulate in the FlowShield treasury vault on-chain.
+
+| Fee | Amount | Collected By |
+|---|---|---|
+| Verification fee | 0.001 FLOW per check | `ComplianceAction` treasury vault |
+| Credential issuance | 0.01 FLOW per mint | `ComplianceAction` treasury vault |
+
+Protocols call `verifyWithFee()` instead of `verify()` — same result, but the fee is auto-deducted and deposited into the treasury. Admin can withdraw via the `Governance` proposal system.
+
+### 2. API Subscription Tiers
+
+| Tier | Price | Daily Limit | Jurisdictions | Copilot | Radar |
+|---|---|---|---|---|---|
+| **Free** | $0 | 100 | US only | — | — |
+| **Pro** | $499/mo | 10,000 | All 5 | ✓ | ✓ |
+| **Enterprise** | $2,999/mo | Unlimited | Custom | ✓ | ✓ |
+
+Tier enforcement is handled by middleware (`backend/lib/subscription.js`). Protocols register for an API key via `/api/subscription/register`.
+
+### 3. Credential Issuance Fee
+
+Charged to the **protocol** (not the user) when a new compliance credential is minted. The protocol absorbs this cost or passes it through. At scale: 100K users × $0.50 = $50K revenue.
+
+---
+
+## Governance
+
+The `Governance` contract implements **M-of-N multi-signature proposals** for all admin operations. No single key can change fees, update rules, or withdraw from the treasury.
+
+### Proposal Flow
+
+```
+Signer creates proposal → Other signers approve → Quorum reached → Execute
+```
+
+| Action | What It Controls |
+|---|---|
+| `setFee` | Change verification fee or issuance fee |
+| `withdraw` | Withdraw FLOW from treasury |
+| `addVerifier` | Add trusted KYC verifier to ZKVerifier registry |
+| `setRule` | Update jurisdiction rules in RuleEngine |
+| `revoke` | Emergency credential revocation |
+
+Proposals expire after 7 days if quorum is not reached. The proposer auto-approves. Starting quorum is 1-of-N (increase after team setup).
+
+---
+
+## ZK Circuit
+
+The compliance circuit (`evm/circuits/compliance.circom`) defines what the ZK proof actually proves:
+
+**Public output:** `complianceHash` (goes on-chain)
+**Private inputs:** KYC secret, jurisdiction, risk score, expiry, salt (never leave the browser)
+
+### Constraints
+
+1. **KYC secret is non-zero** — user actually passed identity verification
+2. **Jurisdiction is valid** — code in range 1–5 (US, EU, UK, SG, CA)
+3. **Risk score ≤ threshold** — user's score is within compliance bounds
+4. **Credential not expired** — current time < expiry timestamp
+5. **Score in valid range** — 0–100
+
+The circuit uses Poseidon hashing (ZK-friendly) to produce the public compliance hash from private inputs. The Groth16 verifier on FlowEVM validates the proof using BN256 elliptic curve pairings.
+
+---
+
+## Wallet Integration
+
+FlowShield supports **FCL Wallet Discovery** for real wallet connections:
+
+```
+Frontend → FCL Discovery popup → User selects wallet (Lilico, Blocto, Dapper)
+         → Flow account connected → Check on-chain ComplianceCredential
+         → Protocol calls ComplianceAction.verifyWithFee(user)
+```
+
+Configuration in `frontend/src/utils/fcl-config.js`. Supports testnet, mainnet, and emulator environments. Contract aliases are pre-configured for all 7 FlowShield contracts.

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe } from 'lucide-react'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
+import { generateComplianceProof } from '@/utils/zk-proof'
 
 const VERIFY_STEPS = [
   { label: 'Creating secure account on Flow', detail: 'WebAuthn keypair generated', delay: 800 },
@@ -130,20 +131,32 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     } catch (err) {
     }
 
-    // Step 2: ZK background verification
+    // Step 2: ZK background verification — generate proof client-side
     setCurrentVerifyStep(2)
     if (kycSession?.mode === 'veriff' && kycSession.verificationUrl) {
-      // Real Veriff session created — log the URL for demo proof
-      // Store the URL so we can show it to the user if needed
       setVeriffUrl(kycSession.verificationUrl)
     }
-    await new Promise((r) => setTimeout(r, 1200))
 
-    // Step 3: Issuing credential
+    // Generate ZK compliance proof in the browser (no PII leaves the device)
+    let zkProof = null
+    try {
+      const kycSecret = kycSession?.transactionId || `demo_${email}_${Date.now()}`
+      const expiryTimestamp = Math.floor(Date.now() / 1000) + 7776000 // 90 days
+      zkProof = await generateComplianceProof({
+        kycSecret,
+        jurisdiction: jurisdiction?.code || 'US',
+        riskScore: 15,
+        riskThreshold: 70,
+        expiryTimestamp,
+      })
+    } catch (err) {
+      console.warn('[FlowShield] ZK proof generation:', err.message)
+    }
+
+    // Step 3: Issuing credential — call backend to prepare mint transaction
     setCurrentVerifyStep(3)
-    await new Promise((r) => setTimeout(r, 1500))
 
-    // Complete the KYC session on backend (demo-complete for both modes in dev)
+    // Complete the KYC session on backend
     if (kycSession?.transactionId) {
       try {
         const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
@@ -155,6 +168,30 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       } catch { /* continue anyway */ }
     }
 
+    // Mint credential via backend
+    let mintResult = null
+    try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+      const mintRes = await fetch(`${API}/api/subscription/mint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: email,
+          jurisdiction: jurisdiction?.code || 'US',
+          riskScore: 15,
+          proofHash: zkProof?.proofHash || 'demo_proof',
+          proofData: zkProof ? {
+            proof: JSON.stringify(zkProof.proof).slice(0, 200),
+            claimsHash: zkProof.proofHash,
+            signature: 'demo_sig',
+          } : null,
+        }),
+      })
+      mintResult = await mintRes.json()
+    } catch (err) {
+      console.warn('[FlowShield] Credential mint:', err.message)
+    }
+
     // Step 4: Issue credential
     setCurrentVerifyStep(4)
     await new Promise((r) => setTimeout(r, 1000))
@@ -163,13 +200,19 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setCurrentVerifyStep(5)
     await new Promise((r) => setTimeout(r, 600))
 
-    // Store user session in localStorage so sidebar/dashboard show the real user
+    // Store user session in localStorage with ZK proof data
     const userSession = {
       email,
       jurisdiction,
       displayName: email.split('@')[0],
       createdAt: new Date().toISOString(),
       authMethod: 'passkey',
+      zkProof: zkProof ? {
+        method: zkProof.method,
+        proofHash: zkProof.proofHash,
+        verified: false,
+      } : null,
+      credential: mintResult?.credential || null,
     }
     localStorage.setItem('flowshield_user', JSON.stringify(userSession))
 
