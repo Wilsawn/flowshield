@@ -10,17 +10,17 @@ FlowShield is a four-layer system. The top two layers face users and developers.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  User Experience Layer                                    │
-│  Passkey onboarding · Dashboard · Copilot · Radar         │
+│  User Experience Layer                                   │
+│  Passkey onboarding · Dashboard · Copilot · Radar        │
 ├──────────────────────────────────────────────────────────┤
-│  Compliance Engine (On-Chain Cadence)                     │
-│  6 smart contracts at 0x93c691a98b975493                  │
+│  Compliance Engine (On-Chain Cadence)                    │
+│  6 smart contracts at 0x93c691a98b975493                 │
+├──────────────────────────────────────────────────────────|
+│  Zero-Knowledge Verification                             │
+│  Client-side proof generation → on-chain boolean result  │
 ├──────────────────────────────────────────────────────────┤
-│  Zero-Knowledge Verification                              │
-│  Client-side proof generation → on-chain boolean result   │
-├──────────────────────────────────────────────────────────┤
-│  AI Intelligence (Off-Chain)                              │
-│  Risk scoring · Anomaly detection · Copilot · Radar       │
+│  AI Intelligence (Off-Chain)                             │
+│  Risk scoring · Anomaly detection · Copilot · Radar      │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -73,11 +73,27 @@ The ZK layer ensures that **no identity data ever reaches the blockchain**. Only
 | Step | Where It Happens | What's Stored |
 |---|---|---|
 | Identity verification | Off-chain (Veriff KYC) | Nothing on-chain |
-| Proof generation | Client-side | Nothing on-chain |
-| Proof verification | `ZKVerifier` contract | SHA3-256 hash of proof |
-| Compliance result | `ComplianceCredential` | Boolean + expiry timestamp |
+| Proof generation | Client-side (`snarkjs`) | Nothing on-chain |
+| Proof verification | FlowEVM `Groth16Verifier` | SHA3-256 hash of proof |
+| Compliance result | Cadence `ComplianceCredential` | Boolean + expiry timestamp |
 
-**Design decision:** Cadence does not natively support ZK-SNARK pairing operations. FlowEVM has the BN256 precompiles needed for Groth16 verification. For the hackathon, FlowShield uses a simplified Cadence verifier that validates proof structure and trusted verifier signatures. Production would use a Solidity verifier on FlowEVM bridged to Cadence via Cadence-Owned Accounts (COAs).
+### Cross-VM Bridge: Cadence → FlowEVM
+
+Cadence does not natively support ZK-SNARK pairing operations. FlowShield solves this by deploying a **Groth16 verifier in Solidity on FlowEVM** and calling it from Cadence via a **Cadence-Owned Account (COA)**:
+
+```
+Cadence ZKVerifier
+    │
+    ▼ COA.call()
+FlowEVM Groth16Verifier.verifyProof()
+    │  Uses BN256 precompiles (ecAdd 0x06, ecMul 0x07, ecPairing 0x08)
+    ▼
+Returns boolean → Cadence mints ComplianceCredential
+```
+
+The Solidity verifier (`evm/contracts/Groth16Verifier.sol`) implements the full Groth16 pairing equation using the BN256 precompiles available on FlowEVM. The Cadence transaction (`cadence/transactions/verify_zk_via_evm.cdc`) ABI-encodes proof parameters and calls the Solidity contract through a COA.
+
+**Why this matters:** This is a real cross-VM ZK verification pipeline — proofs are generated client-side with `snarkjs`, verified on FlowEVM using elliptic curve pairings, and the boolean result is consumed by Cadence to mint a compliance credential. Identity data never touches either VM.
 
 ---
 
