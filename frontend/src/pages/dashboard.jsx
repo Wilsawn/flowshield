@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { ArrowDownToLine, ArrowUpFromLine, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, ExternalLink, Code, X, CheckCircle2, XCircle, Wallet } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpFromLine, RotateCcw, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, ExternalLink, Code, X, CheckCircle2, XCircle, Wallet } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedTicker from '@/components/ui/animated-ticker'
 import VerificationPanel from '@/components/VerificationPanel'
@@ -35,6 +35,7 @@ export default function Dashboard() {
   const chain = useChainData(walletAddr)
   const [depositAmount, setDepositAmount] = useState('')
   const [borrowAmount, setBorrowAmount] = useState('')
+  const [repayAmount, setRepayAmount] = useState('')
   const [verifying, setVerifying] = useState(null) // null | { action, amount }
   const [showCompliance, setShowCompliance] = useState(false)
   const [jurisdictionCode, setJurisdictionCode] = useState(() => {
@@ -204,9 +205,19 @@ export default function Dashboard() {
     setVerifying({ action: 'borrow', amount: borrowAmount })
   }
 
+  const handleRepay = () => {
+    if (!repayAmount || parseFloat(repayAmount) <= 0) return
+    if (parseFloat(repayAmount) > (live.borrowed ?? 0)) {
+      setVerifying({ action: 'repay', amount: String(live.borrowed ?? 0) })
+      return
+    }
+    setVerifying({ action: 'repay', amount: repayAmount })
+  }
+
   const handleVerificationComplete = () => {
     if (verifying?.action === 'deposit') setDepositAmount('')
     if (verifying?.action === 'borrow') setBorrowAmount('')
+    if (verifying?.action === 'repay') setRepayAmount('')
     // Refresh live data to show updated pool stats from chain
     live.refresh?.()
     chain.refresh?.()
@@ -407,8 +418,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Actions + Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
           {/* Deposit */}
           <div className="p-6 rounded-xl border border-white/[0.06]">
@@ -427,7 +438,7 @@ export default function Dashboard() {
               />
               <button
                 onClick={handleDeposit}
-                className="w-full h-10 rounded-lg bg-white text-[#060a13] text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-30"
+                className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 text-[#060a13] text-sm font-semibold hover:shadow-[0_0_20px_rgba(52,211,153,0.15)] transition-all disabled:opacity-30"
                 disabled={!depositAmount || Number(depositAmount) <= 0}
               >
                 Deposit
@@ -455,7 +466,7 @@ export default function Dashboard() {
               />
               <button
                 onClick={handleBorrow}
-                className="w-full h-10 rounded-lg border border-white/[0.08] text-sm font-semibold text-white/70 hover:text-white hover:border-white/[0.15] transition-colors disabled:opacity-30"
+                className="w-full h-10 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-[#060a13] text-sm font-semibold hover:shadow-[0_0_20px_rgba(34,211,238,0.15)] transition-all disabled:opacity-30"
                 disabled={!borrowAmount || Number(borrowAmount) <= 0}
               >
                 Borrow
@@ -466,12 +477,42 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Account Info */}
+          {/* Repay */}
           <div className="p-6 rounded-xl border border-white/[0.06]">
             <div className="flex items-center gap-2 mb-5">
-              <Activity className="w-4 h-4 text-white/40" />
-              <h3 className="text-sm font-semibold text-white/80">Account Info</h3>
+              <RotateCcw className="w-4 h-4 text-white/40" />
+              <h3 className="text-sm font-semibold text-white/80">Repay</h3>
+              <span className="text-xs text-white/20 ml-auto">USDC</span>
             </div>
+            <div className="space-y-3">
+              <input
+                type="number"
+                placeholder="0.00"
+                value={repayAmount}
+                onChange={(e) => setRepayAmount(e.target.value)}
+                className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/[0.12] transition-colors"
+              />
+              <button
+                onClick={handleRepay}
+                className="w-full h-10 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-[#060a13] text-sm font-semibold hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all disabled:opacity-30"
+                disabled={!repayAmount || Number(repayAmount) <= 0 || (live.borrowed ?? 0) <= 0}
+              >
+                Repay
+              </button>
+              <p className="text-xs text-white/25 text-center">
+                {(live.borrowed ?? 0) > 0 ? `${(live.borrowed ?? 0).toFixed(2)} outstanding` : 'No outstanding borrows'}
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Account Info — full width below actions */}
+        <div className="mt-4 p-6 rounded-xl border border-white/[0.06]">
+          <div className="flex items-center gap-2 mb-5">
+            <Activity className="w-4 h-4 text-white/40" />
+            <h3 className="text-sm font-semibold text-white/80">Account Info</h3>
+          </div>
             <div className="space-y-2">
               {[
                 { label: 'Account Age', value: live.accountAge != null ? `${live.accountAge} days` : '—' },
@@ -504,8 +545,6 @@ export default function Dashboard() {
               </p>
             )}
           </div>
-
-        </div>
 
         {/* ─── COMPLIANCE LAYER OVERLAY — REAL ON-CHAIN DATA ─── */}
         <AnimatePresence>

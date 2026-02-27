@@ -120,7 +120,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
 
           // Step 4: Show events
           const complianceEvent = txData.events?.find(e => e.type === 'ComplianceVerified')
-          const actionEvent = txData.events?.find(e => e.type === 'Deposited' || e.type === 'Borrowed')
+          const actionEvent = txData.events?.find(e => e.type === 'Deposited' || e.type === 'Borrowed' || e.type === 'Repaid')
           if (complianceEvent || actionEvent) {
             addStep(
               `On-chain events emitted`,

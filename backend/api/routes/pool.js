@@ -289,6 +289,69 @@ router.post('/borrow', async (req, res) => {
   }
 })
 
+// POST /api/pool/repay — Repay a borrow in DemoLendingPool
+router.post('/repay', async (req, res) => {
+  const fcl = req.app.locals.fcl
+  const contractAddress = req.app.locals.contractAddress
+  const amount = parseFloat(req.body.amount) || 0
+  const userAddress = req.body.userAddress || contractAddress
+
+  if (!PRIVATE_KEY) {
+    return res.status(500).json({ error: 'Private key not available', source: 'error' })
+  }
+  if (amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be greater than 0', source: 'error' })
+  }
+
+  try {
+    const authz = serverAuthorization(fcl, contractAddress)
+
+    const txId = await fcl.mutate({
+      cadence: `
+        import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+
+        transaction(amount: UFix64, borrower: Address) {
+          prepare(signer: auth(Storage) &Account) {}
+          execute {
+            DemoLendingPool.repay(borrower: borrower, amount: amount)
+          }
+        }
+      `,
+      args: (arg, t) => [
+        arg(amount.toFixed(8), t.UFix64),
+        arg(userAddress, t.Address),
+      ],
+      proposer: authz,
+      payer: authz,
+      authorizations: [authz],
+      limit: 999,
+    })
+
+    const txResult = await fcl.tx(txId).onceSealed()
+
+    logAudit({ action: 'pool_repay', agent: 'pool', detail: { transactionId: txId, amount, userAddress, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
+
+    res.json({
+      success: txResult.status === 4,
+      transactionId: txId,
+      action: 'repay',
+      amount: amount,
+      userAddress,
+      status: txResult.status,
+      statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
+      events: txResult.events?.map(e => ({
+        type: e.type.split('.').pop(),
+        data: e.data,
+      })) || [],
+      blockHeight: txResult.blockHeight,
+      explorerUrl: `https://testnet.flowscan.io/tx/${txId}`,
+      source: 'flow-testnet',
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message, action: 'repay', source: 'error' })
+  }
+})
+
 // GET /api/pool/status — Get pool stats from chain
 router.get('/status', async (req, res) => {
   const fcl = req.app.locals.fcl
