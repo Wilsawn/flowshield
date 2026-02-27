@@ -29,6 +29,7 @@ export default function GovernancePanel() {
   const [approving, setApproving] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [notice, setNotice] = useState(null)
   const [stats, setStats] = useState({
     totalSigners: 0,
     requiredApprovals: 1,
@@ -67,23 +68,79 @@ export default function GovernancePanel() {
     fetchGovernance()
   }, [])
 
+  const refetchProposals = async () => {
+    try {
+      const [statsRes, proposalsRes] = await Promise.allSettled([
+        fetch(`${API}/api/governance/stats`).then(r => r.json()),
+        fetch(`${API}/api/governance/proposals`).then(r => r.json()),
+      ])
+      if (statsRes.status === 'fulfilled' && statsRes.value.source === 'flow-testnet') {
+        setStats({ totalSigners: statsRes.value.totalSigners || 0, requiredApprovals: statsRes.value.requiredApprovals || 1 })
+      }
+      if (proposalsRes.status === 'fulfilled' && proposalsRes.value.proposals) {
+        const mapped = proposalsRes.value.proposals.map(p => ({
+          ...p,
+          createdAt: p.createdAt > 1e9 ? new Date(p.createdAt * 1000).toISOString() : new Date(p.createdAt).toISOString(),
+          expiresAt: p.expiresAt > 1e9 ? new Date(p.expiresAt * 1000).toISOString() : new Date(p.expiresAt).toISOString(),
+          approvals: (p.approvals || []).map(a => `${a.slice(0, 6)}...${a.slice(-4)}`),
+          proposer: p.proposer ? `${p.proposer.slice(0, 6)}...${p.proposer.slice(-4)}` : '—',
+        }))
+        setProposals(mapped)
+      }
+    } catch { /* ignore */ }
+  }
+
   const handleCreate = async () => {
     if (!newAction || !newDescription) return
     setCreating(true)
-    // TODO: Send real transaction to create proposal on-chain
-    // For now, show that creation requires an on-chain transaction
-    await new Promise(r => setTimeout(r, 500))
+    try {
+      // Ensure deployer is set up as a signer first
+      await fetch(`${API}/api/governance/setup`, { method: 'POST' })
+
+      const res = await fetch(`${API}/api/governance/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: newAction, description: newDescription, data: {} }),
+      })
+      const result = await res.json()
+
+      if (result.success) {
+        setNotice(`Proposal created on-chain. Tx: ${result.txId.slice(0, 16)}...`)
+        await refetchProposals()
+      } else {
+        setNotice(`Failed: ${result.error}`)
+      }
+    } catch (err) {
+      setNotice(`Network error: ${err.message}`)
+    }
     setCreating(false)
     setShowCreate(false)
-    alert('Proposal creation requires an on-chain transaction via the Governance.Signer resource. Connect a signer wallet to submit.')
+    setNewAction('')
+    setNewDescription('')
+    setTimeout(() => setNotice(null), 8000)
   }
 
   const handleApprove = async (id) => {
     setApproving(id)
-    // TODO: Send real approval transaction on-chain
-    await new Promise(r => setTimeout(r, 500))
+    try {
+      const res = await fetch(`${API}/api/governance/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalId: id }),
+      })
+      const result = await res.json()
+
+      if (result.success) {
+        setNotice(`Proposal #${id} approved on-chain. Tx: ${result.txId.slice(0, 16)}...`)
+        await refetchProposals()
+      } else {
+        setNotice(`Failed: ${result.error}`)
+      }
+    } catch (err) {
+      setNotice(`Network error: ${err.message}`)
+    }
     setApproving(null)
-    alert('Proposal approval requires an on-chain transaction via the Governance.Signer resource. Connect a signer wallet to approve.')
+    setTimeout(() => setNotice(null), 8000)
   }
 
   const pending = proposals.filter(p => p.status === 'pending')
@@ -107,6 +164,24 @@ export default function GovernancePanel() {
           <Plus className="w-3.5 h-3.5" /> New Proposal
         </button>
       </div>
+
+      {/* Notice banner */}
+      <AnimatePresence>
+        {notice && (
+          <motion.div
+            className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.04]"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-white/50 leading-relaxed flex-1">{notice}</p>
+            <button onClick={() => setNotice(null)} className="text-white/20 hover:text-white/40 transition-colors shrink-0">
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-3">

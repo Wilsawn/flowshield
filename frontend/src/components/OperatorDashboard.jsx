@@ -83,12 +83,12 @@ export default function OperatorDashboard() {
       fetch(`${API}/api/risk/monitor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: live.address || '0x93c691a98b975493' }),
+        body: JSON.stringify({ address: live.address }),
       }).then(r => r.json()),
       fetch(`${API}/api/risk/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: live.address || '0x93c691a98b975493' }),
+        body: JSON.stringify({ address: live.address }),
       }).then(r => r.json()),
     ])
     const results = {
@@ -329,7 +329,7 @@ export default function OperatorDashboard() {
                       Source: {anomaly.id === 'whale_transfer' ? 'Transfer pattern analysis' : anomaly.id === 'bot' ? 'Transaction frequency monitor' : anomaly.id === 'sleeper' ? 'Activity gap detection' : 'AI Anomaly Monitor'}
                     </span>
                     <a
-                      href={`https://testnet.flowscan.io/account/${live.monitorAddress || '0x93c691a98b975493'}`}
+                      href={`https://testnet.flowscan.io/account/${live.monitorAddress || live.address || ''}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[9px] text-cyan-400/40 hover:text-cyan-400 transition-colors"

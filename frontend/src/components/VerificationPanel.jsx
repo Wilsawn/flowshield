@@ -67,7 +67,13 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         addStep('Checking compliance credential...', 'Querying ComplianceCredential on Flow testnet', 'active')
         await new Promise(r => setTimeout(r, 500))
 
-        const credRes = await fetch(`${API}/api/compliance/status/0x93c691a98b975493`)
+        // Use the connected user's wallet address
+        const walletAddr = (() => {
+          try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').addr } catch { return null }
+        })()
+        const userAddress = walletAddr || '0x93c691a98b975493'
+
+        const credRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
         const credData = await credRes.json()
 
         if (!credData.hasCredential) {
@@ -100,7 +106,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         const txRes = await fetch(`${API}/api/pool/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: parseFloat(amount) }),
+          body: JSON.stringify({ amount: parseFloat(amount), userAddress }),
         })
         const txData = await txRes.json()
 

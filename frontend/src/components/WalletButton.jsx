@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, LogOut, ShieldCheck, ShieldX, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
-
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x93c691a98b975493'
+import { connectWallet, disconnectWallet, subscribeToWallet } from '@/utils/fcl-config'
 
 export default function WalletButton() {
   const [walletUser, setWalletUser] = useState(null)
@@ -14,8 +13,16 @@ export default function WalletButton() {
   const [copied, setCopied] = useState(false)
   const ref = useRef(null)
 
-  // Load saved wallet on mount
+  // Subscribe to FCL auth state on mount
   useEffect(() => {
+    const unsub = subscribeToWallet((user) => {
+      if (user?.loggedIn && user?.addr) {
+        setWalletUser(user)
+        localStorage.setItem('flowshield_wallet', JSON.stringify(user))
+        checkComplianceStatus(user.addr)
+      }
+    })
+    // Also restore from localStorage for manual/demo connections
     try {
       const saved = localStorage.getItem('flowshield_wallet')
       if (saved) {
@@ -24,6 +31,7 @@ export default function WalletButton() {
         if (w.addr) checkComplianceStatus(w.addr)
       }
     } catch { /* ignore */ }
+    return unsub
   }, [])
 
   // Close dropdown on outside click
@@ -38,10 +46,26 @@ export default function WalletButton() {
 
   const [manualAddr, setManualAddr] = useState('')
 
+  // Primary: FCL wallet discovery (Lilico, Blocto, etc.)
+  const handleFCLConnect = async () => {
+    setConnecting(true)
+    try {
+      const user = await connectWallet()
+      if (user?.loggedIn) {
+        setWalletUser(user)
+        localStorage.setItem('flowshield_wallet', JSON.stringify(user))
+        checkComplianceStatus(user.addr)
+        setShowDiscovery(false)
+      }
+    } catch (err) {
+      console.error('[Wallet] FCL connect failed:', err)
+    }
+    setConnecting(false)
+  }
+
   const handleConnect = () => {
     setShowDiscovery(true)
   }
-
 
   const handleManualConnect = () => {
     const addr = manualAddr.trim()
@@ -55,7 +79,8 @@ export default function WalletButton() {
     setManualAddr('')
   }
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    try { await disconnectWallet() } catch { /* ignore */ }
     setWalletUser(null)
     setCompliance(null)
     setShowDropdown(false)
@@ -131,41 +156,23 @@ export default function WalletButton() {
                   </button>
                 </div>
 
-                {/* Quick connect — demo account */}
+                {/* Primary: Real wallet connection via FCL Discovery */}
                 <div className="px-4 pt-4 space-y-2">
                   <button
-                    onClick={() => {
-                      const user = { loggedIn: true, addr: CONTRACT_ADDRESS }
-                      setWalletUser(user)
-                      localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-                      checkComplianceStatus(user.addr)
-                      setShowDiscovery(false)
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08] hover:border-emerald-500/30 transition-all group"
+                    onClick={handleFCLConnect}
+                    disabled={connecting}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.08] bg-white text-[#060a13] hover:bg-white/90 transition-all"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    </div>
+                    {connecting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Wallet className="w-5 h-5" />
+                    )}
                     <div className="text-left flex-1">
-                      <p className="text-[13px] font-medium text-emerald-400/90">FlowShield Demo Account</p>
-                      <p className="text-[10px] text-white/30 font-mono">0x93c6...5493 · Credentials + Contracts deployed</p>
+                      <p className="text-[13px] font-semibold">{connecting ? 'Connecting...' : 'Connect Flow Wallet'}</p>
+                      <p className="text-[10px] text-[#060a13]/50">Lilico, Blocto, or any FCL-compatible wallet</p>
                     </div>
                   </button>
-
-                  <a
-                    href={`https://testnet.flowscan.io/account/${CONTRACT_ADDRESS}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center">
-                      <ExternalLink className="w-4 h-4 text-white/40" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[13px] font-medium text-white/70 group-hover:text-white/90">View on Flowscan</p>
-                      <p className="text-[10px] text-white/30">Verify contracts and credentials on-chain</p>
-                    </div>
-                  </a>
                 </div>
 
                 {/* Divider */}

@@ -14,6 +14,7 @@ import poolRoutes from './routes/pool.js'
 import adminRoutes from './routes/admin.js'
 import subscriptionRoutes from './routes/subscription.js'
 import governanceRoutes from './routes/governance.js'
+import accountsRoutes from './routes/accounts.js'
 import { requireApiKey, rateLimit } from '../lib/middleware.js'
 import { getSupabase } from '../lib/supabase.js'
 
@@ -55,15 +56,21 @@ app.locals.fcl = fcl
 app.locals.contractAddress = CONTRACT_ADDRESS
 
 // ── Routes ──
+// Public read endpoints — no auth required
 app.use('/api/compliance', complianceRoutes)
 app.use('/api/risk', riskRoutes)
-app.use('/api/copilot', copilotRoutes)
-app.use('/api/kyc', kycRoutes)
 app.use('/api/chain', chainRoutes)
+app.use('/api/kyc', kycRoutes)
+
+// User-facing write endpoints — protected by API key in production
 app.use('/api/pool', poolRoutes)
-app.use('/api/admin', adminRoutes)
+app.use('/api/copilot', copilotRoutes)
 app.use('/api/subscription', subscriptionRoutes)
 app.use('/api/governance', governanceRoutes)
+app.use('/api/accounts', accountsRoutes)
+
+// Admin-only — always require API key when Supabase is configured
+app.use('/api/admin', requireApiKey, adminRoutes)
 
 // ── Health check ──
 app.get('/health', (req, res) => {

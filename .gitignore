@@ -26,7 +26,16 @@ out/
 
 # OS
 .DS_Store
+**/.DS_Store
 Thumbs.db
+
+# Deploy caches
+.netlify/
+frontend/.netlify/
+
+# IDE
+.cursorignore
+*.code-workspace
 
 # Logs
 *.log

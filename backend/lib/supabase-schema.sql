@@ -83,6 +83,23 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(key);
 
+-- ── Users (Custodial Accounts) ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  flow_address TEXT UNIQUE NOT NULL,
+  public_key TEXT NOT NULL,
+  encrypted_private_key TEXT NOT NULL,
+  auth_method TEXT DEFAULT 'passkey',
+  jurisdiction TEXT,
+  credential_tx_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_flow_address ON users(flow_address);
+
 -- ── Operators ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS operators (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -23,7 +23,8 @@ export default function useOperatorData(walletAddress) {
   })
 
   const fetchAll = useCallback(async () => {
-    const address = walletAddress || '0x93c691a98b975493'
+    const address = walletAddress
+    if (!address) { setData(prev => ({ ...prev, loading: false })); return }
     let riskData = null
     let monitorData = null
     let jurisdictionData = {}
@@ -93,7 +94,7 @@ export default function useOperatorData(walletAddress) {
       loading: false,
       lastUpdated: new Date(),
       isLive,
-      address: walletAddress || '0x93c691a98b975493',
+      address: walletAddress || null,
     })
   }, [walletAddress])
 

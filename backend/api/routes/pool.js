@@ -3,54 +3,11 @@
 // Uses server-side signing with the deployer's private key.
 
 import { Router } from 'express'
-import elliptic from 'elliptic'
-import pkg from 'js-sha3'
-const { sha3_256 } = pkg
-const EC = elliptic.ec
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
+import { logAudit } from '../../lib/supabase.js'
 
 const router = Router()
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ec = new EC('p256')
-
-// ── Load private key ──
-let PRIVATE_KEY = null
-try {
-  const pkeyPath = path.resolve(__dirname, '../../../flowshield-testnet2.pkey')
-  let raw = fs.readFileSync(pkeyPath, 'utf8').trim()
-  if (raw.startsWith('0x')) raw = raw.slice(2)
-  PRIVATE_KEY = raw
-} catch {
-  // pkey not available — transactions will fail gracefully
-}
-
-// ── ECDSA_P256 + SHA3_256 signing (Flow's signature scheme) ──
-function signWithKey(privateKey, message) {
-  const key = ec.keyFromPrivate(Buffer.from(privateKey, 'hex'))
-  const digest = sha3_256(Buffer.from(message, 'hex'))
-  const sig = key.sign(Buffer.from(digest, 'hex'))
-  const n = 32
-  const r = sig.r.toArrayLike(Buffer, 'be', n)
-  const s = sig.s.toArrayLike(Buffer, 'be', n)
-  return Buffer.concat([r, s]).toString('hex')
-}
-
-// ── FCL server-side authorization ──
-function serverAuthorization(fcl, address, keyIndex = 0) {
-  return (account) => ({
-    ...account,
-    tempId: `${address}-${keyIndex}`,
-    addr: fcl.sansPrefix(address),
-    keyId: Number(keyIndex),
-    signingFunction: async (signable) => ({
-      addr: fcl.withPrefix(address),
-      keyId: Number(keyIndex),
-      signature: signWithKey(PRIVATE_KEY, signable.message),
-    }),
-  })
-}
+const PRIVATE_KEY = hasPrivateKey()
 
 // POST /api/pool/mint-credential — Mint a compliance credential to the address
 router.post('/mint-credential', async (req, res) => {
@@ -68,7 +25,7 @@ router.post('/mint-credential', async (req, res) => {
         import ComplianceCredential from 0x${fcl.sansPrefix(address)}
         import ZKVerifier from 0x${fcl.sansPrefix(address)}
 
-        transaction(jurisdiction: String, riskScore: UInt64) {
+        transaction(jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
           let admin: &ComplianceCredential.Admin
           let acct: auth(Storage, Capabilities) &Account
 
@@ -93,10 +50,10 @@ router.post('/mint-credential', async (req, res) => {
             let expiresAt = getCurrentBlock().timestamp + 7776000.0
 
             let proofData = ZKVerifier.ProofData(
-              proof: "server-side-demo",
-              claimsHash: "0xdemo",
+              proof: proof,
+              claimsHash: claimsHash,
               verifierName: "FlowShield",
-              signature: "0xdemo",
+              signature: claimsHash,
               jurisdiction: jurisdiction,
               timestamp: getCurrentBlock().timestamp
             )
@@ -113,10 +70,17 @@ router.post('/mint-credential', async (req, res) => {
           }
         }
       `,
-      args: (arg, t) => [
-        arg(req.body.jurisdiction || 'US', t.String),
-        arg(String(req.body.riskScore || 15), t.UInt64),
-      ],
+      args: (arg, t) => {
+        const jurisdiction = req.body.jurisdiction || 'US'
+        const proofId = req.body.proofHash || `zkp_${Date.now()}_${jurisdiction}`
+        const claimsId = req.body.claimsHash || `claims_${Date.now()}`
+        return [
+          arg(jurisdiction, t.String),
+          arg(String(req.body.riskScore || 15), t.UInt64),
+          arg(proofId, t.String),
+          arg(claimsId, t.String),
+        ]
+      },
       proposer: authz,
       payer: authz,
       authorizations: [authz],
@@ -125,6 +89,8 @@ router.post('/mint-credential', async (req, res) => {
 
     // Wait for transaction to be sealed
     const txResult = await fcl.tx(txId).onceSealed()
+
+    logAudit({ action: 'credential_mint', agent: 'pool', detail: { transactionId: txId, blockHeight: txResult.blockHeight }, severity: 'info' })
 
     res.json({
       success: true,
@@ -142,11 +108,66 @@ router.post('/mint-credential', async (req, res) => {
   }
 })
 
+// GET /api/pool/position/:userAddress — Get a specific user's deposit/borrow from chain
+router.get('/position/:userAddress', async (req, res) => {
+  const fcl = req.app.locals.fcl
+  const contractAddress = req.app.locals.contractAddress
+  const userAddress = req.params.userAddress
+
+  if (!userAddress || !userAddress.startsWith('0x')) {
+    return res.status(400).json({ error: 'Valid Flow address required' })
+  }
+
+  try {
+    const [userDeposit, userBorrow, maxBorrow] = await Promise.all([
+      fcl.query({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          access(all) fun main(addr: Address): UFix64 {
+            return DemoLendingPool.getDeposit(address: addr)
+          }
+        `,
+        args: (arg, t) => [arg(userAddress, t.Address)],
+      }),
+      fcl.query({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          access(all) fun main(addr: Address): UFix64 {
+            return DemoLendingPool.getBorrow(address: addr)
+          }
+        `,
+        args: (arg, t) => [arg(userAddress, t.Address)],
+      }),
+      fcl.query({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          access(all) fun main(addr: Address): UFix64 {
+            return DemoLendingPool.getMaxBorrow(address: addr)
+          }
+        `,
+        args: (arg, t) => [arg(userAddress, t.Address)],
+      }),
+    ])
+
+    res.json({
+      address: userAddress,
+      deposited: parseFloat(userDeposit),
+      borrowed: parseFloat(userBorrow),
+      maxBorrowRemaining: parseFloat(maxBorrow),
+      source: 'flow-testnet',
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message, source: 'error' })
+  }
+})
+
 // POST /api/pool/deposit — Real deposit into DemoLendingPool
+// Accepts userAddress in body — deposits for THAT user (server sponsors the tx)
 router.post('/deposit', async (req, res) => {
   const fcl = req.app.locals.fcl
-  const address = req.app.locals.contractAddress
+  const contractAddress = req.app.locals.contractAddress
   const amount = parseFloat(req.body.amount) || 0
+  const userAddress = req.body.userAddress || contractAddress
 
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available', source: 'error' })
@@ -156,22 +177,22 @@ router.post('/deposit', async (req, res) => {
   }
 
   try {
-    const authz = serverAuthorization(fcl, address)
+    const authz = serverAuthorization(fcl, contractAddress)
 
-    // Send real deposit transaction
     const txId = await fcl.mutate({
       cadence: `
-        import DemoLendingPool from 0x${fcl.sansPrefix(address)}
+        import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
 
-        transaction(amount: UFix64) {
+        transaction(amount: UFix64, depositor: Address) {
           prepare(signer: auth(Storage) &Account) {}
           execute {
-            DemoLendingPool.deposit(depositor: ${address}, amount: amount)
+            DemoLendingPool.deposit(depositor: depositor, amount: amount)
           }
         }
       `,
       args: (arg, t) => [
         arg(amount.toFixed(8), t.UFix64),
+        arg(userAddress, t.Address),
       ],
       proposer: authz,
       payer: authz,
@@ -181,11 +202,14 @@ router.post('/deposit', async (req, res) => {
 
     const txResult = await fcl.tx(txId).onceSealed()
 
+    logAudit({ action: 'pool_deposit', agent: 'pool', detail: { transactionId: txId, amount, userAddress, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
+
     res.json({
       success: txResult.status === 4,
       transactionId: txId,
       action: 'deposit',
       amount: amount,
+      userAddress,
       status: txResult.status,
       statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
       events: txResult.events?.map(e => ({
@@ -202,10 +226,12 @@ router.post('/deposit', async (req, res) => {
 })
 
 // POST /api/pool/borrow — Real borrow from DemoLendingPool
+// Accepts userAddress in body — borrows for THAT user (server sponsors the tx)
 router.post('/borrow', async (req, res) => {
   const fcl = req.app.locals.fcl
-  const address = req.app.locals.contractAddress
+  const contractAddress = req.app.locals.contractAddress
   const amount = parseFloat(req.body.amount) || 0
+  const userAddress = req.body.userAddress || contractAddress
 
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available', source: 'error' })
@@ -215,21 +241,22 @@ router.post('/borrow', async (req, res) => {
   }
 
   try {
-    const authz = serverAuthorization(fcl, address)
+    const authz = serverAuthorization(fcl, contractAddress)
 
     const txId = await fcl.mutate({
       cadence: `
-        import DemoLendingPool from 0x${fcl.sansPrefix(address)}
+        import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
 
-        transaction(amount: UFix64) {
+        transaction(amount: UFix64, borrower: Address) {
           prepare(signer: auth(Storage) &Account) {}
           execute {
-            DemoLendingPool.borrow(borrower: ${address}, amount: amount)
+            DemoLendingPool.borrow(borrower: borrower, amount: amount)
           }
         }
       `,
       args: (arg, t) => [
         arg(amount.toFixed(8), t.UFix64),
+        arg(userAddress, t.Address),
       ],
       proposer: authz,
       payer: authz,
@@ -239,11 +266,14 @@ router.post('/borrow', async (req, res) => {
 
     const txResult = await fcl.tx(txId).onceSealed()
 
+    logAudit({ action: 'pool_borrow', agent: 'pool', detail: { transactionId: txId, amount, userAddress, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
+
     res.json({
       success: txResult.status === 4,
       transactionId: txId,
       action: 'borrow',
       amount: amount,
+      userAddress,
       status: txResult.status,
       statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
       events: txResult.events?.map(e => ({

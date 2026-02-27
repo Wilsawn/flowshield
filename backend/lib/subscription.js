@@ -1,47 +1,54 @@
 // subscription.js
 // Tier-based access control for FlowShield API.
 //
-// Revenue model:
-//   Free:       Basic verify() calls, 1 jurisdiction, 100 req/day
-//   Pro:        All jurisdictions, Radar scans, Copilot, 10K req/day — $499/mo
-//   Enterprise: Custom jurisdictions, dedicated Copilot, SLA, unlimited — $2,999/mo
+// Revenue model (3 channels):
+//   1. On-chain fees: 0.001 FLOW per verification, 0.01 FLOW per credential mint
+//   2. API subscriptions (below)
+//   3. Enterprise custom contracts
 //
-// Protocols register with an API key and are assigned a tier.
-// Middleware checks tier before allowing access to gated endpoints.
+// Pricing based on industry comps:
+//   Sumsub ($199-499/mo), Persona (free + usage), Auth0 (free-$240/mo),
+//   ComplyAdvantage ($500-2k/mo), Chainalysis (enterprise-only)
+//
+// FlowShield undercuts traditional compliance vendors by 60-80% because
+// ZK proofs + on-chain credentials eliminate manual review overhead.
 
 const TIERS = {
-  free: {
-    name: 'Free',
+  starter: {
+    name: 'Starter',
     price: 0,
-    dailyLimit: 100,
+    monthlyLimit: 1000,
     jurisdictions: ['US'],
     features: ['verify', 'verifyFull'],
     copilot: false,
     radar: false,
     webhooks: false,
     sla: null,
+    stripePriceId: null, // free tier — no Stripe product
   },
-  pro: {
-    name: 'Pro',
-    price: 499,
-    dailyLimit: 10000,
+  growth: {
+    name: 'Growth',
+    price: 149,
+    monthlyLimit: 25000,
     jurisdictions: ['US', 'EU', 'UK', 'SG', 'CA'],
     features: ['verify', 'verifyFull', 'verifyWithRecord', 'verifyForJurisdiction', 'radar', 'copilot'],
     copilot: true,
     radar: true,
     webhooks: true,
     sla: '99.9%',
+    stripePriceId: process.env.STRIPE_GROWTH_PRICE_ID || null,
   },
-  enterprise: {
-    name: 'Enterprise',
-    price: 2999,
-    dailyLimit: -1, // unlimited
+  scale: {
+    name: 'Scale',
+    price: 499,
+    monthlyLimit: -1, // unlimited
     jurisdictions: ['US', 'EU', 'UK', 'SG', 'CA', 'JP', 'AU', 'BR', 'KR', 'custom'],
     features: ['verify', 'verifyFull', 'verifyWithRecord', 'verifyForJurisdiction', 'radar', 'copilot', 'admin', 'webhooks', 'dedicated'],
     copilot: true,
     radar: true,
     webhooks: true,
     sla: '99.99%',
+    stripePriceId: process.env.STRIPE_SCALE_PRICE_ID || null,
   },
 }
 
@@ -75,7 +82,7 @@ function hasFeature(apiKey, feature) {
   return tier.features.includes(feature)
 }
 
-// Check and increment daily usage
+// Check and increment monthly usage
 function checkUsage(apiKey) {
   const protocol = apiKeys.get(apiKey)
   if (!protocol) return { allowed: false, reason: 'Invalid API key' }
@@ -83,37 +90,37 @@ function checkUsage(apiKey) {
   const tier = TIERS[protocol.tier]
   if (!tier) return { allowed: false, reason: 'Invalid tier' }
 
-  // Unlimited for enterprise
-  if (tier.dailyLimit === -1) return { allowed: true, remaining: -1 }
+  // Unlimited for scale tier
+  if (tier.monthlyLimit === -1) return { allowed: true, remaining: -1 }
 
-  const today = new Date().toISOString().split('T')[0]
-  const key = `${apiKey}:${today}`
+  const month = new Date().toISOString().slice(0, 7) // YYYY-MM
+  const key = `${apiKey}:${month}`
   const current = dailyUsage.get(key) || 0
 
-  if (current >= tier.dailyLimit) {
+  if (current >= tier.monthlyLimit) {
     return {
       allowed: false,
-      reason: `Daily limit reached (${tier.dailyLimit} requests). Upgrade to ${protocol.tier === 'free' ? 'Pro' : 'Enterprise'} for more.`,
-      limit: tier.dailyLimit,
+      reason: `Monthly limit reached (${tier.monthlyLimit.toLocaleString()} requests). Upgrade for more.`,
+      limit: tier.monthlyLimit,
       used: current,
     }
   }
 
   dailyUsage.set(key, current + 1)
-  return { allowed: true, remaining: tier.dailyLimit - current - 1 }
+  return { allowed: true, remaining: tier.monthlyLimit - current - 1 }
 }
 
 // Express middleware: enforce tier-based access
 function requireTier(minimumTier) {
-  const tierOrder = ['free', 'pro', 'enterprise']
+  const tierOrder = ['starter', 'growth', 'scale']
 
   return (req, res, next) => {
     const apiKey = req.headers['x-api-key'] || req.query.apiKey
 
     // Allow unauthenticated requests in demo mode (no API key = free tier)
     if (!apiKey) {
-      req.tier = TIERS.free
-      req.tierName = 'free'
+      req.tier = TIERS.starter
+      req.tierName = 'starter'
       return next()
     }
 
@@ -154,19 +161,20 @@ function getPricing() {
     name: tier.name,
     price: tier.price,
     priceLabel: tier.price === 0 ? 'Free' : `$${tier.price}/mo`,
-    dailyLimit: tier.dailyLimit === -1 ? 'Unlimited' : tier.dailyLimit.toLocaleString(),
+    monthlyLimit: tier.monthlyLimit === -1 ? 'Unlimited' : tier.monthlyLimit.toLocaleString(),
     jurisdictions: tier.jurisdictions,
     copilot: tier.copilot,
     radar: tier.radar,
     webhooks: tier.webhooks,
     sla: tier.sla || 'Best effort',
+    stripePriceId: !!tier.stripePriceId,
   }))
 }
 
 // Seed demo protocols
-registerProtocol('demo-free-key', { name: 'Demo DeFi Protocol', tier: 'free', contactEmail: 'demo@example.com' })
-registerProtocol('demo-pro-key', { name: 'FlowShield Pro Demo', tier: 'pro', contactEmail: 'pro@flowshield.xyz' })
-registerProtocol('demo-enterprise-key', { name: 'FlowShield Enterprise', tier: 'enterprise', contactEmail: 'enterprise@flowshield.xyz' })
+registerProtocol('demo-starter-key', { name: 'Demo DeFi Protocol', tier: 'starter', contactEmail: 'demo@example.com' })
+registerProtocol('demo-growth-key', { name: 'FlowShield Growth Demo', tier: 'growth', contactEmail: 'growth@flowshield.xyz' })
+registerProtocol('demo-scale-key', { name: 'FlowShield Scale', tier: 'scale', contactEmail: 'scale@flowshield.xyz' })
 
 export {
   TIERS,
