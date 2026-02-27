@@ -88,6 +88,8 @@ flowshield/
 │   ├── agents/           AI + rule-based agents (risk, copilot, radar, anomaly)
 │   ├── api/              Express server + REST routes
 │   └── lib/              Supabase, middleware, demo state
+├── evm/
+│   └── contracts/        Solidity Groth16 verifier for FlowEVM (BN256 pairing)
 ├── frontend/
 │   ├── src/components/   React UI (dashboard, copilot, radar, onboarding)
 │   ├── src/hooks/        Data hooks (useChainData, useDashboardData, useRiskScore)
