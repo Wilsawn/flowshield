@@ -26,8 +26,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true })
 
 const app = express()
-// Always default to 3002 for backend (root .env PORT=3001 is for frontend)
-const PORT = process.env.BACKEND_PORT || 3002
+// Railway sets PORT automatically. Locally, use BACKEND_PORT to avoid conflict with frontend.
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 3002
 
 // ── Middleware ──
 app.use(cors({ origin: true }))
