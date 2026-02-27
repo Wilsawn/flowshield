@@ -4,13 +4,14 @@ import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Spark
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
+import { getSupabase } from '@/lib/supabase'
 
 const VERIFY_STEPS = [
-  { label: 'Creating secure account on Flow', detail: 'WebAuthn keypair generated', delay: 800 },
-  { label: 'Setting up passkey authentication', detail: 'Stored in device secure enclave', delay: 1200 },
-  { label: 'Running ZK background verification', detail: 'Client-side proof — no PII sent', delay: 1500 },
-  { label: 'Issuing compliance credential', detail: 'On-chain resource created', delay: 1000 },
-  { label: 'Finalizing account', detail: 'Sponsored by FlowShield — zero gas', delay: 600 },
+  { label: 'Creating your Flow account', detail: 'Unique on-chain account — funded by FlowShield', delay: 800 },
+  { label: 'Running identity verification', detail: 'KYC + ZK proof — no PII stored on-chain', delay: 1500 },
+  { label: 'Issuing compliance credential', detail: 'Minting to your account', delay: 1000 },
+  { label: 'Verifying on-chain state', detail: 'Confirming credential on Flow testnet', delay: 800 },
+  { label: 'Finalizing account', detail: 'Sponsored by FlowShield — zero gas fees', delay: 600 },
 ]
 
 const stepIndex = { email: 0, jurisdiction: 1, passkey: 2, verifying: 3, complete: 4 }
@@ -24,11 +25,13 @@ const slideIn = {
 export default function OnboardingFlow({ onComplete, onBack }) {
   const [step, setStep] = useState('email')
   const [email, setEmail] = useState('')
+  const [authMethod, setAuthMethod] = useState('email') // 'email' | 'google'
   const [jurisdiction, setJurisdiction] = useState(null)
   const [currentVerifyStep, setCurrentVerifyStep] = useState(0)
   const [error, setError] = useState(null)
   const [scanPulse, setScanPulse] = useState(false)
   const [veriffUrl, setVeriffUrl] = useState(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleEmailSubmit = (e) => {
     e.preventDefault()
@@ -37,8 +40,69 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       return
     }
     setError(null)
+    setAuthMethod('email')
     setStep('jurisdiction')
   }
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true)
+    setError(null)
+
+    const supabase = getSupabase()
+
+    if (!supabase) {
+      setError('Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then enable Google provider in Supabase → Authentication → Providers.')
+      setGoogleLoading(false)
+      return
+    }
+
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/onboarding?auth=google',
+          queryParams: { prompt: 'select_account' },
+        },
+      })
+
+      if (oauthError) {
+        setError(oauthError.message)
+        setGoogleLoading(false)
+      }
+      // If no error, the browser redirects to Google — we handle the callback below
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed')
+      setGoogleLoading(false)
+    }
+  }
+
+  // Handle Google OAuth callback — Supabase redirects back with session
+  useEffect(() => {
+    const supabase = getSupabase()
+    if (!supabase) return
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user?.email) {
+        setEmail(session.user.email)
+        setAuthMethod('google')
+        setGoogleLoading(false)
+        setStep('jurisdiction')
+      }
+    })
+
+    // Also check if we're returning from an OAuth redirect
+    if (window.location.search.includes('auth=google')) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) {
+          setEmail(session.user.email)
+          setAuthMethod('google')
+          setStep('jurisdiction')
+        }
+      })
+    }
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handlePasskeySetup = async () => {
     setScanPulse(true)
@@ -117,11 +181,49 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setScanPulse(false)
     setStep('verifying')
 
-    // Step 1: Start KYC session via backend
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+
+    // Step 1: Create a Flow account for this user (or retrieve existing)
     setCurrentVerifyStep(1)
+    let userFlowAddress = null
+    try {
+      // Check if user already has an external wallet connected
+      const existingWallet = (() => {
+        try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').addr } catch { return null }
+      })()
+
+      if (existingWallet) {
+        // User already connected an external wallet — use that address
+        userFlowAddress = existingWallet
+      } else {
+        // No wallet connected — create a custodial Flow account for this user
+        const acctRes = await fetch(`${API}/api/accounts/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, authMethod }),
+        })
+        const acctData = await acctRes.json()
+        if (acctData.address) {
+          userFlowAddress = acctData.address
+          // Store as the user's wallet so the dashboard picks it up
+          localStorage.setItem('flowshield_wallet', JSON.stringify({
+            loggedIn: true,
+            addr: acctData.address,
+            custodial: true,
+            email: email,
+          }))
+          // Dispatch storage event so dashboard reacts immediately
+          window.dispatchEvent(new Event('storage'))
+        }
+      }
+    } catch (err) {
+      console.warn('[FlowShield] Account creation:', err.message)
+    }
+
+    // Step 2: Start KYC + generate ZK proof
+    setCurrentVerifyStep(2)
     let kycSession = null
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
       const res = await fetch(`${API}/api/kyc/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,10 +231,9 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       })
       kycSession = await res.json()
     } catch (err) {
+      console.warn('[FlowShield] KYC start:', err.message)
     }
 
-    // Step 2: ZK background verification — generate proof client-side
-    setCurrentVerifyStep(2)
     if (kycSession?.mode === 'veriff' && kycSession.verificationUrl) {
       setVeriffUrl(kycSession.verificationUrl)
     }
@@ -140,7 +241,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     // Generate ZK compliance proof in the browser (no PII leaves the device)
     let zkProof = null
     try {
-      const kycSecret = kycSession?.transactionId || `demo_${email}_${Date.now()}`
+      const kycSecret = kycSession?.transactionId || `kyc_${email}_${Date.now()}`
       const expiryTimestamp = Math.floor(Date.now() / 1000) + 7776000 // 90 days
       zkProof = await generateComplianceProof({
         kycSecret,
@@ -153,13 +254,11 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       console.warn('[FlowShield] ZK proof generation:', err.message)
     }
 
-    // Step 3: Issuing credential — call backend to prepare mint transaction
+    // Step 3: Complete KYC + issue credential to user's OWN Flow account
     setCurrentVerifyStep(3)
 
-    // Complete the KYC session on backend
     if (kycSession?.transactionId) {
       try {
-        const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
         await fetch(`${API}/api/kyc/demo-complete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -168,22 +267,21 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       } catch { /* continue anyway */ }
     }
 
-    // Mint credential via backend
+    // Mint credential to the user's Flow address (custodial or external wallet)
     let mintResult = null
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
       const mintRes = await fetch(`${API}/api/subscription/mint`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          address: email,
+          address: userFlowAddress || email,
           jurisdiction: jurisdiction?.code || 'US',
           riskScore: 15,
-          proofHash: zkProof?.proofHash || 'demo_proof',
+          proofHash: zkProof?.proofHash || `zkp_${kycSession?.transactionId || Date.now()}`,
           proofData: zkProof ? {
             proof: JSON.stringify(zkProof.proof).slice(0, 200),
             claimsHash: zkProof.proofHash,
-            signature: 'demo_sig',
+            signature: zkProof.proofHash,
           } : null,
         }),
       })
@@ -200,10 +298,11 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setCurrentVerifyStep(5)
     await new Promise((r) => setTimeout(r, 600))
 
-    // Store user session in localStorage with ZK proof data
+    // Store user session in localStorage with ZK proof data + Flow address
     const userSession = {
       email,
       jurisdiction,
+      flowAddress: userFlowAddress,
       displayName: email.split('@')[0],
       createdAt: new Date().toISOString(),
       authMethod: 'passkey',
@@ -268,7 +367,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                 <motion.form key="email" onSubmit={handleEmailSubmit} {...slideIn}>
                   <h2 className="text-xl font-bold text-white mb-2">Create your account</h2>
                   <p className="text-[13px] text-white/35 mb-7 leading-relaxed">
-                    No wallet needed. No seed phrases. Just your email.
+                    No wallet needed. No seed phrases. We create a secure Flow account for you automatically.
                   </p>
                   <div className="space-y-4">
                     <div className="relative">
@@ -287,7 +386,34 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       type="submit"
                       className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500"
                     >
-                      Continue
+                      Continue with Email
+                    </button>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3 my-1">
+                      <div className="flex-1 h-px bg-white/[0.06]" />
+                      <span className="text-[11px] text-white/20">or</span>
+                      <div className="flex-1 h-px bg-white/[0.06]" />
+                    </div>
+
+                    {/* Google Sign-In */}
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      disabled={googleLoading}
+                      className="w-full h-12 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white font-medium text-[14px] flex items-center justify-center gap-3 hover:bg-white/[0.06] transition-all disabled:opacity-50"
+                    >
+                      {googleLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                      )}
+                      Continue with Google
                     </button>
                   </div>
                   <p className="text-[11px] text-white/20 mt-5 text-center leading-relaxed">

@@ -6,51 +6,9 @@ import { chat, scanCode } from '../../agents/builder-copilot.js'
 import { scanForGaps, parseRegulation } from '../../agents/regulatory-radar.js'
 import { logAudit, storeScanResult, fireWebhooks } from '../../lib/supabase.js'
 import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps } from '../../lib/demo-state.js'
-import elliptic from 'elliptic'
-import pkg from 'js-sha3'
-const { sha3_256 } = pkg
-const EC = elliptic.ec
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ec = new EC('p256')
-
-// ── Load private key (same key as pool.js) ──
-let PRIVATE_KEY = null
-try {
-  const pkeyPath = path.resolve(__dirname, '../../../flowshield-testnet2.pkey')
-  let raw = fs.readFileSync(pkeyPath, 'utf8').trim()
-  if (raw.startsWith('0x')) raw = raw.slice(2)
-  PRIVATE_KEY = raw
-} catch {
-  // pkey not available — will fall back to simulated
-}
-
-function signWithKey(privateKey, message) {
-  const key = ec.keyFromPrivate(Buffer.from(privateKey, 'hex'))
-  const digest = sha3_256(Buffer.from(message, 'hex'))
-  const sig = key.sign(Buffer.from(digest, 'hex'))
-  const n = 32
-  const r = sig.r.toArrayLike(Buffer, 'be', n)
-  const s = sig.s.toArrayLike(Buffer, 'be', n)
-  return Buffer.concat([r, s]).toString('hex')
-}
-
-function serverAuthorization(fcl, address, keyIndex = 0) {
-  return (account) => ({
-    ...account,
-    tempId: `${address}-${keyIndex}`,
-    addr: fcl.sansPrefix(address),
-    keyId: keyIndex,
-    signingFunction: async (signable) => ({
-      addr: fcl.withPrefix(address),
-      keyId: keyIndex,
-      signature: signWithKey(PRIVATE_KEY, signable.message),
-    }),
-  })
-}
+const PRIVATE_KEY = hasPrivateKey()
 
 const router = Router()
 
@@ -211,18 +169,9 @@ router.post('/radar/approve', async (req, res) => {
   const address = req.app.locals.contractAddress
 
   if (!PRIVATE_KEY || !fcl) {
-    console.warn('[Radar] No private key — using simulated approve')
-    const txHash = Array.from({ length: 64 }, () =>
-      '0123456789abcdef'[Math.floor(Math.random() * 16)]
-    ).join('')
-    return res.json({
-      success: true,
-      simulated: true,
-      txHash,
-      rulesApplied: Object.entries(rules).map(([key, value]) => ({ jurisdiction, key, value: String(value) })),
-      jurisdiction,
-      timestamp: new Date().toISOString(),
-      message: `Simulated — private key not available`,
+    return res.status(500).json({
+      success: false,
+      error: 'Private key not available — cannot sign on-chain transactions. Ensure flowshield-testnet2.pkey exists.',
     })
   }
 

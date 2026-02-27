@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, TrendingUp, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, FileCheck, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, Radio, ExternalLink, Code, X, Info, CheckCircle2, XCircle } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpFromLine, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, ExternalLink, Code, X, CheckCircle2, XCircle, Wallet } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import SpotlightCard from '@/components/ui/spotlight-card'
 import AnimatedTicker from '@/components/ui/animated-ticker'
 import VerificationPanel from '@/components/VerificationPanel'
 import WalletButton from '@/components/WalletButton'
@@ -11,8 +10,29 @@ import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
 
 export default function Dashboard() {
-  const live = useDashboardData()
-  const chain = useChainData()
+  const [walletAddr, setWalletAddr] = useState(() => {
+    try {
+      const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
+      return w.addr || null
+    } catch { return null }
+  })
+
+  // React to wallet connect/disconnect — poll localStorage for changes
+  useEffect(() => {
+    const check = () => {
+      try {
+        const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
+        const addr = w.addr || null
+        setWalletAddr(prev => prev !== addr ? addr : prev)
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('storage', check)
+    const interval = setInterval(check, 1000)
+    return () => { window.removeEventListener('storage', check); clearInterval(interval) }
+  }, [])
+
+  const live = useDashboardData(walletAddr)
+  const chain = useChainData(walletAddr)
   const [depositAmount, setDepositAmount] = useState('')
   const [borrowAmount, setBorrowAmount] = useState('')
   const [verifying, setVerifying] = useState(null) // null | { action, amount }
@@ -95,7 +115,7 @@ export default function Dashboard() {
     // Step 3: Compliance check
     setReVerifySteps(prev => [...prev, { label: 'Querying ComplianceCredential contract...', done: false }])
     try {
-      await fetch(`${API}/api/compliance/status/0x93c691a98b975493`)
+      await fetch(`${API}/api/compliance/status/${walletAddr || '0x93c691a98b975493'}`)
       setReVerifySteps(prev => {
         const updated = [...prev]
         updated[updated.length - 1] = { label: `Credential status verified on Flow testnet (block ${chain.latestBlock?.height || '...'})`, done: true }
@@ -110,7 +130,7 @@ export default function Dashboard() {
       const riskRes = await fetch(`${API}/api/risk/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: '0x93c691a98b975493' }),
+        body: JSON.stringify({ address: walletAddr || '0x93c691a98b975493' }),
       })
       if (riskRes.ok) {
         const riskData = await riskRes.json()
@@ -143,21 +163,44 @@ export default function Dashboard() {
 
   const handleRenewCredential = useCallback(async () => {
     setRenewing(true)
-    // Simulate renewal verification
-    await new Promise((r) => setTimeout(r, 2500))
+    try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+      const res = await fetch(`${API}/api/subscription/mint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: walletAddr,
+          jurisdiction: live.jurisdiction || 'US',
+          riskScore: live.riskScore ?? 15,
+          proofHash: `renewal_${Date.now()}`,
+        }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        setRenewed(true)
+        setCredentialExpiring(false)
+        live.refresh()
+        setTimeout(() => setRenewed(false), 4000)
+      }
+    } catch (err) {
+      console.error('[Dashboard] Renewal failed:', err)
+    }
     setRenewing(false)
-    setRenewed(true)
-    setCredentialExpiring(false)
-    setTimeout(() => setRenewed(false), 4000)
-  }, [])
+  }, [live])
 
   const handleDeposit = () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) return
     setVerifying({ action: 'deposit', amount: depositAmount })
   }
 
+  const maxBorrowRemaining = Math.max(0, ((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100) - (live.borrowed ?? 0))
+
   const handleBorrow = () => {
     if (!borrowAmount || parseFloat(borrowAmount) <= 0) return
+    if (parseFloat(borrowAmount) > maxBorrowRemaining) {
+      setVerifying({ action: 'borrow', amount: borrowAmount, error: `Exceeds borrow limit. Max remaining: $${maxBorrowRemaining.toFixed(0)} USDC (75% LTV)` })
+      return
+    }
     setVerifying({ action: 'borrow', amount: borrowAmount })
   }
 
@@ -166,6 +209,9 @@ export default function Dashboard() {
     if (verifying?.action === 'borrow') setBorrowAmount('')
     // Refresh live data to show updated pool stats from chain
     live.refresh?.()
+    chain.refresh?.()
+    // Second refresh after 3s to catch chain indexing lag
+    setTimeout(() => { live.refresh?.(); chain.refresh?.() }, 3000)
     setTimeout(() => setVerifying(null), 600)
   }
 
@@ -173,131 +219,107 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#060a13] text-white p-6 md:p-10">
       <div className="max-w-[1100px] mx-auto">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div>
-            <h1 className="text-[1.75rem] font-bold tracking-tight">
-              {(() => { try { const u = JSON.parse(localStorage.getItem('flowshield_user') || '{}'); return u.displayName ? `Welcome, ${u.displayName}` : 'Dashboard' } catch { return 'Dashboard' } })()}
-            </h1>
-            <p className="text-[13px] text-white/30 mt-1">
-              {currentJurisdiction.flag} {currentJurisdiction.name} · {currentJurisdiction.framework}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Live indicator */}
-            {live.isLive && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/[0.04]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-medium text-emerald-400/70">Live · Flow Testnet</span>
+        {/* Header — clean two-row layout */}
+        <div className="mb-10">
+          {/* Row 1: Title + actions */}
+          <div className="flex items-start justify-between gap-6 mb-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight truncate">
+                {(() => { try { const u = JSON.parse(localStorage.getItem('flowshield_user') || '{}'); return u.displayName ? `Welcome, ${u.displayName}` : 'Dashboard' } catch { return 'Dashboard' } })()}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              {/* Jurisdiction picker */}
+              <div className="relative" ref={jurisdictionRef}>
+                <button
+                  onClick={() => setShowJurisdictionPicker(!showJurisdictionPicker)}
+                  className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all"
+                >
+                  <span className="text-sm leading-none">{currentJurisdiction.flag}</span>
+                  <span>{currentJurisdiction.code}</span>
+                  <ChevronDown className="w-3 h-3 text-white/25" />
+                </button>
+                <AnimatePresence>
+                  {showJurisdictionPicker && (
+                    <motion.div
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-2">
+                        <p className="text-[10px] text-white/40 uppercase tracking-wider px-2.5 py-2 font-semibold">Select Jurisdiction</p>
+                        {JURISDICTION_LIST.map((j) => (
+                          <button
+                            key={j.code}
+                            onClick={() => handleJurisdictionChange(j.code)}
+                            className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-left transition-all duration-200 ${
+                              jurisdictionCode === j.code
+                                ? 'bg-emerald-500/[0.08] text-emerald-400'
+                                : 'hover:bg-white/[0.04] text-white/60'
+                            }`}
+                          >
+                            <span className="text-lg leading-none">{j.flag}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-medium">{j.name}</p>
+                              <p className="text-[10px] text-white/40 truncate">{j.regulator} · Travel rule: {j.travelRuleCurrency} {j.travelRuleThreshold.toLocaleString()}</p>
+                            </div>
+                            {jurisdictionCode === j.code && (
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
-            {/* Connect Wallet — real FCL Discovery */}
-            <WalletButton />
-            {/* Jurisdiction Selector */}
-            <div className="relative" ref={jurisdictionRef}>
+              {/* Compliance toggle */}
               <button
-                onClick={() => setShowJurisdictionPicker(!showJurisdictionPicker)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all duration-300"
+                onClick={() => setShowCompliance(!showCompliance)}
+                className={`h-9 px-3 rounded-lg border text-[12px] transition-all ${
+                  showCompliance
+                    ? 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-400'
+                    : 'border-white/[0.06] bg-white/[0.02] text-white/30 hover:text-white/50'
+                }`}
+                title={showCompliance ? 'Hide compliance layer' : 'Show compliance layer'}
               >
-                <span className="text-base leading-none">{currentJurisdiction.flag}</span>
-                <span>{currentJurisdiction.code}</span>
-                <ChevronDown className="w-3 h-3 text-white/30" />
+                {showCompliance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
-              <AnimatePresence>
-                {showJurisdictionPicker && (
-                  <motion.div
-                    className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="p-2">
-                      <p className="text-[10px] text-white/40 uppercase tracking-wider px-2.5 py-2 font-semibold">Select Jurisdiction</p>
-                      {JURISDICTION_LIST.map((j) => (
-                        <button
-                          key={j.code}
-                          onClick={() => handleJurisdictionChange(j.code)}
-                          className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-left transition-all duration-200 ${
-                            jurisdictionCode === j.code
-                              ? 'bg-emerald-500/[0.08] text-emerald-400'
-                              : 'hover:bg-white/[0.04] text-white/60'
-                          }`}
-                        >
-                          <span className="text-lg leading-none">{j.flag}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-medium">{j.name}</p>
-                            <p className="text-[10px] text-white/40 truncate">{j.regulator} · Travel rule: {j.travelRuleCurrency} {j.travelRuleThreshold.toLocaleString()}</p>
-                          </div>
-                          {jurisdictionCode === j.code && (
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Wallet */}
+              <WalletButton />
             </div>
+          </div>
 
-            <button
-              onClick={() => setShowCompliance(!showCompliance)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-[12px] font-medium transition-all duration-300 ${
-                showCompliance
-                  ? 'border-cyan-500/30 bg-cyan-500/[0.06] text-cyan-400'
-                  : 'border-white/[0.06] bg-white/[0.02] text-white/40 hover:text-white/60'
-              }`}
-            >
-              {showCompliance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{showCompliance ? 'Hide' : 'Show'} compliance layer</span>
-            </button>
-            <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.04]">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="text-[12px] sm:text-[13px] font-medium text-emerald-400">Compliant</span>
-              <span className="text-[11px] text-white/40 ml-1 hidden sm:inline">{currentJurisdiction.flag} {currentJurisdiction.code}</span>
-            </div>
+          {/* Row 2: Status strip */}
+          <div className="flex items-center gap-3 text-xs text-white/25">
+            {live.isLive && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Connected
+              </span>
+            )}
+            <span className="text-white/10">·</span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-emerald-400/50">Compliant</span>
+              <span>{currentJurisdiction.flag} {currentJurisdiction.name}</span>
+            </span>
+            <span className="text-white/10">·</span>
+            <ZKProofBadge compact />
           </div>
         </div>
 
-        {/* Key Differentiators — visible proof of what makes FlowShield unique */}
-        <div className="flex flex-wrap items-center gap-2 mb-8">
-          {[
-            { label: 'Walletless', detail: 'Passkey login, no seed phrases', color: 'emerald' },
-            { label: 'Sponsored Gas', detail: 'Protocol pays all fees', color: 'cyan' },
-            { label: 'ZK Private', detail: 'Identity never on-chain', color: 'violet' },
-            { label: 'Automated', detail: 'Agent monitors 24/7', color: 'amber' },
-            { label: 'Invisible', detail: 'Compliance happens behind the scenes', color: 'white' },
-          ].map((f, i) => (
-            <motion.div
-              key={f.label}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-medium ${
-                f.color === 'emerald' ? 'border-emerald-500/15 bg-emerald-500/[0.04] text-emerald-400/70' :
-                f.color === 'cyan' ? 'border-cyan-500/15 bg-cyan-500/[0.04] text-cyan-400/70' :
-                f.color === 'violet' ? 'border-violet-500/15 bg-violet-500/[0.04] text-violet-400/70' :
-                f.color === 'amber' ? 'border-amber-500/15 bg-amber-500/[0.04] text-amber-400/70' :
-                'border-white/[0.06] bg-white/[0.02] text-white/40'
-              }`}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.06 }}
-              title={f.detail}
-            >
-              <span className={`w-1 h-1 rounded-full ${
-                f.color === 'emerald' ? 'bg-emerald-400' :
-                f.color === 'cyan' ? 'bg-cyan-400' :
-                f.color === 'violet' ? 'bg-violet-400' :
-                f.color === 'amber' ? 'bg-amber-400' :
-                'bg-white/30'
-              }`} />
-              {f.label}
-            </motion.div>
-          ))}
-        </div>
-
-        {/* ZK Proof Badge — shows proof details from onboarding */}
-        <div className="mb-6">
-          <ZKProofBadge />
-        </div>
+        {/* Connect Wallet Prompt */}
+        {!walletAddr && (
+          <div className="mb-6 p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] text-center">
+            <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
+              <Wallet className="w-6 h-6 text-white/30" />
+            </div>
+            <p className="text-[15px] font-semibold text-white/80 mb-1">Connect your wallet to get started</p>
+            <p className="text-[12px] text-white/30 max-w-sm mx-auto">Connect a Flow wallet (Lilico, Blocto, or any FCL-compatible wallet) to view your compliance status, deposit, borrow, and manage your credentials.</p>
+          </div>
+        )}
 
         {/* Credential Expiration Banner */}
         <AnimatePresence>
@@ -349,62 +371,39 @@ export default function Dashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Wallet Balance', value: live.walletBalance ?? 0, icon: <Wallet className="w-4 h-4" />, sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'FLOW on testnet', subColor: 'text-white/40', prefix: '', onClick: () => setShowStatDetail('wallet') },
-            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: 'Earning 4.2% APY', subColor: 'text-emerald-400/70', onClick: () => setShowStatDetail('deposited') },
-            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: '2.8% interest rate', subColor: 'text-cyan-400/70', onClick: () => setShowStatDetail('borrowed') },
-            { label: 'Risk Score', value: live.riskScore ?? 0, icon: <TrendingUp className="w-4 h-4" />, sub: `Tier: ${live.riskTier || 'loading...'} · ${live.riskFactors?.length || 0} factors`, subColor: live.riskTier === 'compliant' ? 'text-emerald-400/70' : 'text-amber-400/70', noPrefix: true, onClick: () => setShowRiskDetail(true) },
+            { label: 'Wallet Balance', value: chain.account?.balance ?? live.walletBalance ?? 0, sub: 'FLOW', prefix: '', decimals: 2, onClick: () => setShowStatDetail('wallet') },
+            { label: 'Total Deposited', value: live.deposited ?? 0, sub: live.baseAPYPercent != null ? `${live.baseAPYPercent}% APY` : '—', onClick: () => setShowStatDetail('deposited') },
+            { label: 'Total Borrowed', value: live.borrowed ?? 0, sub: live.borrowRatePercent != null ? `${live.borrowRatePercent}% interest` : '—', onClick: () => setShowStatDetail('borrowed') },
+            { label: 'Risk Score', value: live.riskScore ?? 0, sub: live.riskTier || '—', noPrefix: true, onClick: () => setShowRiskDetail(true) },
           ].map((stat, i) => (
-            <SpotlightCard key={i} className="p-5 cursor-pointer hover:border-white/[0.1] transition-all" onClick={stat.onClick}>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[13px] text-white/35">{stat.label}</span>
-                <div className="text-white/35">{stat.icon}</div>
-              </div>
-              <p className="text-[1.75rem] font-bold tracking-tight">
-                {stat.noPrefix ? '' : (stat.prefix !== undefined ? stat.prefix : '$')}<AnimatedTicker value={stat.value} decimals={stat.decimals || 0} className="text-white" />
+            <button
+              key={i}
+              onClick={stat.onClick}
+              className="p-5 rounded-xl border border-white/[0.06] bg-white/[0.01] text-left hover:border-white/[0.1] transition-colors"
+            >
+              <span className="text-xs text-white/35 block mb-3">{stat.label}</span>
+              <p className="text-[1.6rem] font-bold tracking-tight text-white">
+                {stat.noPrefix ? '' : (stat.prefix !== undefined ? stat.prefix : '$')}<AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />
               </p>
-              <div className="flex items-center justify-between mt-1.5">
-                <p className={`text-[11px] ${stat.subColor}`}>{stat.sub}</p>
-                <Info className="w-3 h-3 text-white/25" />
-              </div>
-            </SpotlightCard>
+              <p className="text-xs text-white/30 mt-1">{stat.sub}</p>
+            </button>
           ))}
         </div>
 
-        {/* Flow Network Widget */}
-        <div className="mb-8 rounded-2xl border border-white/[0.06] bg-gradient-to-br from-emerald-500/[0.02] to-cyan-500/[0.02] p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/[0.03] rounded-full blur-[60px] pointer-events-none" />
-          <div className="flex items-center justify-between relative">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <Radio className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-white/80">Flow Testnet</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">LIVE</span>
-                </div>
-                <span className="text-[10px] text-white/40">Connected to Flow blockchain via Access API</span>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-6">
-              <div className="text-right">
-                <span className="text-[9px] text-white/35 block">Latest Block</span>
-                <span className="text-[12px] text-white/50 font-mono font-medium">#{chain.latestBlock?.height || '—'}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] text-white/35 block">Contract</span>
-                <a href="https://testnet.flowscan.io/account/0x93c691a98b975493" target="_blank" rel="noopener noreferrer" className="text-[12px] text-cyan-400/60 font-mono font-medium hover:text-cyan-400 transition-colors">0x93c6...5493</a>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] text-white/35 block">Jurisdiction</span>
-                <span className="text-[12px] text-white/50 font-medium">{currentJurisdiction.flag} {currentJurisdiction.code}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] text-white/35 block">Gas Fees</span>
-                <span className="text-[12px] text-emerald-400/70 font-medium">Sponsored</span>
-              </div>
-            </div>
+        {/* Flow Network Bar */}
+        <div className="mb-8 flex items-center justify-between rounded-xl border border-white/[0.06] px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="text-xs text-white/50 font-medium">Flow Testnet</span>
+            <span className="text-xs text-white/20">·</span>
+            <span className="text-xs text-white/30 font-mono">Block #{chain.latestBlock?.height || '—'}</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-4">
+            <a href={`https://testnet.flowscan.io/account/${walletAddr || '0x93c691a98b975493'}`} target="_blank" rel="noopener noreferrer" className="text-xs text-white/30 font-mono hover:text-white/50 transition-colors">{walletAddr ? `${walletAddr.slice(0, 6)}...${walletAddr.slice(-4)}` : 'Not connected'}</a>
+            <span className="text-xs text-white/20">·</span>
+            <span className="text-xs text-white/30">{currentJurisdiction.flag} {currentJurisdiction.code}</span>
+            <span className="text-xs text-white/20">·</span>
+            <span className="text-xs text-white/30">Gas sponsored</span>
           </div>
         </div>
 
@@ -412,114 +411,99 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* Deposit */}
-          <SpotlightCard className="p-6">
+          <div className="p-6 rounded-xl border border-white/[0.06]">
             <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <ArrowDownToLine className="w-4 h-4 text-emerald-400" />
-              </div>
-              <h3 className="text-[15px] font-semibold">Deposit</h3>
+              <ArrowDownToLine className="w-4 h-4 text-white/40" />
+              <h3 className="text-sm font-semibold text-white/80">Deposit</h3>
+              <span className="text-xs text-white/20 ml-auto">USDC</span>
             </div>
             <div className="space-y-3">
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="w-full h-11 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 pr-16 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:border-emerald-500/30 transition-colors"
-                />
-                <span className="absolute right-4 top-3 text-[13px] text-white/40 flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-white/[0.06] flex items-center justify-center text-[8px]">$</span>
-                  USDC
-                </span>
-              </div>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/[0.12] transition-colors"
+              />
               <button
-                onClick={() => {
-                  if (!depositAmount || Number(depositAmount) <= 0) return
-                  live.deposit(Number(depositAmount))
-                  setDepositAmount('')
-                }}
-                className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-[13px] font-semibold text-white hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-300 disabled:opacity-30"
+                onClick={handleDeposit}
+                className="w-full h-10 rounded-lg bg-white text-[#060a13] text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-30"
                 disabled={!depositAmount || Number(depositAmount) <= 0}
               >
                 Deposit
               </button>
-              <p className="text-[11px] text-white/40 text-center">
-                Compliance verified automatically. Zero gas fees.
+              <p className="text-xs text-white/25 text-center">
+                Into DemoLendingPool · Gas sponsored
               </p>
             </div>
-          </SpotlightCard>
+          </div>
 
           {/* Borrow */}
-          <SpotlightCard className="p-6">
+          <div className="p-6 rounded-xl border border-white/[0.06]">
             <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                <ArrowUpFromLine className="w-4 h-4 text-cyan-400" />
-              </div>
-              <h3 className="text-[15px] font-semibold">Borrow</h3>
+              <ArrowUpFromLine className="w-4 h-4 text-white/40" />
+              <h3 className="text-sm font-semibold text-white/80">Borrow</h3>
+              <span className="text-xs text-white/20 ml-auto">USDC</span>
             </div>
             <div className="space-y-3">
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={borrowAmount}
-                  onChange={(e) => setBorrowAmount(e.target.value)}
-                  className="w-full h-11 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 pr-16 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:border-cyan-500/30 transition-colors"
-                />
-                <span className="absolute right-4 top-3 text-[13px] text-white/40 flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-white/[0.06] flex items-center justify-center text-[8px]">$</span>
-                  USDC
-                </span>
-              </div>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={borrowAmount}
+                onChange={(e) => setBorrowAmount(e.target.value)}
+                className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/[0.12] transition-colors"
+              />
               <button
-                onClick={() => {
-                  if (!borrowAmount || Number(borrowAmount) <= 0) return
-                  live.borrow(Number(borrowAmount))
-                  setBorrowAmount('')
-                }}
-                className="w-full h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 text-[13px] font-semibold text-white hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] transition-all duration-300 disabled:opacity-30"
+                onClick={handleBorrow}
+                className="w-full h-10 rounded-lg border border-white/[0.08] text-sm font-semibold text-white/70 hover:text-white hover:border-white/[0.15] transition-colors disabled:opacity-30"
                 disabled={!borrowAmount || Number(borrowAmount) <= 0}
               >
                 Borrow
               </button>
-              <p className="text-[11px] text-white/40 text-center">
-                Max borrow: ${((live.deposited ?? 0) * 0.75).toFixed(0)} (75% LTV)
+              <p className="text-xs text-white/25 text-center">
+                ${maxBorrowRemaining.toFixed(0)} remaining · {live.maxLTVPercent ?? 75}% LTV
               </p>
             </div>
-          </SpotlightCard>
+          </div>
 
-          {/* Recent Activity */}
-          <SpotlightCard className="p-6">
+          {/* Account Info */}
+          <div className="p-6 rounded-xl border border-white/[0.06]">
             <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center">
-                <Activity className="w-4 h-4 text-white/40" />
-              </div>
-              <h3 className="text-[15px] font-semibold">Account Info</h3>
-              {live.isLive && <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">LIVE</span>}
+              <Activity className="w-4 h-4 text-white/40" />
+              <h3 className="text-sm font-semibold text-white/80">Account Info</h3>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[
-                { label: 'Account Age', value: live.accountAge != null ? `${live.accountAge} days` : '—', dot: 'bg-emerald-400' },
-                { label: 'Transactions (24h)', value: live.txCount != null ? `${live.txCount}` : '—', dot: 'bg-emerald-400' },
-                { label: 'Contracts Deployed', value: live.contractCount != null ? `${live.contractCount}` : '—', dot: 'bg-cyan-400' },
-                { label: 'Signing Keys', value: live.keyCount != null ? `${live.keyCount}` : '—', dot: 'bg-white/30' },
-                { label: 'Funding Sources', value: live.fundingSources != null ? `${live.fundingSources}` : '—', dot: live.fundingSources > 3 ? 'bg-amber-400' : 'bg-emerald-400' },
-                { label: 'Risk Factors', value: live.riskFactors?.length > 0 ? live.riskFactors.map(f => f.label).join(', ') : 'None detected', dot: live.riskFactors?.length > 0 ? 'bg-amber-400' : 'bg-emerald-400' },
+                { label: 'Account Age', value: live.accountAge != null ? `${live.accountAge} days` : '—' },
+                { label: 'Transactions (24h)', value: live.txCount != null ? `${live.txCount}` : '—' },
+                { label: 'Contracts', value: live.contractCount != null ? `${live.contractCount}` : '—' },
+                { label: 'Keys', value: live.keyCount != null ? `${live.keyCount}` : '—' },
+                { label: 'Funding Sources', value: live.fundingSources != null ? `${live.fundingSources}` : '—' },
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-2.5 -mx-2.5 rounded-lg hover:bg-white/[0.02] transition-colors">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.dot}`} />
-                  <span className="text-[12px] text-white/40 flex-1">{item.label}</span>
-                  <span className="text-[12px] text-white/70 font-medium text-right">{item.value}</span>
+                <div key={i} className="flex items-center justify-between py-1.5">
+                  <span className="text-xs text-white/35">{item.label}</span>
+                  <span className="text-xs text-white/60 font-medium">{item.value}</span>
                 </div>
               ))}
+              {live.riskFactors?.length > 0 && (
+                <div className="pt-2 border-t border-white/[0.04]">
+                  <span className="text-xs text-white/35">Risk Factors</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {live.riskFactors.map((f, fi) => (
+                      <span key={fi} className="text-[10px] px-2 py-0.5 rounded bg-white/[0.04] text-white/40">
+                        +{f.points} {f.label?.length > 30 ? f.label.slice(0, 27) + '...' : f.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {live.lastUpdated && (
-              <p className="text-[10px] text-white/35 mt-4 text-center">
-                Last updated: {live.lastUpdated.toLocaleTimeString()} · Auto-refreshes every 30s
+              <p className="text-xs text-white/20 mt-4 text-center">
+                Updated {live.lastUpdated.toLocaleTimeString()}
               </p>
             )}
-          </SpotlightCard>
+          </div>
 
         </div>
 
@@ -534,125 +518,95 @@ export default function Dashboard() {
               transition={{ duration: 0.4 }}
             >
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="text-[11px] font-semibold text-cyan-400/70 uppercase tracking-[0.25em]">Compliance Layer — On-Chain Data</span>
-                {chain.latestBlock && <span className="text-[10px] text-white/20 ml-auto font-mono">Block #{chain.latestBlock.height}</span>}
+                <span className="text-xs font-medium text-white/40 uppercase tracking-wider">Compliance — On-Chain</span>
+                {chain.latestBlock && <span className="text-xs text-white/20 ml-auto font-mono">#{chain.latestBlock.height}</span>}
               </div>
 
-              {/* Real on-chain status cards */}
+              {/* On-chain status cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <SpotlightCard className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400/70" />
-                    <span className="text-[11px] text-white/30 uppercase tracking-wider">Credential</span>
-                  </div>
-                  <p className={`text-[14px] font-bold mb-1 ${chain.compliance?.hasCredential ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {chain.compliance?.hasCredential ? 'ACTIVE' : 'NOT MINTED'}
+                <div className="p-4 rounded-xl border border-white/[0.06]">
+                  <span className="text-xs text-white/30 block mb-2">Credential</span>
+                  <p className={`text-sm font-bold mb-1 ${chain.compliance?.hasCredential ? 'text-emerald-400' : 'text-white/50'}`}>
+                    {chain.compliance?.hasCredential ? 'Active' : 'Not minted'}
                   </p>
-                  <p className="text-[11px] text-white/20 font-mono">Tier: {chain.compliance?.tier || '—'} · Source: {chain.compliance?.source || '—'}</p>
-                </SpotlightCard>
+                  <p className="text-xs text-white/20 font-mono">{chain.compliance?.tier || '—'} · {chain.compliance?.source || '—'}</p>
+                </div>
 
-                <SpotlightCard className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Fingerprint className="w-4 h-4 text-cyan-400/70" />
-                    <span className="text-[11px] text-white/30 uppercase tracking-wider">Risk Score</span>
-                  </div>
-                  <p className={`text-[14px] font-bold mb-1 ${(live.riskScore ?? 0) < 30 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {live.riskScore ?? '—'}/100
-                  </p>
-                  <p className="text-[11px] text-white/20 font-mono">Tier: {live.riskTier || '—'} · {live.riskFactors?.length || 0} factors detected</p>
-                </SpotlightCard>
+                <div className="p-4 rounded-xl border border-white/[0.06]">
+                  <span className="text-xs text-white/30 block mb-2">Risk Score</span>
+                  <p className="text-sm font-bold text-white mb-1">{live.riskScore ?? '—'}/100</p>
+                  <p className="text-xs text-white/20 font-mono">{live.riskTier || '—'} · {live.riskFactors?.length || 0} factors</p>
+                </div>
 
-                <SpotlightCard className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Globe className="w-4 h-4 text-cyan-400/70" />
-                    <span className="text-[11px] text-white/30 uppercase tracking-wider">Jurisdiction</span>
-                  </div>
-                  <p className="text-[14px] font-bold text-cyan-400 mb-1">{currentJurisdiction.code} / {currentJurisdiction.regulator}</p>
-                  <p className="text-[11px] text-white/20 font-mono">
-                    Travel rule: {onChainRules?.rules?.travel_rule_threshold || currentJurisdiction.travelRuleThreshold} · KYC: {onChainRules?.rules?.kyc_level || currentJurisdiction.kycLevel}
+                <div className="p-4 rounded-xl border border-white/[0.06]">
+                  <span className="text-xs text-white/30 block mb-2">Jurisdiction</span>
+                  <p className="text-sm font-bold text-white mb-1">{currentJurisdiction.code} / {currentJurisdiction.regulator}</p>
+                  <p className="text-xs text-white/20 font-mono">
+                    Travel rule: {onChainRules?.rules?.travel_rule_threshold || currentJurisdiction.travelRuleThreshold}
                   </p>
-                </SpotlightCard>
+                </div>
 
-                <SpotlightCard className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap className="w-4 h-4 text-cyan-400/70" />
-                    <span className="text-[11px] text-white/30 uppercase tracking-wider">Network</span>
-                  </div>
-                  <p className="text-[14px] font-bold text-cyan-400 mb-1">Flow Testnet</p>
-                  <p className="text-[11px] text-white/20 font-mono">
-                    Balance: {chain.account?.balance?.toLocaleString() || '—'} FLOW · {chain.account?.contractCount || 0} contracts
+                <div className="p-4 rounded-xl border border-white/[0.06]">
+                  <span className="text-xs text-white/30 block mb-2">Network</span>
+                  <p className="text-sm font-bold text-white mb-1">Flow Testnet</p>
+                  <p className="text-xs text-white/20 font-mono">
+                    {chain.account?.balance?.toLocaleString() || '—'} FLOW · {chain.account?.contractCount || 0} contracts
                   </p>
-                </SpotlightCard>
+                </div>
               </div>
 
-              {/* Deployed Contracts — REAL from Flow testnet */}
-              <SpotlightCard className="p-5 mt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Code className="w-4 h-4 text-white/30" />
-                  <span className="text-[11px] text-white/30 uppercase tracking-wider">Deployed Contracts on Flow Testnet</span>
-                  <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium ml-auto">LIVE</span>
-                </div>
+              {/* Deployed Contracts */}
+              <div className="p-5 mt-4 rounded-xl border border-white/[0.06]">
+                <span className="text-xs text-white/30 uppercase tracking-wider block mb-3">Deployed Contracts</span>
                 {chain.contracts.length > 0 ? (
                   <div className="space-y-2">
                     {chain.contracts.map((c, i) => (
-                      <div key={i} className="p-3 rounded-lg border border-white/[0.04] bg-white/[0.01]">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span className="text-[12px] font-medium text-white/70">{c.name}</span>
-                          <span className="text-[10px] text-white/15 font-mono ml-auto">{(c.codeSize / 1024).toFixed(1)} KB</span>
-                        </div>
-                        <p className="text-[10px] text-white/25 font-mono leading-relaxed truncate">{c.codePreview?.slice(0, 120)}</p>
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.03] last:border-0">
+                        <span className="text-xs font-medium text-white/60">{c.name}</span>
+                        <span className="text-xs text-white/20 font-mono">{(c.codeSize / 1024).toFixed(1)} KB</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-white/20">Loading contracts from chain...</p>
+                  <p className="text-xs text-white/20">Loading...</p>
                 )}
                 <a
                   href={`https://testnet.flowscan.io/account/${chain.account?.address || '0x93c691a98b975493'}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 mt-3 text-[10px] text-cyan-400/60 hover:text-cyan-400 transition-colors"
+                  className="flex items-center gap-1.5 mt-3 text-xs text-white/30 hover:text-white/50 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   View on Flowscan
                 </a>
-              </SpotlightCard>
+              </div>
 
-              {/* On-Chain Jurisdiction Rules */}
-              <SpotlightCard className="p-5 mt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Globe className="w-4 h-4 text-white/30" />
-                  <span className="text-[11px] text-white/30 uppercase tracking-wider">
-                    {onChainRules?.source === 'flow-testnet' ? 'On-Chain' : 'Active'} Rules ({currentJurisdiction.code})
-                  </span>
-                  {onChainRules?.source === 'flow-testnet' && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium ml-auto">FROM CHAIN</span>
-                  )}
-                </div>
+              {/* Jurisdiction Rules */}
+              <div className="p-5 mt-4 rounded-xl border border-white/[0.06]">
+                <span className="text-xs text-white/30 uppercase tracking-wider block mb-3">
+                  {onChainRules?.source === 'flow-testnet' ? 'On-Chain' : 'Active'} Rules — {currentJurisdiction.code}
+                </span>
                 {onChainRules?.rules ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {Object.entries(onChainRules.rules).map(([key, value], i) => (
-                      <div key={i} className="p-2.5 rounded-lg border border-white/[0.04] bg-white/[0.01]">
-                        <span className="text-[10px] text-white/25 block">{key.replace(/_/g, ' ')}</span>
-                        <span className="text-[12px] text-white/60 font-medium">{value}</span>
+                      <div key={i} className="py-2">
+                        <span className="text-[10px] text-white/20 block">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-xs text-white/50 font-medium">{value}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {currentJurisdiction.complianceChecks.map((check, i) => (
-                      <div key={i} className="flex items-center gap-2.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${check.status === 'clear' ? 'bg-emerald-400' : check.status === 'active' ? 'bg-cyan-400 animate-pulse' : 'bg-emerald-400'}`} />
-                        <span className="text-[11px] text-white/40">{check.label}</span>
-                        <span className="text-[10px] font-mono ml-auto text-white/25">{check.status.toUpperCase()}</span>
+                      <div key={i} className="flex items-center justify-between py-1.5">
+                        <span className="text-xs text-white/35">{check.label}</span>
+                        <span className="text-[10px] font-mono text-white/25">{check.status.toUpperCase()}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 <div className="mt-4 pt-3 border-t border-white/[0.04]">
-                  <p className="text-[10px] text-white/20 leading-relaxed">
+                  <p className="text-xs text-white/15 leading-relaxed">
                     {currentJurisdiction.rules.join(' · ')}
                   </p>
                   <a
@@ -663,13 +617,13 @@ export default function Dashboard() {
                           'https://www.fintrac-canafe.gc.ca/msb-esm/msb-eng'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 mt-2 text-[10px] text-cyan-400/60 hover:text-cyan-400 transition-colors"
+                    className="flex items-center gap-1.5 mt-2 text-xs text-white/30 hover:text-white/50 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    View source regulation ({currentJurisdiction.regulator})
+                    {currentJurisdiction.regulator} source
                   </a>
                 </div>
-              </SpotlightCard>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -723,7 +677,7 @@ export default function Dashboard() {
                 {/* Progress bar */}
                 <div className="mt-6 h-1 bg-white/[0.04] rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full"
+                    className="h-full bg-emerald-400 rounded-full"
                     initial={{ width: '0%' }}
                     animate={{ width: `${(reVerifySteps.length / 5) * 100}%` }}
                     transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -843,10 +797,10 @@ export default function Dashboard() {
                                     href={explorerBase}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[9px] text-cyan-400/50 hover:text-cyan-400 transition-colors"
+                                    className="inline-flex items-center gap-1 text-[9px] text-white/25 hover:text-white/50 transition-colors"
                                   >
                                     <ExternalLink className="w-2.5 h-2.5" />
-                                    View on Flowscan
+                                    Flowscan
                                   </a>
                                 </div>
                               </div>
@@ -857,7 +811,7 @@ export default function Dashboard() {
                     })}
                     {/* Show any extra demo-injected factors not in the standard list */}
                     {live.riskFactors?.filter(f => !['account_age_7d','account_age_30d','high_volume_24h','rapid_in_out','flagged_contract','mixer_interaction','multi_funding','dormancy_spike'].includes(f.id)).map(factor => (
-                      <div key={factor.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                      <div key={factor.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <XCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
@@ -870,10 +824,10 @@ export default function Dashboard() {
                               href={`https://testnet.flowscan.io/account/${live.address || '0x93c691a98b975493'}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[9px] text-cyan-400/50 hover:text-cyan-400 transition-colors"
+                              className="inline-flex items-center gap-1 text-[9px] text-white/25 hover:text-white/50 transition-colors"
                             >
                               <ExternalLink className="w-2.5 h-2.5" />
-                              View source on Flowscan
+                              Flowscan
                             </a>
                           </div>
                         </div>
@@ -958,7 +912,7 @@ export default function Dashboard() {
                   {showStatDetail === 'deposited' && (<>
                     <div className="text-center py-3">
                       <p className="text-[32px] font-bold text-white">{(live.deposited ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
-                      <p className="text-[11px] text-emerald-400/70 mt-1">Earning 4.2% APY</p>
+                      <p className="text-[11px] text-emerald-400/70 mt-1">Earning {live.baseAPYPercent ?? '—'}% APY</p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
@@ -988,12 +942,12 @@ export default function Dashboard() {
                   {showStatDetail === 'borrowed' && (<>
                     <div className="text-center py-3">
                       <p className="text-[32px] font-bold text-white">{(live.borrowed ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
-                      <p className="text-[11px] text-cyan-400/70 mt-1">2.8% interest rate</p>
+                      <p className="text-[11px] text-cyan-400/70 mt-1">{live.borrowRatePercent ?? '—'}% interest rate</p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
-                        <span className="text-[11px] text-white/40">Max Borrow (75% LTV)</span>
-                        <span className="text-[11px] text-white/70 font-medium">${((live.deposited ?? 0) * 0.75).toFixed(0)} USDC</span>
+                        <span className="text-[11px] text-white/40">Max Borrow ({live.maxLTVPercent ?? '—'}% LTV)</span>
+                        <span className="text-[11px] text-white/70 font-medium">${((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100).toFixed(0)} USDC</span>
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Available Liquidity</span>
@@ -1009,7 +963,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <p className="text-[10px] text-white/20 leading-relaxed">
-                      <strong className="text-white/40">What is borrowing?</strong> You borrow from the pool using your deposits as collateral (75% loan-to-value ratio). 
+                      <strong className="text-white/40">What is borrowing?</strong> You borrow from the pool using your deposits as collateral ({live.maxLTVPercent ?? '—'}% loan-to-value ratio). 
                       Borrowing requires <strong className="text-white/40">full compliance</strong> — ComplianceAction.verifyFull() is called on-chain, which checks 
                       your credential tier is "compliant" (not just semi-compliant). Gas fees are sponsored by FlowShield — completely free for users.
                     </p>
@@ -1027,6 +981,7 @@ export default function Dashboard() {
           action={verifying?.action || 'deposit'}
           amount={verifying?.amount || '0'}
           onComplete={handleVerificationComplete}
+          clientError={verifying?.error || null}
         />
 
       </div>

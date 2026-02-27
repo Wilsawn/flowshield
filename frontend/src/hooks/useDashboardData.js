@@ -2,13 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
-// Smart fallbacks — used only when real data is empty/zero
-const FALLBACKS = {
-  balance: 1250.00,
-  deposited: 800.00,
-  borrowed: 200.00,
-  earnedYield: 12.45,
-}
+// No fake fallbacks — always show real chain data or 0
 
 export default function useDashboardData(address) {
   const [data, setData] = useState({
@@ -47,9 +41,10 @@ export default function useDashboardData(address) {
     let complianceData = null
     let poolData = null
 
-    // Fetch all 3 APIs in parallel
+    // Fetch all 4 APIs in parallel — risk, compliance, global pool stats, and per-user position
+    let userPosition = null
     try {
-      const [riskRes, complianceRes, poolRes] = await Promise.allSettled([
+      const [riskRes, complianceRes, poolRes, positionRes] = await Promise.allSettled([
         fetch(`${API}/api/risk/score`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -59,6 +54,8 @@ export default function useDashboardData(address) {
         fetch(`${API}/api/compliance/status/${targetAddress}`).then(r => r.json()),
 
         fetch(`${API}/api/pool/status`).then(r => r.json()),
+
+        fetch(`${API}/api/pool/position/${targetAddress}`).then(r => r.json()),
       ])
 
       if (riskRes.status === 'fulfilled') {
@@ -73,26 +70,25 @@ export default function useDashboardData(address) {
         poolData = poolRes.value
         sources.pool = poolData.source || 'api'
       }
+      if (positionRes.status === 'fulfilled') {
+        userPosition = positionRes.value
+      }
     } catch (err) {
-      // API fetch error — will use fallback data
+      // API fetch error — data will show as 0 or null
     }
 
     // Parse wallet balance from risk data (real FLOW balance from testnet)
-    const realBalance = riskData?.walletData?.balance || 0
-    const realDeposits = parseFloat(poolData?.totalDeposits) || 0
-    const realBorrowed = parseFloat(poolData?.totalBorrowed) || 0
-
-    // Use real data, fall back to demo numbers only when real is 0
-    const walletBalance = realBalance > 0 ? realBalance : FALLBACKS.balance
-    const deposited = realDeposits > 0 ? realDeposits : FALLBACKS.deposited
-    const borrowed = realBorrowed > 0 ? realBorrowed : FALLBACKS.borrowed
+    const walletBalance = riskData?.walletData?.balance ?? 0
+    // Per-user position from on-chain (not global pool totals)
+    const deposited = userPosition?.deposited ?? 0
+    const borrowed = userPosition?.borrowed ?? 0
 
     setData({
       // Wallet — real from Flow testnet
       walletBalance,
       deposited,
       borrowed,
-      earnedYield: realDeposits > 0 ? realDeposits * 0.042 / 12 : FALLBACKS.earnedYield,
+      earnedYield: deposited > 0 && poolData?.baseAPY ? deposited * parseFloat(poolData.baseAPY) / 12 : 0,
       accountAge: riskData?.walletData?.accountAgeDays || null,
       txCount: riskData?.walletData?.txCount24h || null,
       contractCount: riskData?.walletData?.contractCount || null,
@@ -108,11 +104,15 @@ export default function useDashboardData(address) {
       credentialTier: complianceData?.tier || null,
       expiresAt: complianceData?.expiresAt || null,
       jurisdiction: complianceData?.jurisdiction || null,
-      // Pool — real from on-chain
-      totalDeposits: realDeposits,
-      totalBorrowed: realBorrowed,
+      // Pool — global stats from on-chain
+      totalDeposits: parseFloat(poolData?.totalDeposits) || 0,
+      totalBorrowed: parseFloat(poolData?.totalBorrowed) || 0,
       availableLiquidity: parseFloat(poolData?.availableLiquidity) || 0,
       utilizationRate: parseFloat(poolData?.utilizationRate) || 0,
+      baseAPYPercent: poolData?.baseAPYPercent ?? null,
+      maxLTVPercent: poolData?.maxLTVPercent ?? null,
+      borrowRatePercent: poolData?.borrowRatePercent ?? null,
+      maxBorrowRemaining: userPosition?.maxBorrowRemaining ?? 0,
       // Meta
       loading: false,
       lastUpdated: new Date(),
@@ -124,6 +124,8 @@ export default function useDashboardData(address) {
 
   useEffect(() => {
     fetchAll()
+    const interval = setInterval(fetchAll, 30000)
+    return () => clearInterval(interval)
   }, [fetchAll])
 
   return { ...data, refresh: fetchAll }

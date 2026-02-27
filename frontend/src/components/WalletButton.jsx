@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wallet, LogOut, ShieldCheck, ShieldX, ExternalLink, Copy, Check, Loader2 } from 'lucide-react'
-
-const FLOW_NETWORK = import.meta.env.VITE_FLOW_NETWORK || 'testnet'
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x93c691a98b975493'
-const DISCOVERY_URL = FLOW_NETWORK === 'testnet'
-  ? 'https://fcl-discovery.onflow.org/testnet/authn'
-  : 'https://fcl-discovery.onflow.org/authn'
+import { Wallet, LogOut, ShieldCheck, ShieldX, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
+import { connectWallet, disconnectWallet, subscribeToWallet } from '@/utils/fcl-config'
 
 export default function WalletButton() {
   const [walletUser, setWalletUser] = useState(null)
@@ -18,8 +13,16 @@ export default function WalletButton() {
   const [copied, setCopied] = useState(false)
   const ref = useRef(null)
 
-  // Load saved wallet on mount
+  // Subscribe to FCL auth state on mount
   useEffect(() => {
+    const unsub = subscribeToWallet((user) => {
+      if (user?.loggedIn && user?.addr) {
+        setWalletUser(user)
+        localStorage.setItem('flowshield_wallet', JSON.stringify(user))
+        checkComplianceStatus(user.addr)
+      }
+    })
+    // Also restore from localStorage for manual/demo connections
     try {
       const saved = localStorage.getItem('flowshield_wallet')
       if (saved) {
@@ -28,6 +31,7 @@ export default function WalletButton() {
         if (w.addr) checkComplianceStatus(w.addr)
       }
     } catch { /* ignore */ }
+    return unsub
   }, [])
 
   // Close dropdown on outside click
@@ -40,74 +44,43 @@ export default function WalletButton() {
     return () => document.removeEventListener('mousedown', handler)
   }, [showDropdown])
 
-  const handleConnect = async () => {
+  const [manualAddr, setManualAddr] = useState('')
+
+  // Primary: FCL wallet discovery (Lilico, Blocto, etc.)
+  const handleFCLConnect = async () => {
     setConnecting(true)
-    // Open FCL Discovery in a popup window
-    const width = 400, height = 600
-    const left = window.screenX + (window.innerWidth - width) / 2
-    const top = window.screenY + (window.innerHeight - height) / 2
-    const popup = window.open(
-      DISCOVERY_URL,
-      'FlowShield Wallet',
-      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
-    )
-
-    // Listen for messages from the popup (FCL Discovery protocol)
-    const handleMessage = (event) => {
-      try {
-        const data = event.data
-        // FCL Discovery sends back authn responses
-        if (data?.type === 'FCL:VIEW:RESPONSE' || data?.addr || data?.address) {
-          const addr = data.addr || data.address || data?.data?.addr
-          if (addr) {
-            const user = { loggedIn: true, addr, demo: false }
-            setWalletUser(user)
-            localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-            checkComplianceStatus(addr)
-            if (popup && !popup.closed) popup.close()
-          }
-        }
-      } catch { /* ignore malformed messages */ }
-    }
-
-    window.addEventListener('message', handleMessage)
-
-    // Fallback: if popup is blocked or no response in 30s, use demo mode
-    const timeout = setTimeout(() => {
-      window.removeEventListener('message', handleMessage)
-      if (!walletUser) {
-        const demoAddr = '0x93c691a98b975493'
-        const user = { loggedIn: true, addr: demoAddr, demo: true }
+    try {
+      const user = await connectWallet()
+      if (user?.loggedIn) {
         setWalletUser(user)
         localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-        setCompliance({ isCompliant: true, hasCredential: true, tier: 'compliant', demo: true })
+        checkComplianceStatus(user.addr)
+        setShowDiscovery(false)
       }
-      setConnecting(false)
-    }, 30000)
-
-    // Poll for popup close
-    const pollClose = setInterval(() => {
-      if (popup && popup.closed) {
-        clearInterval(pollClose)
-        clearTimeout(timeout)
-        window.removeEventListener('message', handleMessage)
-        setConnecting(false)
-
-        // If no wallet was set from the popup, show demo
-        setTimeout(() => {
-          if (!localStorage.getItem('flowshield_wallet')) {
-            const demoAddr = '0x93c691a98b975493'
-            const user = { loggedIn: true, addr: demoAddr, demo: true }
-            setWalletUser(user)
-            localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-            setCompliance({ isCompliant: true, hasCredential: true, tier: 'compliant', demo: true })
-          }
-        }, 300)
-      }
-    }, 500)
+    } catch (err) {
+      console.error('[Wallet] FCL connect failed:', err)
+    }
+    setConnecting(false)
   }
 
-  const handleDisconnect = () => {
+  const handleConnect = () => {
+    setShowDiscovery(true)
+  }
+
+  const handleManualConnect = () => {
+    const addr = manualAddr.trim()
+    if (!addr || !addr.startsWith('0x') || addr.length < 10) return
+    const user = { loggedIn: true, addr }
+    setWalletUser(user)
+    localStorage.setItem('flowshield_wallet', JSON.stringify(user))
+    checkComplianceStatus(addr)
+    setShowDiscovery(false)
+    setConnecting(false)
+    setManualAddr('')
+  }
+
+  const handleDisconnect = async () => {
+    try { await disconnectWallet() } catch { /* ignore */ }
     setWalletUser(null)
     setCompliance(null)
     setShowDropdown(false)
@@ -141,27 +114,102 @@ export default function WalletButton() {
     ? `${walletUser.addr.slice(0, 6)}...${walletUser.addr.slice(-4)}`
     : ''
 
-  // Not connected — show connect button
+  // Not connected — show connect button + discovery modal
   if (!walletUser) {
     return (
-      <button
-        onClick={handleConnect}
-        disabled={connecting}
-        className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-violet-500/20 bg-violet-500/[0.06] text-[12px] font-medium text-violet-400 hover:border-violet-500/40 hover:bg-violet-500/[0.1] transition-all duration-300"
-      >
-        {connecting ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>Connecting...</span>
-          </>
-        ) : (
-          <>
-            <Wallet className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Connect Wallet</span>
-            <span className="sm:hidden">Wallet</span>
-          </>
-        )}
-      </button>
+      <>
+        <button
+          onClick={handleConnect}
+          disabled={connecting && !showDiscovery}
+          className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all"
+        >
+          <Wallet className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Connect Wallet</span>
+          <span className="sm:hidden">Wallet</span>
+        </button>
+
+        {/* Discovery Modal */}
+        <AnimatePresence>
+          {showDiscovery && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowDiscovery(false); setConnecting(false) }}
+            >
+              <motion.div
+                className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-emerald-400" />
+                    <h3 className="text-[14px] font-semibold text-white">Connect Wallet</h3>
+                  </div>
+                  <button onClick={() => { setShowDiscovery(false); setConnecting(false) }} className="text-white/20 hover:text-white/50 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Primary: Real wallet connection via FCL Discovery */}
+                <div className="px-4 pt-4 space-y-2">
+                  <button
+                    onClick={handleFCLConnect}
+                    disabled={connecting}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.08] bg-white text-[#060a13] hover:bg-white/90 transition-all"
+                  >
+                    {connecting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Wallet className="w-5 h-5" />
+                    )}
+                    <div className="text-left flex-1">
+                      <p className="text-[13px] font-semibold">{connecting ? 'Connecting...' : 'Connect Flow Wallet'}</p>
+                      <p className="text-[10px] text-[#060a13]/50">Lilico, Blocto, or any FCL-compatible wallet</p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3 px-5 py-3">
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-wider">or enter address</span>
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                </div>
+
+                {/* Manual address entry */}
+                <div className="px-5 pb-5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={manualAddr}
+                      onChange={(e) => setManualAddr(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualConnect()}
+                      placeholder="0x... (Flow address)"
+                      className="flex-1 h-9 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[12px] text-white/70 placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 font-mono"
+                    />
+                    <button
+                      onClick={handleManualConnect}
+                      disabled={!manualAddr.trim().startsWith('0x')}
+                      className="h-9 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[12px] font-medium text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-white/15 mt-2 text-center">
+                    Enter any Flow testnet address to view its compliance status
+                  </p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
     )
   }
 
@@ -170,10 +218,10 @@ export default function WalletButton() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-[12px] font-medium transition-all duration-300 ${
+        className={`flex items-center gap-2 h-9 px-3 rounded-lg border text-[12px] font-medium transition-all ${
           compliance?.isCompliant
-            ? 'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400'
-            : 'border-amber-500/20 bg-amber-500/[0.06] text-amber-400'
+            ? 'border-emerald-500/15 bg-emerald-500/[0.04] text-emerald-400/80'
+            : 'border-white/[0.06] bg-white/[0.02] text-white/50'
         }`}
       >
         <Wallet className="w-3.5 h-3.5" />
@@ -243,12 +291,6 @@ export default function WalletButton() {
                   </div>
                 </div>
               </div>
-
-              {walletUser.demo && (
-                <p className="text-[10px] text-white/20 text-center">
-                  Demo mode — install <a href="https://lilico.app" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">Lilico</a> or <a href="https://blocto.io" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">Blocto</a> for real wallet
-                </p>
-              )}
 
               {/* Actions */}
               <div className="flex gap-2">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import GlowOrbs from '@/components/GlowOrbs'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
@@ -16,6 +16,7 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [bottomOpen, setBottomOpen] = useState(false)
   const [backendStatus, setBackendStatus] = useState({ connected: false, network: '', address: '' })
   const [user, setUser] = useState(null)
 
@@ -108,82 +109,106 @@ export default function Layout() {
         ))}
       </nav>
 
-      {/* Bottom */}
-      <div className="p-3 border-t border-white/[0.04] space-y-1">
-        {/* User Profile — shows after onboarding */}
-        {user ? (
-          <div className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-white/70 truncate">{user.displayName || user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-white/25 truncate">{user.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/70 font-medium">
-                <Key className="w-2.5 h-2.5" /> Passkey
-              </span>
-              {user.jurisdiction && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/70 font-medium">
-                  <Globe className="w-2.5 h-2.5" /> {user.jurisdiction}
-                </span>
-              )}
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all ml-auto"
-                title="Sign out"
-              >
-                <LogOut className="w-2.5 h-2.5" /> Sign out
-              </button>
-            </div>
+      {/* Bottom — collapsible */}
+      <div className="border-t border-white/[0.04]">
+        {/* Toggle button */}
+        <button
+          onClick={() => setBottomOpen(!bottomOpen)}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-[11px] text-white/25 hover:text-white/40 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
+            <span>{user ? (user.displayName || user.email?.split('@')[0]) : (backendStatus.connected ? `Flow ${backendStatus.network}` : 'Connecting...')}</span>
           </div>
-        ) : (
-          <NavLink
-            to="/"
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 text-[12px] text-emerald-400/60 hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/[0.03]"
-          >
-            <Fingerprint className="h-3.5 w-3.5" />
-            Sign up with Passkey
-          </NavLink>
-        )}
+          {bottomOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        </button>
 
-        {/* Protocol Status */}
-        <a
-          href={backendStatus.address ? `https://testnet.flowscan.io/account/${backendStatus.address}` : '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group"
-          title={backendStatus.address ? `View ${backendStatus.address} on Flowscan` : ''}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
-          <span className="text-[10px] text-white/25 group-hover:text-white/40 transition-colors truncate">
-            {backendStatus.connected ? `Flow ${backendStatus.network}` : 'Connecting...'} {backendStatus.address ? `· ${backendStatus.address.slice(0, 6)}...${backendStatus.address.slice(-4)}` : ''}
-          </span>
-        </a>
+        <AnimatePresence>
+          {bottomOpen && (
+            <motion.div
+              className="px-3 pb-3 space-y-1 overflow-hidden"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* User Profile — shows after onboarding */}
+              {user ? (
+                <div className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-white/70 truncate">{user.displayName || user.email?.split('@')[0]}</p>
+                      <p className="text-[10px] text-white/25 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/70 font-medium">
+                      <Key className="w-2.5 h-2.5" /> Passkey
+                    </span>
+                    {user.jurisdiction && (
+                      <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/70 font-medium">
+                        <Globe className="w-2.5 h-2.5" /> {user.jurisdiction}
+                      </span>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all ml-auto"
+                      title="Sign out"
+                    >
+                      <LogOut className="w-2.5 h-2.5" /> Sign out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <NavLink
+                  to="/"
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-[12px] text-emerald-400/60 hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/[0.03]"
+                >
+                  <Fingerprint className="h-3.5 w-3.5" />
+                  Sign up with Passkey
+                </NavLink>
+              )}
 
-        <NavLink
-          to="/"
-          onClick={() => setSidebarOpen(false)}
-          className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-white/20 hover:text-white/40 transition-colors rounded-lg hover:bg-white/[0.03]"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Home
-        </NavLink>
+              {/* Protocol Status */}
+              <a
+                href={backendStatus.address ? `https://testnet.flowscan.io/account/${backendStatus.address}` : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group"
+                title={backendStatus.address ? `View ${backendStatus.address} on Flowscan` : ''}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
+                <span className="text-[10px] text-white/25 group-hover:text-white/40 transition-colors truncate">
+                  {backendStatus.connected ? `Flow ${backendStatus.network}` : 'Connecting...'} {backendStatus.address ? `· ${backendStatus.address.slice(0, 6)}...${backendStatus.address.slice(-4)}` : ''}
+                </span>
+              </a>
 
-        {/* Powered by Flow badge */}
-        <a
-          href="https://flow.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-gradient-to-r from-emerald-500/[0.04] to-cyan-500/[0.04] border border-white/[0.03] hover:border-emerald-500/15 transition-all group"
-        >
-          <span className="text-[9px] text-white/20 group-hover:text-white/35 transition-colors font-medium tracking-wide">POWERED BY</span>
-          <span className="text-[10px] font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">FLOW</span>
-        </a>
+              <NavLink
+                to="/"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-white/20 hover:text-white/40 transition-colors rounded-lg hover:bg-white/[0.03]"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Home
+              </NavLink>
+
+              {/* Powered by Flow badge */}
+              <a
+                href="https://flow.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-gradient-to-r from-emerald-500/[0.08] to-cyan-500/[0.08] border border-white/[0.06] hover:border-emerald-500/20 transition-all group"
+              >
+                <span className="text-[9px] text-white/40 group-hover:text-white/60 transition-colors font-medium tracking-wide">POWERED BY</span>
+                <span className="text-[10px] font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">FLOW</span>
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </>
   )

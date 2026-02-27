@@ -4,7 +4,19 @@ import { ShieldCheck, Fingerprint, Zap, FileCheck, Loader2, CheckCircle2, X, Ext
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
-export default function VerificationPanel({ isOpen, onClose, action = 'deposit', amount = '0', onComplete }) {
+function friendlyError(raw) {
+  if (!raw) return 'Transaction failed'
+  if (raw.includes('Exceeds maximum borrow') || raw.includes('Exceeds borrow limit')) return 'Borrow amount exceeds your 75% LTV limit. Try a smaller amount.'
+  if (raw.includes('Insufficient liquidity')) return 'Not enough liquidity in the pool for this amount.'
+  if (raw.includes('not compliant') || raw.includes('Not compliant')) return 'Compliance check failed. Your credential may be expired.'
+  // Strip Cadence noise, show the assertion message
+  const assertMatch = raw.match(/assertion failed:\s*(.+?)(?:\n|$)/)
+  if (assertMatch) return assertMatch[1].trim()
+  // Fallback: truncate long errors
+  return raw.length > 120 ? raw.slice(0, 120) + '...' : raw
+}
+
+export default function VerificationPanel({ isOpen, onClose, action = 'deposit', amount = '0', onComplete, clientError }) {
   const [steps, setSteps] = useState([])
   const [txResult, setTxResult] = useState(null)
   const [error, setError] = useState(null)
@@ -41,13 +53,27 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
     if (startedRef.current) return
     startedRef.current = true
 
+    // Client-side validation error — show immediately, no transaction
+    if (clientError) {
+      addStep('Compliance credential verified', 'Credential active', 'done')
+      addStep('Pre-check failed', clientError, 'error')
+      setError(clientError)
+      return
+    }
+
     const runTransaction = async () => {
       try {
         // Step 1: Check credential
         addStep('Checking compliance credential...', 'Querying ComplianceCredential on Flow testnet', 'active')
         await new Promise(r => setTimeout(r, 500))
 
-        const credRes = await fetch(`${API}/api/compliance/status/0x93c691a98b975493`)
+        // Use the connected user's wallet address
+        const walletAddr = (() => {
+          try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').addr } catch { return null }
+        })()
+        const userAddress = walletAddr || '0x93c691a98b975493'
+
+        const credRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
         const credData = await credRes.json()
 
         if (!credData.hasCredential) {
@@ -80,7 +106,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         const txRes = await fetch(`${API}/api/pool/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: parseFloat(amount) }),
+          body: JSON.stringify({ amount: parseFloat(amount), userAddress }),
         })
         const txData = await txRes.json()
 
@@ -108,8 +134,9 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           setCompleted(true)
           setTimeout(() => onComplete?.(), 2000)
         } else {
-          setError(txData.error || 'Transaction failed')
-          updateLastStep('Transaction failed', txData.error || 'Unknown error', 'error')
+          const friendly = friendlyError(txData.error)
+          setError(friendly)
+          updateLastStep('Transaction failed', friendly, 'error')
         }
       } catch (err) {
         setError(err.message)
@@ -118,7 +145,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
     }
 
     runTransaction()
-  }, [isOpen, action, amount, onComplete])
+  }, [isOpen, action, amount, onComplete, clientError])
 
   if (!isOpen) return null
 

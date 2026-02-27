@@ -16,7 +16,8 @@
     "dotenv": "^16.4.7",
     "elliptic": "^6.6.1",
     "express": "^4.21.2",
-    "js-sha3": "^0.9.3"
+    "js-sha3": "^0.9.3",
+    "stripe": "^20.4.0"
   },
   "license": "MIT"
 }
