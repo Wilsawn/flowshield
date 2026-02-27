@@ -1,86 +1,155 @@
-# FlowShield Architecture
+# Architecture
 
-## Core Principle
+> **Identity data never exists on-chain.** Only zero-knowledge proofs and boolean compliance results are stored.
 
-**Identity data never exists on-chain.** Only zero-knowledge proofs and boolean compliance results are stored. This preserves user privacy while enabling full regulatory compliance.
+---
 
-## 4-Layer System
+## System Overview
 
-### Layer 1: User Experience
-**Stack:** React + Vite + TailwindCSS + Framer Motion
+FlowShield is a four-layer system. The top two layers face users and developers. The bottom two handle verification and intelligence without exposing personal data.
 
-- Passkey/WebAuthn onboarding (no passwords, no seed phrases)
-- Consumer verification flow (biometric → ZK proof → credential)
-- Operator dashboard (compliance overview, rule management)
-- Responsive landing page with animated stats
+```
+┌──────────────────────────────────────────────────────────┐
+│  User Experience Layer                                    │
+│  Passkey onboarding · Dashboard · Copilot · Radar         │
+├──────────────────────────────────────────────────────────┤
+│  Compliance Engine (On-Chain Cadence)                     │
+│  6 smart contracts at 0x93c691a98b975493                  │
+├──────────────────────────────────────────────────────────┤
+│  Zero-Knowledge Verification                              │
+│  Client-side proof generation → on-chain boolean result   │
+├──────────────────────────────────────────────────────────┤
+│  AI Intelligence (Off-Chain)                              │
+│  Risk scoring · Anomaly detection · Copilot · Radar       │
+└──────────────────────────────────────────────────────────┘
+```
 
-### Layer 2: Compliance Engine (On-Chain Cadence)
-**Deployed:** `0x93c691a98b975493` on Flow Testnet
+---
 
-| Contract | Role | Key Function |
+## Layer 1 — User Experience
+
+**Stack:** React 19, Vite, TailwindCSS, Framer Motion, React Flow
+
+| Surface | What It Does |
+|---|---|
+| **Landing page** | Product overview with interactive React Flow canvas |
+| **Passkey onboarding** | WebAuthn biometric login → Flow account creation → ZK credential |
+| **User dashboard** | Lending pool, risk score, jurisdiction picker, live chain data |
+| **Builder Copilot** | AI chat for compliance questions and Cadence code generation |
+| **Regulatory Radar** | Scan on-chain rules against real regulations, push fixes |
+| **Operator dashboard** | Protocol-level compliance stats, audit trail, rule management |
+
+---
+
+## Layer 2 — Compliance Engine
+
+All contracts are deployed on **Flow Testnet** at [`0x93c691a98b975493`](https://testnet.flowscan.io/account/0x93c691a98b975493).
+
+| Contract | Role | Key Functions |
 |---|---|---|
-| **ComplianceCredential** | Cadence Resource stored in user accounts | `isValid()`, `isExpired()`, `getTier()` |
-| **ComplianceAction** | Flow Actions primitive for DeFi integration | `verify(addr)`, `verifyFull(addr)` |
+| **ComplianceCredential** | Cadence Resource in user accounts | `isValid()`, `isExpired()`, `getTier()` |
+| **ComplianceAction** | Flow Actions pre-transaction check | `verify(addr)`, `verifyFull(addr)` |
 | **ZKVerifier** | Validates ZK proofs from trusted verifiers | `verifyProof(proofData, userAddr)` |
-| **RuleEngine** | Stores jurisdiction-specific rules on-chain | `getRules(jurisdiction)`, admin `setRule()` |
-| **DemoLendingPool** | Reference DeFi integration | `deposit()` + `borrow()` with compliance |
-| **ComplianceAgent** | Flow Agent for autonomous monitoring | `runMonitoringCycle()` via Scheduled Txns |
+| **RuleEngine** | Per-jurisdiction rules on-chain | `getRules(jurisdiction)`, `setRule()` |
+| **DemoLendingPool** | Reference DeFi integration | `deposit()`, `borrow()` with compliance gates |
+| **ComplianceAgent** | Flow Agent for autonomous monitoring | `runMonitoringCycle()` |
 
-**Data flow:**
+### Data Flow
+
 ```
-User → WebAuthn → ZK Proof → ZKVerifier.verifyProof()
-     → ComplianceCredential.mint() → stored in user account
+User → WebAuthn → ZK Proof generated client-side
+     → ZKVerifier.verifyProof() validates proof on-chain
+     → ComplianceCredential minted → stored in user's account
      → DeFi protocol calls ComplianceAction.verify(user)
-     → Boolean result (no identity data exposed)
+     → Returns boolean (no identity data exposed)
 ```
 
-### Layer 3: Zero-Knowledge Verification
+---
 
-- **Client-side proof generation** — user's identity provider creates ZK proof locally
-- **On-chain verification** — `ZKVerifier` validates proof structure, freshness, and trusted source
-- **Proof hash only** — SHA3-256 hash stored on credential, not the proof itself
-- **Trusted verifier registry** — admin-managed list of approved identity providers
+## Layer 3 — Zero-Knowledge Verification
 
-### Layer 4: AI Intelligence (Off-Chain)
-**Stack:** Express.js + Claude API + FCL
+The ZK layer ensures that **no identity data ever reaches the blockchain**. Only a boolean result and a proof hash are stored.
 
-| Agent | Type | Function |
+| Step | Where It Happens | What's Stored |
 |---|---|---|
-| **Risk Scoring** | Rule-based (no LLM) | 8 risk factors, reads real Flow chain data via FCL |
-| **Anomaly Monitor** | Rule-based (no LLM) | 8 anomaly types, post-verification behavioral monitoring |
-| **Builder Copilot** | Claude API + fallbacks | AI assistant for developers integrating FlowShield |
-| **Regulatory Radar** | Claude API + fallbacks | Parses regulatory text → on-chain rule updates |
+| Identity verification | Off-chain (Veriff KYC) | Nothing on-chain |
+| Proof generation | Client-side | Nothing on-chain |
+| Proof verification | `ZKVerifier` contract | SHA3-256 hash of proof |
+| Compliance result | `ComplianceCredential` | Boolean + expiry timestamp |
 
-## Flow Primitives Integration
+**Design decision:** Cadence does not natively support ZK-SNARK pairing operations. FlowEVM has the BN256 precompiles needed for Groth16 verification. For the hackathon, FlowShield uses a simplified Cadence verifier that validates proof structure and trusted verifier signatures. Production would use a Solidity verifier on FlowEVM bridged to Cadence via Cadence-Owned Accounts (COAs).
+
+---
+
+## Layer 4 — AI Intelligence
+
+**Stack:** Express.js, Claude AI (Haiku 4.5), FCL
+
+| Agent | Type | Purpose |
+|---|---|---|
+| **Risk Scoring** | Rule-based, no LLM | 8 factors scored from real Flow chain data via FCL |
+| **Anomaly Monitor** | Rule-based, no LLM | 8 anomaly types, post-verification behavioral analysis |
+| **Builder Copilot** | Claude API + fallbacks | Answers compliance questions, generates Cadence code |
+| **Regulatory Radar** | Deterministic + Claude | Scans on-chain rules against jurisdiction checklists |
+
+### Regulatory Radar Architecture
+
+The Radar uses a **hybrid deterministic + AI** approach based on [Microsoft AI Agent Orchestration Patterns](https://www.microsoft.com/en-us/research/):
+
+1. **Deterministic checklist** defines exact required values per jurisdiction (US, EU, UK, SG, CA)
+2. **`detectGaps()`** compares on-chain RuleEngine rules against the checklist — same input always produces same output
+3. **`enrichWithClaude()`** sends deterministic gaps to Claude, which **only improves descriptions** with regulatory context — Claude cannot add or remove gaps
+
+Fix a rule on-chain → the gap disappears on next scan. No randomness, no hallucination risk.
+
+---
+
+## Flow Primitives
 
 ### Flow Actions
-`ComplianceAction` implements the Flow Actions pattern — any DeFi protocol imports it and calls `verify()` or `verifyFull()` as a composable pre-condition.
 
-### Scheduled Transactions
-`ComplianceAgent.runMonitoringCycle()` is designed to be called by a Scheduled Transaction on a recurring timer, checking all monitored wallets for expired credentials.
+`ComplianceAction` is a composable pre-transaction check. Any DeFi protocol imports it and calls `verify()` before financial operations:
 
-### Flow Agents
-The `Agent` resource lives in the protocol operator's account and autonomously monitors wallet compliance, emitting events when re-verification is needed.
-
-### Sponsored Transactions
-The `verify_and_mint.cdc` transaction uses two signers — the protocol account pays gas while the user just signs with their passkey.
+```cadence
+// In any transaction:
+let isCompliant = ComplianceAction.verify(acct.address)
+assert(isCompliant, message: "Not compliant")
+// ...then proceed with deposit, borrow, swap
+```
 
 ### Cadence Resources
-`Credential` is a Cadence Resource that lives in the user's account storage, not in a central registry. The user owns their compliance credential.
+
+`Credential` is a Cadence Resource stored in the user's account at `/storage/FlowShieldCredential`. Any contract can read the public capability — no extra transaction needed from the user.
+
+### Flow Agents
+
+The `ComplianceAgent` resource lives in the protocol operator's account. It monitors wallets autonomously and emits events when re-verification is needed.
+
+### Scheduled Transactions
+
+`ComplianceAgent.runMonitoringCycle()` is called by a Scheduled Transaction on a recurring timer. Each execution can schedule the next one for continuous monitoring.
+
+### Sponsored Transactions
+
+`verify_and_mint.cdc` uses two signers — the protocol account pays gas while the user signs with their passkey. Users never see a gas fee.
 
 ### WebAuthn / Passkeys
-Frontend uses WebAuthn for passwordless authentication. No seed phrases, no browser extensions — just biometrics.
+
+Frontend uses the Web Authentication API for passwordless biometric login. No seed phrases, no browser extensions. A Flow account is created in the background.
+
+---
 
 ## API Architecture
 
 ```
-Frontend (port 3001)
-    ↓ HTTP
-Backend API (port 3002)
-    ├── /api/compliance/* → FCL → Flow Testnet (real chain queries)
-    ├── /api/risk/*       → Risk Scoring Agent → FCL → Flow Testnet
-    ├── /api/copilot/*    → Builder Copilot Agent → Claude API
-    └── /api/radar/*      → Regulatory Radar Agent → Claude API
+Frontend (localhost:3001)
+    │
+    ▼ HTTP
+Backend API (localhost:3002)
+    ├── /api/compliance/*     → FCL → Flow Testnet (real chain queries)
+    ├── /api/risk/*           → Risk Scoring Agent → FCL → Flow Testnet
+    ├── /api/copilot/chat     → Builder Copilot → Claude API
+    └── /api/copilot/radar/*  → Regulatory Radar → Claude API + FCL
 ```
 
-All compliance endpoints query **real on-chain data** from the deployed contracts. Risk scoring reads actual account balances, key counts, and contract deployments from the Flow Access API.
+All compliance endpoints query **real on-chain data** from deployed contracts. Risk scoring reads actual account balances, key counts, and contract deployments from the Flow Access API.
