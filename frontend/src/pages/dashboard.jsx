@@ -173,130 +173,96 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#060a13] text-white p-6 md:p-10">
       <div className="max-w-[1100px] mx-auto">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div>
-            <h1 className="text-[1.75rem] font-bold tracking-tight">
-              {(() => { try { const u = JSON.parse(localStorage.getItem('flowshield_user') || '{}'); return u.displayName ? `Welcome, ${u.displayName}` : 'Dashboard' } catch { return 'Dashboard' } })()}
-            </h1>
-            <p className="text-[13px] text-white/30 mt-1">
-              {currentJurisdiction.flag} {currentJurisdiction.name} · {currentJurisdiction.framework}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Live indicator */}
-            {live.isLive && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/[0.04]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-medium text-emerald-400/70">Live · Flow Testnet</span>
+        {/* Header — clean two-row layout */}
+        <div className="mb-10">
+          {/* Row 1: Title + actions */}
+          <div className="flex items-start justify-between gap-6 mb-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight truncate">
+                {(() => { try { const u = JSON.parse(localStorage.getItem('flowshield_user') || '{}'); return u.displayName ? `Welcome, ${u.displayName}` : 'Dashboard' } catch { return 'Dashboard' } })()}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              {/* Jurisdiction picker */}
+              <div className="relative" ref={jurisdictionRef}>
+                <button
+                  onClick={() => setShowJurisdictionPicker(!showJurisdictionPicker)}
+                  className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all"
+                >
+                  <span className="text-sm leading-none">{currentJurisdiction.flag}</span>
+                  <span>{currentJurisdiction.code}</span>
+                  <ChevronDown className="w-3 h-3 text-white/25" />
+                </button>
+                <AnimatePresence>
+                  {showJurisdictionPicker && (
+                    <motion.div
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-2">
+                        <p className="text-[10px] text-white/40 uppercase tracking-wider px-2.5 py-2 font-semibold">Select Jurisdiction</p>
+                        {JURISDICTION_LIST.map((j) => (
+                          <button
+                            key={j.code}
+                            onClick={() => handleJurisdictionChange(j.code)}
+                            className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-left transition-all duration-200 ${
+                              jurisdictionCode === j.code
+                                ? 'bg-emerald-500/[0.08] text-emerald-400'
+                                : 'hover:bg-white/[0.04] text-white/60'
+                            }`}
+                          >
+                            <span className="text-lg leading-none">{j.flag}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-medium">{j.name}</p>
+                              <p className="text-[10px] text-white/40 truncate">{j.regulator} · Travel rule: {j.travelRuleCurrency} {j.travelRuleThreshold.toLocaleString()}</p>
+                            </div>
+                            {jurisdictionCode === j.code && (
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
-            {/* Connect Wallet — real FCL Discovery */}
-            <WalletButton />
-            {/* Jurisdiction Selector */}
-            <div className="relative" ref={jurisdictionRef}>
+              {/* Compliance toggle */}
               <button
-                onClick={() => setShowJurisdictionPicker(!showJurisdictionPicker)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all duration-300"
+                onClick={() => setShowCompliance(!showCompliance)}
+                className={`h-9 px-3 rounded-lg border text-[12px] transition-all ${
+                  showCompliance
+                    ? 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-400'
+                    : 'border-white/[0.06] bg-white/[0.02] text-white/30 hover:text-white/50'
+                }`}
+                title={showCompliance ? 'Hide compliance layer' : 'Show compliance layer'}
               >
-                <span className="text-base leading-none">{currentJurisdiction.flag}</span>
-                <span>{currentJurisdiction.code}</span>
-                <ChevronDown className="w-3 h-3 text-white/30" />
+                {showCompliance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
-              <AnimatePresence>
-                {showJurisdictionPicker && (
-                  <motion.div
-                    className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="p-2">
-                      <p className="text-[10px] text-white/40 uppercase tracking-wider px-2.5 py-2 font-semibold">Select Jurisdiction</p>
-                      {JURISDICTION_LIST.map((j) => (
-                        <button
-                          key={j.code}
-                          onClick={() => handleJurisdictionChange(j.code)}
-                          className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-left transition-all duration-200 ${
-                            jurisdictionCode === j.code
-                              ? 'bg-emerald-500/[0.08] text-emerald-400'
-                              : 'hover:bg-white/[0.04] text-white/60'
-                          }`}
-                        >
-                          <span className="text-lg leading-none">{j.flag}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-medium">{j.name}</p>
-                            <p className="text-[10px] text-white/40 truncate">{j.regulator} · Travel rule: {j.travelRuleCurrency} {j.travelRuleThreshold.toLocaleString()}</p>
-                          </div>
-                          {jurisdictionCode === j.code && (
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <button
-              onClick={() => setShowCompliance(!showCompliance)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-[12px] font-medium transition-all duration-300 ${
-                showCompliance
-                  ? 'border-cyan-500/30 bg-cyan-500/[0.06] text-cyan-400'
-                  : 'border-white/[0.06] bg-white/[0.02] text-white/40 hover:text-white/60'
-              }`}
-            >
-              {showCompliance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{showCompliance ? 'Hide' : 'Show'} compliance layer</span>
-            </button>
-            <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.04]">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="text-[12px] sm:text-[13px] font-medium text-emerald-400">Compliant</span>
-              <span className="text-[11px] text-white/40 ml-1 hidden sm:inline">{currentJurisdiction.flag} {currentJurisdiction.code}</span>
+              {/* Wallet */}
+              <WalletButton />
             </div>
           </div>
-        </div>
 
-        {/* Key Differentiators — visible proof of what makes FlowShield unique */}
-        <div className="flex flex-wrap items-center gap-2 mb-8">
-          {[
-            { label: 'Walletless', detail: 'Passkey login, no seed phrases', color: 'emerald' },
-            { label: 'Sponsored Gas', detail: 'Protocol pays all fees', color: 'cyan' },
-            { label: 'ZK Private', detail: 'Identity never on-chain', color: 'violet' },
-            { label: 'Automated', detail: 'Agent monitors 24/7', color: 'amber' },
-            { label: 'Invisible', detail: 'Compliance happens behind the scenes', color: 'white' },
-          ].map((f, i) => (
-            <motion.div
-              key={f.label}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-medium ${
-                f.color === 'emerald' ? 'border-emerald-500/15 bg-emerald-500/[0.04] text-emerald-400/70' :
-                f.color === 'cyan' ? 'border-cyan-500/15 bg-cyan-500/[0.04] text-cyan-400/70' :
-                f.color === 'violet' ? 'border-violet-500/15 bg-violet-500/[0.04] text-violet-400/70' :
-                f.color === 'amber' ? 'border-amber-500/15 bg-amber-500/[0.04] text-amber-400/70' :
-                'border-white/[0.06] bg-white/[0.02] text-white/40'
-              }`}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.06 }}
-              title={f.detail}
-            >
-              <span className={`w-1 h-1 rounded-full ${
-                f.color === 'emerald' ? 'bg-emerald-400' :
-                f.color === 'cyan' ? 'bg-cyan-400' :
-                f.color === 'violet' ? 'bg-violet-400' :
-                f.color === 'amber' ? 'bg-amber-400' :
-                'bg-white/30'
-              }`} />
-              {f.label}
-            </motion.div>
-          ))}
-        </div>
-
-        {/* ZK Proof Badge — shows proof details from onboarding */}
-        <div className="mb-6">
-          <ZKProofBadge />
+          {/* Row 2: Subtle status strip */}
+          <div className="flex items-center gap-3 text-[11px] text-white/30">
+            {live.isLive && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Flow Testnet
+              </span>
+            )}
+            <span className="text-white/10">·</span>
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3 h-3 text-emerald-400/60" />
+              <span className="text-emerald-400/60">Compliant</span>
+              <span>{currentJurisdiction.flag} {currentJurisdiction.name}</span>
+            </span>
+            <span className="text-white/10">·</span>
+            <ZKProofBadge compact />
+          </div>
         </div>
 
         {/* Credential Expiration Banner */}
@@ -349,9 +315,9 @@ export default function Dashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Wallet Balance', value: live.walletBalance ?? 0, icon: <Wallet className="w-4 h-4" />, sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'FLOW on testnet', subColor: 'text-white/40', prefix: '', onClick: () => setShowStatDetail('wallet') },
-            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: 'Earning 4.2% APY', subColor: 'text-emerald-400/70', onClick: () => setShowStatDetail('deposited') },
-            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: '2.8% interest rate', subColor: 'text-cyan-400/70', onClick: () => setShowStatDetail('borrowed') },
+            { label: 'Wallet Balance', value: chain.account?.balance ?? live.walletBalance ?? 0, icon: <Wallet className="w-4 h-4" />, sub: chain.account ? `${chain.account.address?.slice(0,6)}...${chain.account.address?.slice(-4)} · FLOW` : 'Loading from chain...', subColor: 'text-white/40', prefix: '', decimals: 2, onClick: () => setShowStatDetail('wallet') },
+            { label: 'Total Deposited', value: live.deposited ?? 0, icon: <ArrowDownToLine className="w-4 h-4" />, sub: live.baseAPYPercent != null ? `Earning ${live.baseAPYPercent}% APY` : 'Loading APY from chain...', subColor: 'text-emerald-400/70', onClick: () => setShowStatDetail('deposited') },
+            { label: 'Total Borrowed', value: live.borrowed ?? 0, icon: <ArrowUpFromLine className="w-4 h-4" />, sub: live.borrowRatePercent != null ? `${live.borrowRatePercent}% interest rate` : 'Loading rate from chain...', subColor: 'text-cyan-400/70', onClick: () => setShowStatDetail('borrowed') },
             { label: 'Risk Score', value: live.riskScore ?? 0, icon: <TrendingUp className="w-4 h-4" />, sub: `Tier: ${live.riskTier || 'loading...'} · ${live.riskFactors?.length || 0} factors`, subColor: live.riskTier === 'compliant' ? 'text-emerald-400/70' : 'text-amber-400/70', noPrefix: true, onClick: () => setShowRiskDetail(true) },
           ].map((stat, i) => (
             <SpotlightCard key={i} className="p-5 cursor-pointer hover:border-white/[0.1] transition-all" onClick={stat.onClick}>
@@ -484,7 +450,7 @@ export default function Dashboard() {
                 Borrow
               </button>
               <p className="text-[11px] text-white/40 text-center">
-                Max borrow: ${((live.deposited ?? 0) * 0.75).toFixed(0)} (75% LTV)
+                Max borrow: ${((live.deposited ?? 0) * (live.maxLTVPercent ?? 0) / 100).toFixed(0)} ({live.maxLTVPercent ?? '—'}% LTV)
               </p>
             </div>
           </SpotlightCard>
@@ -958,7 +924,7 @@ export default function Dashboard() {
                   {showStatDetail === 'deposited' && (<>
                     <div className="text-center py-3">
                       <p className="text-[32px] font-bold text-white">{(live.deposited ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
-                      <p className="text-[11px] text-emerald-400/70 mt-1">Earning 4.2% APY</p>
+                      <p className="text-[11px] text-emerald-400/70 mt-1">Earning {live.baseAPYPercent ?? '—'}% APY</p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
@@ -988,12 +954,12 @@ export default function Dashboard() {
                   {showStatDetail === 'borrowed' && (<>
                     <div className="text-center py-3">
                       <p className="text-[32px] font-bold text-white">{(live.borrowed ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
-                      <p className="text-[11px] text-cyan-400/70 mt-1">2.8% interest rate</p>
+                      <p className="text-[11px] text-cyan-400/70 mt-1">{live.borrowRatePercent ?? '—'}% interest rate</p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
-                        <span className="text-[11px] text-white/40">Max Borrow (75% LTV)</span>
-                        <span className="text-[11px] text-white/70 font-medium">${((live.deposited ?? 0) * 0.75).toFixed(0)} USDC</span>
+                        <span className="text-[11px] text-white/40">Max Borrow ({live.maxLTVPercent ?? '—'}% LTV)</span>
+                        <span className="text-[11px] text-white/70 font-medium">${((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100).toFixed(0)} USDC</span>
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Available Liquidity</span>
@@ -1009,7 +975,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <p className="text-[10px] text-white/20 leading-relaxed">
-                      <strong className="text-white/40">What is borrowing?</strong> You borrow from the pool using your deposits as collateral (75% loan-to-value ratio). 
+                      <strong className="text-white/40">What is borrowing?</strong> You borrow from the pool using your deposits as collateral ({live.maxLTVPercent ?? '—'}% loan-to-value ratio). 
                       Borrowing requires <strong className="text-white/40">full compliance</strong> — ComplianceAction.verifyFull() is called on-chain, which checks 
                       your credential tier is "compliant" (not just semi-compliant). Gas fees are sponsored by FlowShield — completely free for users.
                     </p>

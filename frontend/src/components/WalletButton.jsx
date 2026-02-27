@@ -72,18 +72,11 @@ export default function WalletButton() {
 
     window.addEventListener('message', handleMessage)
 
-    // Fallback: if popup is blocked or no response in 30s, use demo mode
+    // Timeout: if popup is blocked or no response in 60s, stop connecting
     const timeout = setTimeout(() => {
       window.removeEventListener('message', handleMessage)
-      if (!walletUser) {
-        const demoAddr = '0x93c691a98b975493'
-        const user = { loggedIn: true, addr: demoAddr, demo: true }
-        setWalletUser(user)
-        localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-        setCompliance({ isCompliant: true, hasCredential: true, tier: 'compliant', demo: true })
-      }
       setConnecting(false)
-    }, 30000)
+    }, 60000)
 
     // Poll for popup close
     const pollClose = setInterval(() => {
@@ -92,17 +85,6 @@ export default function WalletButton() {
         clearTimeout(timeout)
         window.removeEventListener('message', handleMessage)
         setConnecting(false)
-
-        // If no wallet was set from the popup, show demo
-        setTimeout(() => {
-          if (!localStorage.getItem('flowshield_wallet')) {
-            const demoAddr = '0x93c691a98b975493'
-            const user = { loggedIn: true, addr: demoAddr, demo: true }
-            setWalletUser(user)
-            localStorage.setItem('flowshield_wallet', JSON.stringify(user))
-            setCompliance({ isCompliant: true, hasCredential: true, tier: 'compliant', demo: true })
-          }
-        }, 300)
       }
     }, 500)
   }
@@ -147,7 +129,7 @@ export default function WalletButton() {
       <button
         onClick={handleConnect}
         disabled={connecting}
-        className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-violet-500/20 bg-violet-500/[0.06] text-[12px] font-medium text-violet-400 hover:border-violet-500/40 hover:bg-violet-500/[0.1] transition-all duration-300"
+        className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all"
       >
         {connecting ? (
           <>
@@ -170,10 +152,10 @@ export default function WalletButton() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-[12px] font-medium transition-all duration-300 ${
+        className={`flex items-center gap-2 h-9 px-3 rounded-lg border text-[12px] font-medium transition-all ${
           compliance?.isCompliant
-            ? 'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400'
-            : 'border-amber-500/20 bg-amber-500/[0.06] text-amber-400'
+            ? 'border-emerald-500/15 bg-emerald-500/[0.04] text-emerald-400/80'
+            : 'border-white/[0.06] bg-white/[0.02] text-white/50'
         }`}
       >
         <Wallet className="w-3.5 h-3.5" />
@@ -243,12 +225,6 @@ export default function WalletButton() {
                   </div>
                 </div>
               </div>
-
-              {walletUser.demo && (
-                <p className="text-[10px] text-white/20 text-center">
-                  Demo mode — install <a href="https://lilico.app" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">Lilico</a> or <a href="https://blocto.io" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">Blocto</a> for real wallet
-                </p>
-              )}
 
               {/* Actions */}
               <div className="flex gap-2">

@@ -2,13 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
-// Smart fallbacks — used only when real data is empty/zero
-const FALLBACKS = {
-  balance: 1250.00,
-  deposited: 800.00,
-  borrowed: 200.00,
-  earnedYield: 12.45,
-}
+// No fake fallbacks — always show real chain data or 0
 
 export default function useDashboardData(address) {
   const [data, setData] = useState({
@@ -74,25 +68,20 @@ export default function useDashboardData(address) {
         sources.pool = poolData.source || 'api'
       }
     } catch (err) {
-      // API fetch error — will use fallback data
+      // API fetch error — data will show as 0 or null
     }
 
     // Parse wallet balance from risk data (real FLOW balance from testnet)
-    const realBalance = riskData?.walletData?.balance || 0
-    const realDeposits = parseFloat(poolData?.totalDeposits) || 0
-    const realBorrowed = parseFloat(poolData?.totalBorrowed) || 0
-
-    // Use real data, fall back to demo numbers only when real is 0
-    const walletBalance = realBalance > 0 ? realBalance : FALLBACKS.balance
-    const deposited = realDeposits > 0 ? realDeposits : FALLBACKS.deposited
-    const borrowed = realBorrowed > 0 ? realBorrowed : FALLBACKS.borrowed
+    const walletBalance = riskData?.walletData?.balance ?? 0
+    const deposited = parseFloat(poolData?.totalDeposits) || 0
+    const borrowed = parseFloat(poolData?.totalBorrowed) || 0
 
     setData({
       // Wallet — real from Flow testnet
       walletBalance,
       deposited,
       borrowed,
-      earnedYield: realDeposits > 0 ? realDeposits * 0.042 / 12 : FALLBACKS.earnedYield,
+      earnedYield: deposited > 0 && poolData?.baseAPY ? deposited * parseFloat(poolData.baseAPY) / 12 : 0,
       accountAge: riskData?.walletData?.accountAgeDays || null,
       txCount: riskData?.walletData?.txCount24h || null,
       contractCount: riskData?.walletData?.contractCount || null,
@@ -109,10 +98,13 @@ export default function useDashboardData(address) {
       expiresAt: complianceData?.expiresAt || null,
       jurisdiction: complianceData?.jurisdiction || null,
       // Pool — real from on-chain
-      totalDeposits: realDeposits,
-      totalBorrowed: realBorrowed,
+      totalDeposits: deposited,
+      totalBorrowed: borrowed,
       availableLiquidity: parseFloat(poolData?.availableLiquidity) || 0,
       utilizationRate: parseFloat(poolData?.utilizationRate) || 0,
+      baseAPYPercent: poolData?.baseAPYPercent ?? null,
+      maxLTVPercent: poolData?.maxLTVPercent ?? null,
+      borrowRatePercent: poolData?.borrowRatePercent ?? null,
       // Meta
       loading: false,
       lastUpdated: new Date(),

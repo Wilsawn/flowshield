@@ -26,16 +26,16 @@ export default function ZKProofBadge({ compact = false }) {
 
   if (!zkData) return null
 
-  // Compact version for inline use
+  // Compact version for inline use in status strip
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-violet-500/20 bg-violet-500/[0.06]">
-        <Lock className="w-3 h-3 text-violet-400" />
-        <span className="text-[10px] font-semibold text-violet-400 tracking-wide uppercase">ZK Proof</span>
-        <span className="text-[10px] text-violet-400/50 font-mono">
+      <span className="inline-flex items-center gap-1.5">
+        <Lock className="w-3 h-3 text-violet-400/60" />
+        <span className="text-violet-400/60">ZK Proof</span>
+        <span className="text-white/20 font-mono">
           {zkData.proofHash?.slice(0, 8)}...
         </span>
-      </div>
+      </span>
     )
   }
 

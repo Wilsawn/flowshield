@@ -13,6 +13,7 @@ import chainRoutes from './routes/chain.js'
 import poolRoutes from './routes/pool.js'
 import adminRoutes from './routes/admin.js'
 import subscriptionRoutes from './routes/subscription.js'
+import governanceRoutes from './routes/governance.js'
 import { requireApiKey, rateLimit } from '../lib/middleware.js'
 import { getSupabase } from '../lib/supabase.js'
 
@@ -62,6 +63,7 @@ app.use('/api/chain', chainRoutes)
 app.use('/api/pool', poolRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/subscription', subscriptionRoutes)
+app.use('/api/governance', governanceRoutes)
 
 // ── Health check ──
 app.get('/health', (req, res) => {

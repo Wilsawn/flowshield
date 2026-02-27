@@ -54,20 +54,18 @@ router.get('/status/:address', async (req, res) => {
 
     res.json({ address, ...result, source: 'flow-testnet' })
   } catch (err) {
-    // If contracts aren't deployed yet, return mock data
-    const hash = address.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
     res.json({
       address,
       hasCredential: false,
       isValid: false,
       isExpired: false,
       tier: 0,
-      riskScore: hash % 35,
+      riskScore: 0,
       expiresAt: 0,
-      jurisdiction: 'US',
+      jurisdiction: '',
       proofHash: '',
       issuedAt: 0,
-      source: 'mock-fallback',
+      source: 'error',
       error: err.message,
     })
   }
@@ -127,7 +125,8 @@ router.get('/pool', async (req, res) => {
       totalBorrowed: 0,
       availableLiquidity: 0,
       utilizationRate: 0,
-      source: 'mock-fallback',
+      source: 'error',
+      error: err.message,
     })
   }
 })

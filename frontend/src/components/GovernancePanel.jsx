@@ -18,95 +18,72 @@ const STATUS_STYLES = {
   rejected: { label: 'Rejected', color: 'red', icon: XCircle },
 }
 
-// Demo proposals for display
-const DEMO_PROPOSALS = [
-  {
-    id: 0,
-    proposer: '0x93c6...5493',
-    action: 'setFee',
-    description: 'Increase verification fee to 0.002 FLOW',
-    data: { newFee: '0.002' },
-    approvals: ['0x93c6...5493'],
-    status: 'pending',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    expiresAt: new Date(Date.now() + 518400000).toISOString(),
-  },
-  {
-    id: 1,
-    proposer: '0x93c6...5493',
-    action: 'addVerifier',
-    description: 'Add Veriff as trusted KYC verifier',
-    data: { verifierName: 'Veriff', publicKey: '0xabc...' },
-    approvals: ['0x93c6...5493', '0xdef0...1234'],
-    status: 'executed',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    expiresAt: new Date(Date.now() + 432000000).toISOString(),
-  },
-  {
-    id: 2,
-    proposer: '0xdef0...1234',
-    action: 'withdraw',
-    description: 'Withdraw 5.0 FLOW from treasury for operations',
-    data: { amount: '5.0' },
-    approvals: ['0xdef0...1234'],
-    status: 'pending',
-    createdAt: new Date(Date.now() - 43200000).toISOString(),
-    expiresAt: new Date(Date.now() + 561600000).toISOString(),
-  },
-]
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
 export default function GovernancePanel() {
-  const [proposals, setProposals] = useState(DEMO_PROPOSALS)
+  const [proposals, setProposals] = useState([])
   const [showCreate, setShowCreate] = useState(false)
   const [newAction, setNewAction] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [creating, setCreating] = useState(false)
   const [approving, setApproving] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
-    totalSigners: 3,
-    requiredApprovals: 2,
-    treasuryBalance: '12.450',
+    totalSigners: 0,
+    requiredApprovals: 1,
   })
+
+  // Fetch real governance data from chain on mount
+  useEffect(() => {
+    async function fetchGovernance() {
+      try {
+        const [statsRes, proposalsRes] = await Promise.allSettled([
+          fetch(`${API}/api/governance/stats`).then(r => r.json()),
+          fetch(`${API}/api/governance/proposals`).then(r => r.json()),
+        ])
+        if (statsRes.status === 'fulfilled' && statsRes.value.source === 'flow-testnet') {
+          setStats({
+            totalSigners: statsRes.value.totalSigners || 0,
+            requiredApprovals: statsRes.value.requiredApprovals || 1,
+          })
+        }
+        if (proposalsRes.status === 'fulfilled' && proposalsRes.value.proposals) {
+          // Convert timestamps from UFix64 (seconds) to ISO strings for display
+          const mapped = proposalsRes.value.proposals.map(p => ({
+            ...p,
+            createdAt: p.createdAt > 1e9 ? new Date(p.createdAt * 1000).toISOString() : new Date(p.createdAt).toISOString(),
+            expiresAt: p.expiresAt > 1e9 ? new Date(p.expiresAt * 1000).toISOString() : new Date(p.expiresAt).toISOString(),
+            approvals: (p.approvals || []).map(a => `${a.slice(0, 6)}...${a.slice(-4)}`),
+            proposer: p.proposer ? `${p.proposer.slice(0, 6)}...${p.proposer.slice(-4)}` : '—',
+          }))
+          setProposals(mapped)
+        }
+      } catch {
+        // API unavailable — show empty state
+      }
+      setLoading(false)
+    }
+    fetchGovernance()
+  }, [])
 
   const handleCreate = async () => {
     if (!newAction || !newDescription) return
     setCreating(true)
-    await new Promise(r => setTimeout(r, 800))
-
-    const proposal = {
-      id: proposals.length,
-      proposer: '0x93c6...5493',
-      action: newAction,
-      description: newDescription,
-      data: {},
-      approvals: ['0x93c6...5493'],
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 604800000).toISOString(),
-    }
-    setProposals(prev => [proposal, ...prev])
-    setNewAction('')
-    setNewDescription('')
-    setShowCreate(false)
+    // TODO: Send real transaction to create proposal on-chain
+    // For now, show that creation requires an on-chain transaction
+    await new Promise(r => setTimeout(r, 500))
     setCreating(false)
+    setShowCreate(false)
+    alert('Proposal creation requires an on-chain transaction via the Governance.Signer resource. Connect a signer wallet to submit.')
   }
 
   const handleApprove = async (id) => {
     setApproving(id)
-    await new Promise(r => setTimeout(r, 600))
-
-    setProposals(prev => prev.map(p => {
-      if (p.id === id && p.status === 'pending') {
-        const updated = { ...p, approvals: [...p.approvals, '0xYOUR...ADDR'] }
-        if (updated.approvals.length >= stats.requiredApprovals) {
-          updated.status = 'approved'
-        }
-        return updated
-      }
-      return p
-    }))
+    // TODO: Send real approval transaction on-chain
+    await new Promise(r => setTimeout(r, 500))
     setApproving(null)
+    alert('Proposal approval requires an on-chain transaction via the Governance.Signer resource. Connect a signer wallet to approve.')
   }
 
   const pending = proposals.filter(p => p.status === 'pending')
@@ -136,7 +113,7 @@ export default function GovernancePanel() {
         {[
           { label: 'Signers', value: stats.totalSigners, icon: Users, color: 'violet' },
           { label: 'Quorum', value: `${stats.requiredApprovals}-of-${stats.totalSigners}`, icon: Shield, color: 'emerald' },
-          { label: 'Treasury', value: `${stats.treasuryBalance} FLOW`, icon: Coins, color: 'cyan' },
+          { label: 'Proposals', value: proposals.length, icon: FileText, color: 'cyan' },
         ].map((stat, i) => (
           <div
             key={i}

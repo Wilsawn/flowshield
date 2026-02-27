@@ -114,12 +114,7 @@ export default function PricingSection() {
       }
     } catch (err) {
       console.warn('[Pricing] Registration failed:', err)
-      // Demo fallback
-      setApiKey({
-        key: `fs_${tierId}_demo_${Date.now().toString(36)}`,
-        tier: tierId,
-        demo: true,
-      })
+      setApiKey({ error: 'Registration failed — backend unavailable. Start the server and try again.' })
     }
     setRegistering(null)
   }
@@ -262,8 +257,8 @@ export default function PricingSection() {
                   )}
                 </button>
               </div>
-              {apiKey.demo && (
-                <p className="text-[10px] text-white/20 mt-2">Demo key — start the backend server for real registration.</p>
+              {apiKey.error && (
+                <p className="text-[10px] text-red-400/60 mt-2">{apiKey.error}</p>
               )}
             </div>
           </div>

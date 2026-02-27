@@ -87,21 +87,21 @@ export async function fetchWalletData(address, fcl) {
       source: 'flow-testnet',
     }
   } catch (err) {
-    // Fall back to deterministic mock based on address hash
-    const hash = address.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    console.warn(`[RiskScoring] Could not fetch wallet data for ${address}:`, err.message)
     return {
       address,
-      balance: (hash % 10000) / 100,
-      accountAgeDays: 10 + (hash % 350),
-      txCount24h: hash % 30,
-      rapidInOut: hash % 13 === 0,
-      flaggedContracts: hash % 17 === 0 ? 1 : 0,
+      balance: 0,
+      accountAgeDays: null,
+      txCount24h: null,
+      rapidInOut: false,
+      flaggedContracts: 0,
       mixerInteractions: 0,
-      fundingSources: (hash % 4) + 1,
-      dormancySpike: hash % 23 === 0,
-      keyCount: 1,
-      contractCount: 0,
-      source: 'mock-fallback',
+      fundingSources: null,
+      dormancySpike: false,
+      keyCount: null,
+      contractCount: null,
+      source: 'unavailable',
+      error: err.message,
     }
   }
 }

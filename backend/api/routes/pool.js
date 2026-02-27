@@ -265,7 +265,7 @@ router.get('/status', async (req, res) => {
   const address = req.app.locals.contractAddress
 
   try {
-    const [deposits, borrowed, txCount, liquidity] = await Promise.all([
+    const [deposits, borrowed, txCount, liquidity, baseAPY, maxLTV, utilRate] = await Promise.all([
       fcl.query({
         cadence: `import DemoLendingPool from 0x${fcl.sansPrefix(address)}\naccess(all) fun main(): UFix64 { return DemoLendingPool.totalDeposits }`,
       }),
@@ -278,13 +278,34 @@ router.get('/status', async (req, res) => {
       fcl.query({
         cadence: `import DemoLendingPool from 0x${fcl.sansPrefix(address)}\naccess(all) fun main(): UFix64 { return DemoLendingPool.availableLiquidity() }`,
       }),
+      fcl.query({
+        cadence: `import DemoLendingPool from 0x${fcl.sansPrefix(address)}\naccess(all) fun main(): UFix64 { return DemoLendingPool.baseAPY }`,
+      }),
+      fcl.query({
+        cadence: `import DemoLendingPool from 0x${fcl.sansPrefix(address)}\naccess(all) fun main(): UFix64 { return DemoLendingPool.maxLTV }`,
+      }),
+      fcl.query({
+        cadence: `import DemoLendingPool from 0x${fcl.sansPrefix(address)}\naccess(all) fun main(): UFix64 { return DemoLendingPool.utilizationRate() }`,
+      }),
     ])
+
+    const apyPct = parseFloat(baseAPY) * 100
+    const ltvPct = parseFloat(maxLTV) * 100
+    const util = parseFloat(utilRate)
+    // Simple interest model: borrow rate = baseAPY + utilization spread
+    const borrowRate = parseFloat(baseAPY) + util * 0.02
 
     res.json({
       totalDeposits: parseFloat(deposits),
       totalBorrowed: parseFloat(borrowed),
       totalTransactions: parseInt(txCount),
       availableLiquidity: parseFloat(liquidity),
+      baseAPY: parseFloat(baseAPY),
+      baseAPYPercent: apyPct,
+      maxLTV: parseFloat(maxLTV),
+      maxLTVPercent: ltvPct,
+      utilizationRate: util,
+      borrowRatePercent: +(borrowRate * 100).toFixed(2),
       source: 'flow-testnet',
     })
   } catch (err) {
