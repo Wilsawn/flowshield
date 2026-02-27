@@ -4,6 +4,7 @@ import LandingPage from './pages/index'
 import Dashboard from './pages/dashboard'
 import CopilotPage from './pages/copilot'
 import OperatorPage from './pages/operator'
+import PricingPage from './pages/pricing'
 import PrivacyPolicy from './pages/privacy'
 import TermsOfService from './pages/terms'
 
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/copilot" element={<RequireAuth><CopilotPage /></RequireAuth>} />
         <Route path="/operator" element={<RequireAuth><OperatorPage /></RequireAuth>} />
+        <Route path="/pricing" element={<PricingPage />} />
       </Route>
     </Routes>
   )

@@ -511,7 +511,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                     {/* Veriff badge — shows when real KYC was used */}
                     {veriffUrl && (
                       <motion.div
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/20 mb-4"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/20 mb-2"
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.45 }}
@@ -519,6 +519,19 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                         <span className="text-[10px] font-semibold text-cyan-400 tracking-wide uppercase">Verified by Veriff</span>
                       </motion.div>
                     )}
+
+                    {/* ZK Proof badge — always shows after proof generation */}
+                    <motion.div
+                      className="flex items-center justify-center gap-3 mb-4"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/[0.08] border border-violet-500/20">
+                        <svg className="w-3 h-3 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span className="text-[10px] font-semibold text-violet-400 tracking-wide uppercase">ZK Proof Generated</span>
+                      </div>
+                    </motion.div>
 
                     {/* Success details */}
                     <div className="flex items-center justify-center gap-4 mb-8">

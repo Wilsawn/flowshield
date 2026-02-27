@@ -1,4 +1,5 @@
 import OperatorDashboard from '@/components/OperatorDashboard'
+import GovernancePanel from '@/components/GovernancePanel'
 
 export default function OperatorPage() {
   let userName = ''
@@ -18,6 +19,11 @@ export default function OperatorPage() {
         </p>
       </div>
       <OperatorDashboard />
+
+      {/* Governance — Multi-sig proposals */}
+      <div className="mt-10 pt-8 border-t border-white/[0.04]">
+        <GovernancePanel />
+      </div>
     </div>
   )
 }
