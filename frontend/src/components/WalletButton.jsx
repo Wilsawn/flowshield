@@ -44,6 +44,20 @@ export default function WalletButton() {
     return () => document.removeEventListener('mousedown', handler)
   }, [showDropdown])
 
+  // Re-check compliance when dropdown is opened
+  useEffect(() => {
+    if (showDropdown && walletUser?.addr) {
+      checkComplianceStatus(walletUser.addr)
+    }
+  }, [showDropdown])
+
+  // Periodic compliance refresh (every 30s)
+  useEffect(() => {
+    if (!walletUser?.addr) return
+    const interval = setInterval(() => checkComplianceStatus(walletUser.addr), 30000)
+    return () => clearInterval(interval)
+  }, [walletUser?.addr])
+
   const [manualAddr, setManualAddr] = useState('')
 
   // Primary: FCL wallet discovery (Lilico, Blocto, etc.)

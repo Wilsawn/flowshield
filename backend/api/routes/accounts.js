@@ -373,6 +373,17 @@ router.post('/mint-credential', async (req, res) => {
     })
 
     const txResult = await fcl.tx(txId).onceSealed()
+
+    if (txResult.errorMessage) {
+      console.error(`[Accounts] Credential mint tx failed on-chain: ${txResult.errorMessage}`)
+      return res.status(400).json({
+        success: false,
+        error: txResult.errorMessage,
+        txId,
+        address: user.address,
+      })
+    }
+
     console.log(`[Accounts] Credential minted for ${email} (${user.address}). Tx: ${txId}`)
     logAudit({
       action: 'credential_minted',
