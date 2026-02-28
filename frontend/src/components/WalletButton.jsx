@@ -97,7 +97,7 @@ export default function WalletButton() {
         setCompliance(data)
       }
     } catch {
-      setCompliance({ isCompliant: false, hasCredential: false })
+      setCompliance({ hasCredential: false, isValid: false })
     }
     setCheckingCompliance(false)
   }
@@ -219,14 +219,14 @@ export default function WalletButton() {
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className={`flex items-center gap-2 h-9 px-3 rounded-lg border text-[12px] font-medium transition-all ${
-          compliance?.isCompliant
+          compliance?.hasCredential && compliance?.isValid
             ? 'border-emerald-500/15 bg-emerald-500/[0.04] text-emerald-400/80'
             : 'border-white/[0.06] bg-white/[0.02] text-white/50'
         }`}
       >
         <Wallet className="w-3.5 h-3.5" />
         <span className="font-mono">{shortAddr}</span>
-        {compliance?.isCompliant && <ShieldCheck className="w-3 h-3" />}
+        {compliance?.hasCredential && compliance?.isValid && <ShieldCheck className="w-3 h-3" />}
       </button>
 
       <AnimatePresence>
@@ -260,23 +260,23 @@ export default function WalletButton() {
 
               {/* Compliance Status */}
               <div className={`rounded-lg p-3 border ${
-                compliance?.isCompliant
+                compliance?.hasCredential && compliance?.isValid
                   ? 'border-emerald-500/20 bg-emerald-500/[0.04]'
                   : 'border-amber-500/20 bg-amber-500/[0.04]'
               }`}>
                 <div className="flex items-center gap-2">
                   {checkingCompliance ? (
                     <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
-                  ) : compliance?.isCompliant ? (
+                  ) : compliance?.hasCredential && compliance?.isValid ? (
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   ) : (
                     <ShieldX className="w-4 h-4 text-amber-400" />
                   )}
                   <div>
                     <p className={`text-[12px] font-medium ${
-                      compliance?.isCompliant ? 'text-emerald-400' : 'text-amber-400'
+                      compliance?.hasCredential && compliance?.isValid ? 'text-emerald-400' : 'text-amber-400'
                     }`}>
-                      {checkingCompliance ? 'Checking...' : compliance?.isCompliant ? 'Compliant' : 'Not Compliant'}
+                      {checkingCompliance ? 'Checking...' : compliance?.hasCredential && compliance?.isValid ? 'Compliant' : 'Not Compliant'}
                     </p>
                     {compliance?.hasCredential && (
                       <p className="text-[10px] text-white/30">

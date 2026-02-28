@@ -67,11 +67,12 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         addStep('Checking compliance credential...', 'Querying ComplianceCredential on Flow testnet', 'active')
         await new Promise(r => setTimeout(r, 500))
 
-        // Use the connected user's wallet address
-        const walletAddr = (() => {
-          try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').addr } catch { return null }
+        // Use the connected user's wallet address and email
+        const walletData = (() => {
+          try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} }
         })()
-        const userAddress = walletAddr || '0x93c691a98b975493'
+        const userAddress = walletData.addr || '0x93c691a98b975493'
+        const walletEmail = walletData.email || null
 
         const credRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
         const credData = await credRes.json()
@@ -81,9 +82,6 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           // MUST pass userAddress so pool.js can look up the custodial key and
           // run a two-signer transaction — otherwise credential lands on deployer.
           updateLastStep('No credential found — minting...', 'Calling ZKVerifier + ComplianceCredential.mint()', 'active')
-          const walletEmail = (() => {
-            try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').email } catch { return null }
-          })()
           const mintRes = await fetch(`${API}/api/pool/mint-credential`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -121,7 +119,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         const txRes = await fetch(`${API}/api/pool/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: parseFloat(amount), userAddress }),
+          body: JSON.stringify({ amount: parseFloat(amount), userAddress, email: walletEmail }),
         })
         const txData = await txRes.json()
 

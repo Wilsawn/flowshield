@@ -380,7 +380,11 @@ export default function Dashboard() {
             )}
             <span className="text-white/10">·</span>
             <span className="flex items-center gap-1.5">
-              <span className="text-emerald-400/50">Compliant</span>
+              {live.hasCredential && live.isValid ? (
+                <span className="text-emerald-400/50">Compliant</span>
+              ) : (
+                <span className="text-amber-400/50">Not Compliant</span>
+              )}
               <span>{currentJurisdiction.flag} {currentJurisdiction.name}</span>
             </span>
             <span className="text-white/10">·</span>

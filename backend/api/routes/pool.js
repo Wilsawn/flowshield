@@ -269,9 +269,22 @@ router.post('/deposit', async (req, res) => {
 
   try {
     const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    // Look up custodial user by email first (survives Railway redeploys), then by address
     let custodialUser = null
-    if (userAddress && userAddress !== contractAddress) {
+    if (req.body.email) {
+      custodialUser = await getUser(req.body.email)
+    }
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
       custodialUser = await getUserByAddress(userAddress)
+    }
+
+    // If a specific user address was requested but we cannot find their key, reject
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
+      return res.status(422).json({
+        error: 'Custodial account not found. Your session may have expired — please re-onboard.',
+        userAddress,
+        source: 'error',
+      })
     }
 
     let txId
@@ -386,9 +399,22 @@ router.post('/borrow', async (req, res) => {
 
   try {
     const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    // Look up custodial user by email first (survives Railway redeploys), then by address
     let custodialUser = null
-    if (userAddress && userAddress !== contractAddress) {
+    if (req.body.email) {
+      custodialUser = await getUser(req.body.email)
+    }
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
       custodialUser = await getUserByAddress(userAddress)
+    }
+
+    // If a specific user address was requested but we cannot find their key, reject
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
+      return res.status(422).json({
+        error: 'Custodial account not found. Your session may have expired — please re-onboard.',
+        userAddress,
+        source: 'error',
+      })
     }
 
     let txId
@@ -497,9 +523,22 @@ router.post('/repay', async (req, res) => {
 
   try {
     const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    // Look up custodial user by email first (survives Railway redeploys), then by address
     let custodialUser = null
-    if (userAddress && userAddress !== contractAddress) {
+    if (req.body.email) {
+      custodialUser = await getUser(req.body.email)
+    }
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
       custodialUser = await getUserByAddress(userAddress)
+    }
+
+    // If a specific user address was requested but we cannot find their key, reject
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
+      return res.status(422).json({
+        error: 'Custodial account not found. Your session may have expired — please re-onboard.',
+        userAddress,
+        source: 'error',
+      })
     }
 
     let txId
