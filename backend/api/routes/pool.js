@@ -179,12 +179,30 @@ router.post('/deposit', async (req, res) => {
   try {
     const authz = serverAuthorization(fcl, contractAddress)
 
+    // Scale: 0.001 FLOW per USDC unit, capped at 0.1 FLOW per tx
+    const flowAmount = Math.min(amount * 0.001, 0.1)
+
     const txId = await fcl.mutate({
       cadence: `
         import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+        import FungibleToken from 0x9a0766d93b6608b7
+        import FlowToken from 0x7e60df042a9c0868
 
-        transaction(amount: UFix64, depositor: Address) {
-          prepare(signer: auth(Storage) &Account) {}
+        transaction(amount: UFix64, depositor: Address, flowAmount: UFix64) {
+          prepare(signer: auth(Storage) &Account) {
+            // Real FLOW token transfer — visible on Flowscan
+            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+              from: /storage/flowTokenVault
+            )
+            if vault != nil {
+              let tokens <- vault!.withdraw(amount: flowAmount)
+              // Deposit back to self (creates real FlowToken events on-chain)
+              let receiver = signer.storage.borrow<&{FungibleToken.Receiver}>(
+                from: /storage/flowTokenVault
+              )!
+              receiver.deposit(from: <- tokens)
+            }
+          }
           execute {
             DemoLendingPool.deposit(depositor: depositor, amount: amount)
           }
@@ -193,6 +211,7 @@ router.post('/deposit', async (req, res) => {
       args: (arg, t) => [
         arg(amount.toFixed(8), t.UFix64),
         arg(userAddress, t.Address),
+        arg(flowAmount.toFixed(8), t.UFix64),
       ],
       proposer: authz,
       payer: authz,
@@ -243,12 +262,28 @@ router.post('/borrow', async (req, res) => {
   try {
     const authz = serverAuthorization(fcl, contractAddress)
 
+    const flowAmount = Math.min(amount * 0.001, 0.1)
+
     const txId = await fcl.mutate({
       cadence: `
         import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+        import FungibleToken from 0x9a0766d93b6608b7
+        import FlowToken from 0x7e60df042a9c0868
 
-        transaction(amount: UFix64, borrower: Address) {
-          prepare(signer: auth(Storage) &Account) {}
+        transaction(amount: UFix64, borrower: Address, flowAmount: UFix64) {
+          prepare(signer: auth(Storage) &Account) {
+            // Real FLOW token transfer — visible on Flowscan
+            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+              from: /storage/flowTokenVault
+            )
+            if vault != nil {
+              let tokens <- vault!.withdraw(amount: flowAmount)
+              let receiver = signer.storage.borrow<&{FungibleToken.Receiver}>(
+                from: /storage/flowTokenVault
+              )!
+              receiver.deposit(from: <- tokens)
+            }
+          }
           execute {
             DemoLendingPool.borrow(borrower: borrower, amount: amount)
           }
@@ -257,6 +292,7 @@ router.post('/borrow', async (req, res) => {
       args: (arg, t) => [
         arg(amount.toFixed(8), t.UFix64),
         arg(userAddress, t.Address),
+        arg(flowAmount.toFixed(8), t.UFix64),
       ],
       proposer: authz,
       payer: authz,
@@ -306,12 +342,28 @@ router.post('/repay', async (req, res) => {
   try {
     const authz = serverAuthorization(fcl, contractAddress)
 
+    const flowAmount = Math.min(amount * 0.001, 0.1)
+
     const txId = await fcl.mutate({
       cadence: `
         import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+        import FungibleToken from 0x9a0766d93b6608b7
+        import FlowToken from 0x7e60df042a9c0868
 
-        transaction(amount: UFix64, borrower: Address) {
-          prepare(signer: auth(Storage) &Account) {}
+        transaction(amount: UFix64, borrower: Address, flowAmount: UFix64) {
+          prepare(signer: auth(Storage) &Account) {
+            // Real FLOW token transfer — visible on Flowscan
+            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+              from: /storage/flowTokenVault
+            )
+            if vault != nil {
+              let tokens <- vault!.withdraw(amount: flowAmount)
+              let receiver = signer.storage.borrow<&{FungibleToken.Receiver}>(
+                from: /storage/flowTokenVault
+              )!
+              receiver.deposit(from: <- tokens)
+            }
+          }
           execute {
             DemoLendingPool.repay(borrower: borrower, amount: amount)
           }
@@ -320,6 +372,7 @@ router.post('/repay', async (req, res) => {
       args: (arg, t) => [
         arg(amount.toFixed(8), t.UFix64),
         arg(userAddress, t.Address),
+        arg(flowAmount.toFixed(8), t.UFix64),
       ],
       proposer: authz,
       payer: authz,
