@@ -222,14 +222,22 @@ export default function Dashboard() {
     setRenewing(true)
     try {
       const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
-      const res = await fetch(`${API}/api/subscription/mint`, {
+      // Use the custodial mint endpoint (two-signer tx) so the credential lands
+      // in the user's own account, not the deployer's.
+      const walletInfo = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()
+      const email = walletInfo.email
+      if (!email) {
+        console.error('[Dashboard] Cannot renew: no email in wallet info')
+        setRenewing(false)
+        return
+      }
+      const res = await fetch(`${API}/api/accounts/mint-credential`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          address: walletAddr,
-          jurisdiction: live.jurisdiction || 'US',
+          email,
+          jurisdiction: jurisdictionCode || 'US',
           riskScore: live.riskScore ?? 15,
-          proofHash: `renewal_${Date.now()}`,
         }),
       })
       const result = await res.json()
@@ -238,12 +246,14 @@ export default function Dashboard() {
         setCredentialExpiring(false)
         live.refresh()
         setTimeout(() => setRenewed(false), 4000)
+      } else {
+        console.error('[Dashboard] Renewal failed:', result.error)
       }
     } catch (err) {
       console.error('[Dashboard] Renewal failed:', err)
     }
     setRenewing(false)
-  }, [live])
+  }, [live, jurisdictionCode])
 
   const handleDeposit = () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) return

@@ -76,28 +76,43 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         const credRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
         const credData = await credRes.json()
 
-        if (!credData.hasCredential) {
+        if (!credData.hasCredential || !credData.isValid) {
+          // Attempt to mint credential for custodial user.
+          // MUST pass userAddress so pool.js can look up the custodial key and
+          // run a two-signer transaction — otherwise credential lands on deployer.
           updateLastStep('No credential found — minting...', 'Calling ZKVerifier + ComplianceCredential.mint()', 'active')
+          const walletEmail = (() => {
+            try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').email } catch { return null }
+          })()
           const mintRes = await fetch(`${API}/api/pool/mint-credential`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jurisdiction: 'US', riskScore: 15 }),
+            body: JSON.stringify({ userAddress, email: walletEmail, jurisdiction: credData.jurisdiction || 'US', riskScore: 15 }),
           })
           const mintData = await mintRes.json()
           if (mintData.success) {
-            updateLastStep('Credential minted on-chain', `Tx: ${mintData.transactionId?.slice(0, 12)}... · Block ${mintData.blockHeight}`)
+            updateLastStep('Credential minted on-chain', `Tx: ${mintData.transactionId?.slice(0, 12)}... · Minted to: ${mintData.mintedTo?.slice(0, 10)}...`)
           } else {
-            updateLastStep('Credential already active', `Source: ${credData.source}`)
+            updateLastStep('Credential minting failed', mintData.error || 'Unknown error', 'error')
+            setError(mintData.error || 'Credential minting failed. Please re-onboard.')
+            return
           }
         } else {
-          updateLastStep('Credential verified: ACTIVE', `Tier: ${credData.tier} · Source: ${credData.source}`)
+          updateLastStep('Credential verified: ACTIVE', `Tier: ${credData.tier} · Expires: ${credData.source}`)
         }
         await new Promise(r => setTimeout(r, 400))
 
-        // Step 2: Compliance pre-check
-        addStep('ComplianceAction.verify() — Flow Action pre-check', 'On-chain compliance gate', 'active')
-        await new Promise(r => setTimeout(r, 600))
-        updateLastStep('ComplianceAction.verify() → true', 'Credential valid, proceeding with transaction')
+        // Step 2: Real on-chain compliance check — re-read after any mint above
+        addStep('ComplianceAction.verify() — on-chain gate', 'Reading ComplianceCredential capability', 'active')
+        await new Promise(r => setTimeout(r, 400))
+        const verifyRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
+        const verifyData = await verifyRes.json()
+        if (!verifyData.hasCredential || !verifyData.isValid) {
+          updateLastStep('ComplianceAction.verify() → false', 'No valid credential on this address — deposit blocked', 'error')
+          setError('No valid compliance credential on your account. Please complete onboarding to receive one.')
+          return
+        }
+        updateLastStep('ComplianceAction.verify() → true', `Credential valid · Tier: ${verifyData.tier}`)
         await new Promise(r => setTimeout(r, 300))
 
         // Step 3: Send REAL transaction

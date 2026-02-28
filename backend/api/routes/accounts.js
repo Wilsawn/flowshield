@@ -392,5 +392,5 @@ router.post('/mint-credential', async (req, res) => {
   }
 })
 
-export { getUserByAddress }
+export { getUserByAddress, getUser }
 export default router

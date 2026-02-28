@@ -5,7 +5,7 @@
 import { Router } from 'express'
 import { serverAuthorization, custodialAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { logAudit } from '../../lib/supabase.js'
-import { getUserByAddress } from './accounts.js'
+import { getUserByAddress, getUser } from './accounts.js'
 
 const router = Router()
 const PRIVATE_KEY = hasPrivateKey()
@@ -29,10 +29,25 @@ router.post('/mint-credential', async (req, res) => {
     const claimsId = req.body.claimsHash || `claims_${Date.now()}`
     const riskScore = String(req.body.riskScore || 15)
 
-    // Check if this is a custodial user (we have their private key)
+    // Check if this is a custodial user (we have their private key).
+    // Also accept an email for lookup (more reliable after Railway redeploys
+    // which wipe the in-memory address→user mapping).
     let custodialUser = null
-    if (userAddress && userAddress !== contractAddress) {
+    if (req.body.email) {
+      custodialUser = await getUser(req.body.email)
+    }
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
       custodialUser = await getUserByAddress(userAddress)
+    }
+
+    // If a specific user address was requested but we cannot find their key,
+    // refuse rather than silently minting the credential to the deployer's account.
+    if (!custodialUser && userAddress && userAddress !== contractAddress) {
+      return res.status(422).json({
+        error: 'Custodial account record not found for this address. Your session may have expired — please re-onboard.',
+        userAddress,
+        source: 'error',
+      })
     }
 
     let txId
