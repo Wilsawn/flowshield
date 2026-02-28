@@ -209,7 +209,9 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         }))
         // Dispatch storage event so dashboard reacts immediately
         window.dispatchEvent(new Event('storage'))
-        console.log('[FlowShield] Custodial account created:', acctData.address, 'funded:', acctData.funded)
+        console.log('[FlowShield] Custodial account:', acctData.address, 'isNew:', acctData.isNew, 'funded:', acctData.funded)
+      } else if (acctData.error) {
+        console.error('[FlowShield] Account creation failed:', acctData.error)
       }
     } catch (err) {
       console.warn('[FlowShield] Account creation:', err.message)

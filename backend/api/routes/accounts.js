@@ -110,6 +110,15 @@ router.post('/create', async (req, res) => {
     return res.status(500).json({ error: 'Server signing not available' })
   }
 
+  // Refuse to create accounts in production without Supabase — prevents
+  // in-memory-only records that vanish on every Railway redeploy.
+  if (!getSupabase() && process.env.NODE_ENV === 'production') {
+    console.error('[Accounts] BLOCKED: account creation without Supabase in production')
+    return res.status(503).json({
+      error: 'Database not configured — set SUPABASE_URL and SUPABASE_SERVICE_KEY on Railway',
+    })
+  }
+
   // Check if user already has an account
   let existing
   try {
@@ -432,6 +441,41 @@ router.post('/mint-credential', async (req, res) => {
     console.error('[Accounts] Credential mint failed:', err.message)
     res.status(500).json({ error: 'Credential minting failed', details: err.message })
   }
+})
+
+/**
+ * POST /api/accounts/link-deployer
+ * Body: { email }
+ *
+ * Links an email to the deployer address so that onboarding returns the
+ * deployer account instead of creating a new custodial one.
+ * Testnet/admin utility — saves the deployer key pair into the users table.
+ */
+router.post('/link-deployer', async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ error: 'email is required' })
+  if (!PRIVATE_KEY) return res.status(500).json({ error: 'Deployer key not available' })
+
+  const deployerAddress = req.app.locals.contractAddress
+
+  // Derive public key from the deployer private key
+  const elliptic = (await import('elliptic')).default
+  const EC = elliptic.ec
+  const ec = new EC('p256')
+  const keyPair = ec.keyFromPrivate(Buffer.from(PRIVATE_KEY, 'hex'))
+  const publicKey = keyPair.getPublic(false, 'hex').slice(2)
+
+  await saveUser({
+    email: email.toLowerCase(),
+    address: deployerAddress,
+    publicKey,
+    privateKey: PRIVATE_KEY,
+    authMethod: 'deployer',
+    createdAt: new Date().toISOString(),
+  })
+
+  console.log(`[Accounts] Linked ${email} → deployer ${deployerAddress}`)
+  res.json({ success: true, address: deployerAddress, email: email.toLowerCase() })
 })
 
 export { getUserByAddress, getUser }
