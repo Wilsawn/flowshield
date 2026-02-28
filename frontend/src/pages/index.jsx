@@ -166,29 +166,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── PRODUCT SHOWCASE ─── */}
-      <section className="relative z-10 py-20 md:py-32">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <motion.h2
-            className="text-2xl md:text-[2rem] font-bold tracking-[-0.02em] text-center mb-2"
-            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          >
-            Architecture
-          </motion.h2>
-          <motion.p
-            className="text-sm text-white/35 text-center mb-12"
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
-          >
-            Drag to explore · Scroll to zoom
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
-          >
-            <ProductShowcase />
-          </motion.div>
-        </div>
-      </section>
-
       {/* ─── HOW IT WORKS ─── */}
       <section className="relative z-10 py-20 md:py-32">
         <div className="max-w-[1080px] mx-auto px-6">
@@ -262,6 +239,29 @@ export default function LandingPage() {
               />
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* ─── PRODUCT SHOWCASE ─── */}
+      <section className="relative z-10 py-20 md:py-32">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <motion.h2
+            className="text-2xl md:text-[2rem] font-bold tracking-[-0.02em] text-center mb-2"
+            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          >
+            Architecture
+          </motion.h2>
+          <motion.p
+            className="text-sm text-white/35 text-center mb-12"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+          >
+            Drag to explore · Scroll to zoom
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
+          >
+            <ProductShowcase />
+          </motion.div>
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wallet, LogOut, ShieldCheck, ShieldX, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
+import { Wallet, LogOut, ShieldCheck, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
 import { connectWallet, disconnectWallet, subscribeToWallet } from '@/utils/fcl-config'
 
 export default function WalletButton() {
@@ -257,81 +257,97 @@ export default function WalletButton() {
       <AnimatePresence>
         {showDropdown && (
           <motion.div
-            className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="p-4 space-y-3">
-              {/* Address */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">Connected Wallet</p>
-                  <p className="text-[13px] text-white/70 font-mono mt-0.5">{shortAddr}</p>
-                </div>
-                <button
-                  onClick={copyAddress}
-                  className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
-                  title="Copy address"
-                >
-                  {copied ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-white/30" />
-                  )}
-                </button>
-              </div>
-
-              {/* Compliance Status */}
-              <div className={`rounded-lg p-3 border ${
-                compliance?.hasCredential && compliance?.isValid
-                  ? 'border-emerald-500/20 bg-emerald-500/[0.04]'
-                  : 'border-amber-500/20 bg-amber-500/[0.04]'
-              }`}>
-                <div className="flex items-center gap-2">
-                  {checkingCompliance ? (
-                    <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
-                  ) : compliance?.hasCredential && compliance?.isValid ? (
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <ShieldX className="w-4 h-4 text-amber-400" />
-                  )}
-                  <div>
-                    <p className={`text-[12px] font-medium ${
-                      compliance?.hasCredential && compliance?.isValid ? 'text-emerald-400' : 'text-amber-400'
-                    }`}>
-                      {checkingCompliance ? 'Checking...' : compliance?.hasCredential && compliance?.isValid ? 'Compliant' : 'Not Compliant'}
-                    </p>
-                    {compliance?.hasCredential && (
-                      <p className="text-[10px] text-white/30">
-                        Tier: {compliance.tier || 'standard'} · On-chain credential found
-                      </p>
-                    )}
-                    {!compliance?.hasCredential && !checkingCompliance && (
-                      <p className="text-[10px] text-white/30">
-                        No credential found — complete onboarding first
-                      </p>
-                    )}
+            <div className="p-5 space-y-4">
+              {/* Header — Identicon + Address + Copy + Testnet badge */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-full shrink-0"
+                  style={{
+                    background: walletUser?.addr
+                      ? `linear-gradient(135deg, #${walletUser.addr.slice(2, 8)}, #${walletUser.addr.slice(-6)})`
+                      : 'linear-gradient(135deg, #334155, #1e293b)',
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] text-white/80 font-mono truncate">{shortAddr}</p>
+                    <button
+                      onClick={copyAddress}
+                      className="p-1 rounded hover:bg-white/[0.06] transition-colors shrink-0"
+                      title="Copy address"
+                    >
+                      {copied ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3 text-white/25 hover:text-white/50" />
+                      )}
+                    </button>
                   </div>
+                  <span className="inline-block mt-0.5 px-1.5 py-px rounded text-[9px] font-medium tracking-wide uppercase bg-white/[0.04] text-white/30">
+                    Testnet
+                  </span>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-2">
+              {/* Compliance — clean row */}
+              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-white/[0.02]">
+                {checkingCompliance ? (
+                  <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin shrink-0" />
+                ) : (
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    compliance?.hasCredential && compliance?.isValid
+                      ? 'bg-emerald-400'
+                      : 'bg-white/20'
+                  }`} />
+                )}
+                <p className={`text-[12px] font-medium ${
+                  compliance?.hasCredential && compliance?.isValid ? 'text-white/70' : 'text-white/50'
+                }`}>
+                  {checkingCompliance
+                    ? 'Checking compliance…'
+                    : compliance?.hasCredential && compliance?.isValid
+                      ? 'Compliant'
+                      : 'Not compliant'}
+                </p>
+                {compliance?.hasCredential && compliance?.isValid && (
+                  <span className="ml-auto text-[10px] text-white/25">
+                    {compliance.tier || 'standard'}
+                  </span>
+                )}
+                {!compliance?.hasCredential && !checkingCompliance && (
+                  <span className="ml-auto text-[10px] text-white/20">
+                    no credential
+                  </span>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-white/[0.04]" />
+
+              {/* Actions — stacked rows */}
+              <div className="space-y-1">
                 <a
                   href={`https://testnet.flowscan.io/account/${walletUser.addr}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[11px] text-white/40 hover:text-white/60 hover:border-white/[0.1] transition-all"
+                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[12px] text-white/40 hover:text-white/60 hover:bg-white/[0.03] transition-all"
                 >
-                  <ExternalLink className="w-3 h-3" /> Flowscan
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>View on Flowscan</span>
+                  <span className="ml-auto text-white/15">↗</span>
                 </a>
                 <button
                   onClick={handleDisconnect}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-red-500/10 bg-red-500/[0.04] text-[11px] text-red-400/60 hover:text-red-400 hover:border-red-500/20 transition-all"
+                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[12px] text-red-400/50 hover:text-red-400 hover:bg-white/[0.03] transition-all"
                 >
-                  <LogOut className="w-3 h-3" /> Disconnect
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Disconnect</span>
                 </button>
               </div>
             </div>
