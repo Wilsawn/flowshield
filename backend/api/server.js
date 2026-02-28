@@ -82,9 +82,18 @@ app.get('/health', (req, res) => {
   })
 })
 
-// ── Start server ──
-app.listen(PORT, () => {
-  console.log(`[FlowShield API] Running on port ${PORT}`)
+// ── Process-level error handlers (prevent silent crashes on Railway) ──
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err.message)
+  console.error(err.stack)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled rejection:', reason)
+})
+
+// ── Start server — bind to 0.0.0.0 explicitly for containers ──
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[FlowShield API] Running on 0.0.0.0:${PORT}`)
   console.log(`[FlowShield API] Flow network: ${FLOW_NETWORK}`)
   console.log(`[FlowShield API] Contract address: ${CONTRACT_ADDRESS}`)
   console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`) 
