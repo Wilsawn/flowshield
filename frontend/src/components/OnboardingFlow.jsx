@@ -187,37 +187,37 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setCurrentVerifyStep(1)
     let userFlowAddress = null
     try {
-      // Check if user already has an external wallet connected
-      const existingWallet = (() => {
-        try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}').addr } catch { return null }
-      })()
+      // Always create a fresh custodial account — clear any stale wallet entry
+      localStorage.removeItem('flowshield_wallet')
 
-      if (existingWallet) {
-        // User already connected an external wallet — use that address
-        userFlowAddress = existingWallet
-      } else {
-        // No wallet connected — create a custodial Flow account for this user
-        const acctRes = await fetch(`${API}/api/accounts/create`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, authMethod }),
-        })
-        const acctData = await acctRes.json()
-        if (acctData.address) {
-          userFlowAddress = acctData.address
-          // Store as the user's wallet so the dashboard picks it up
-          localStorage.setItem('flowshield_wallet', JSON.stringify({
-            loggedIn: true,
-            addr: acctData.address,
-            custodial: true,
-            email: email,
-          }))
-          // Dispatch storage event so dashboard reacts immediately
-          window.dispatchEvent(new Event('storage'))
-        }
+      const acctRes = await fetch(`${API}/api/accounts/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, authMethod }),
+      })
+      const acctData = await acctRes.json()
+      if (acctData.address) {
+        userFlowAddress = acctData.address
+        // Store as the user's wallet so the dashboard picks it up
+        localStorage.setItem('flowshield_wallet', JSON.stringify({
+          loggedIn: true,
+          addr: acctData.address,
+          custodial: true,
+          email: email,
+        }))
+        // Dispatch storage event so dashboard reacts immediately
+        window.dispatchEvent(new Event('storage'))
+        console.log('[FlowShield] Custodial account created:', acctData.address, 'funded:', acctData.funded)
       }
     } catch (err) {
       console.warn('[FlowShield] Account creation:', err.message)
+    }
+
+    if (!userFlowAddress) {
+      setScanPulse(false)
+      setError('Account creation failed — could not get a Flow address. Please try again.')
+      setStep('passkey')
+      return
     }
 
     // Step 2: Start KYC + generate ZK proof
@@ -254,7 +254,9 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       console.warn('[FlowShield] ZK proof generation:', err.message)
     }
 
-    // Step 3: Complete KYC + issue credential to user's OWN Flow account
+    // Step 3: Mint compliance credential into the user's own Flow account.
+    // Uses a two-authorizer transaction (admin + user) so the credential lands
+    // in the user's storage — not the deployer's.
     setCurrentVerifyStep(3)
 
     if (kycSession?.transactionId) {
@@ -264,33 +266,38 @@ export default function OnboardingFlow({ onComplete, onBack }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transactionId: kycSession.transactionId }),
         })
-      } catch { /* continue anyway */ }
+      } catch { /* non-fatal */ }
     }
 
-    // Mint credential to the user's Flow address (custodial or external wallet)
     let mintResult = null
     try {
-      const mintRes = await fetch(`${API}/api/subscription/mint`, {
+      const mintRes = await fetch(`${API}/api/accounts/mint-credential`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          address: userFlowAddress || email,
+          email,
           jurisdiction: jurisdiction?.code || 'US',
           riskScore: 15,
-          proofHash: zkProof?.proofHash || `zkp_${kycSession?.transactionId || Date.now()}`,
-          proofData: zkProof ? {
-            proof: JSON.stringify(zkProof.proof).slice(0, 200),
-            claimsHash: zkProof.proofHash,
-            signature: zkProof.proofHash,
-          } : null,
         }),
       })
       mintResult = await mintRes.json()
+
+      if (!mintResult.success) {
+        setScanPulse(false)
+        setError(`Credential issuance failed: ${mintResult.error || mintResult.details || 'Unknown error'}`)
+        setStep('passkey')
+        return
+      }
+
+      console.log('[FlowShield] Credential minted on-chain:', mintResult.txId)
     } catch (err) {
-      console.warn('[FlowShield] Credential mint:', err.message)
+      setScanPulse(false)
+      setError(`Credential issuance failed: ${err.message}`)
+      setStep('passkey')
+      return
     }
 
-    // Step 4: Issue credential
+    // Step 4: Confirm on-chain state
     setCurrentVerifyStep(4)
     await new Promise((r) => setTimeout(r, 1000))
 
@@ -311,7 +318,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         proofHash: zkProof.proofHash,
         verified: false,
       } : null,
-      credential: mintResult?.credential || null,
+      credential: mintResult || null,
     }
     localStorage.setItem('flowshield_user', JSON.stringify(userSession))
 

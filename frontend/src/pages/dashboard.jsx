@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowDownToLine, ArrowUpFromLine, RotateCcw, Activity, ShieldCheck, Eye, EyeOff, Fingerprint, Zap, Globe, ChevronDown, AlertTriangle, RefreshCw, Clock, Loader2, ExternalLink, Code, X, CheckCircle2, XCircle, Wallet } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedTicker from '@/components/ui/animated-ticker'
@@ -9,11 +10,17 @@ import { JURISDICTIONS, JURISDICTION_LIST, getJurisdiction } from '@/data/jurisd
 import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
 
+const DEPLOYER_ADDRESS = '0x93c691a98b975493'
+
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [walletAddr, setWalletAddr] = useState(() => {
     try {
       const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
-      return w.addr || null
+      const addr = w.addr || null
+      // Deployer address is not a real user wallet
+      if (addr === DEPLOYER_ADDRESS) return null
+      return addr
     } catch { return null }
   })
 
@@ -22,7 +29,8 @@ export default function Dashboard() {
     const check = () => {
       try {
         const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
-        const addr = w.addr || null
+        let addr = w.addr || null
+        if (addr === DEPLOYER_ADDRESS) addr = null
         setWalletAddr(prev => prev !== addr ? addr : prev)
       } catch { /* ignore */ }
     }
@@ -468,15 +476,7 @@ export default function Dashboard() {
         </div>
 
         {/* Wallet Status */}
-        {!isCustodial && walletAddr && (
-          <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
-            <p className="text-xs text-amber-400">
-              <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-              Connected as deployer — deposits won't move real FLOW. Complete onboarding to get a custodial account.
-            </p>
-          </div>
-        )}
-        {isCustodial && (
+        {isCustodial && walletAddr && (
           <div className="mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
             <p className="text-xs text-emerald-400">
               <ShieldCheck className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
@@ -485,12 +485,32 @@ export default function Dashboard() {
             </p>
           </div>
         )}
-        {!walletAddr && (
-          <div className="mb-4 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-            <p className="text-xs text-white/40">
-              <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-              No wallet connected — complete onboarding or connect a wallet to enable real FLOW transfers
+        {!isCustodial && walletAddr && (
+          <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
+            <p className="text-xs text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
+              Wallet not recognized — re-onboard to create a custodial account with real FLOW
             </p>
+            <button
+              onClick={() => { localStorage.removeItem('flowshield_wallet'); navigate('/') }}
+              className="ml-3 px-3 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors whitespace-nowrap"
+            >
+              Go to Onboarding
+            </button>
+          </div>
+        )}
+        {!walletAddr && (
+          <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
+            <p className="text-xs text-amber-400">
+              <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
+              No custodial account — complete onboarding to get a funded Flow account with real FLOW transfers
+            </p>
+            <button
+              onClick={() => navigate('/')}
+              className="ml-3 px-3 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors whitespace-nowrap"
+            >
+              Go to Onboarding
+            </button>
           </div>
         )}
 
