@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [flowBalance, setFlowBalance] = useState(null)
   const [isCustodial, setIsCustodial] = useState(false)
 
-  // Fetch real on-chain FLOW balance
+  // Fetch real on-chain FLOW balance + auto-recover lost custodial accounts
   const fetchBalance = useCallback(async () => {
     const addr = walletAddr || '0x93c691a98b975493'
     const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
@@ -49,6 +49,38 @@ export default function Dashboard() {
       const data = await res.json()
       if (data.balance !== undefined) setFlowBalance(data.balance)
       setIsCustodial(!!data.isCustodial)
+
+      // Auto-recovery: if localStorage says custodial but backend lost the mapping
+      // (happens after Railway redeploy wipes in-memory store), re-create account
+      if (!data.isCustodial && walletAddr) {
+        try {
+          const w = JSON.parse(localStorage.getItem('flowshield_wallet') || '{}')
+          if (w.custodial && w.email) {
+            console.log('[Dashboard] Custodial account lost on server, re-creating...')
+            const acctRes = await fetch(`${API}/api/accounts/create`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: w.email, authMethod: 'passkey' }),
+            })
+            const acctData = await acctRes.json()
+            if (acctData.address) {
+              localStorage.setItem('flowshield_wallet', JSON.stringify({
+                loggedIn: true,
+                addr: acctData.address,
+                custodial: true,
+                email: w.email,
+              }))
+              window.dispatchEvent(new Event('storage'))
+              setWalletAddr(acctData.address)
+              setIsCustodial(true)
+              // Re-fetch balance for the new address
+              const balRes = await fetch(`${API}/api/accounts/balance/${acctData.address}`)
+              const balData = await balRes.json()
+              if (balData.balance !== undefined) setFlowBalance(balData.balance)
+            }
+          }
+        } catch { /* ignore recovery errors */ }
+      }
     } catch { /* ignore */ }
   }, [walletAddr])
 
