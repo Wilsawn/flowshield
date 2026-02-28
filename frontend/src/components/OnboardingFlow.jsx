@@ -247,7 +247,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       const expiryTimestamp = Math.floor(Date.now() / 1000) + 7776000 // 90 days
       zkProof = await generateComplianceProof({
         kycSecret,
-        jurisdiction: jurisdiction?.code || 'US',
+        jurisdiction: jurisdiction || 'US',
         riskScore: 15,
         riskThreshold: 70,
         expiryTimestamp,
@@ -278,7 +278,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          jurisdiction: jurisdiction?.code || 'US',
+          jurisdiction: jurisdiction || 'US',
           riskScore: 15,
         }),
       })

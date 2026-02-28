@@ -17,7 +17,7 @@ async function getUser(email) {
   const sb = getSupabase()
   if (sb) {
     try {
-      const { data } = await sb.from('users').select('*').eq('email', key).single()
+      const { data, error } = await sb.from('users').select('*').eq('email', key).single()
       if (data) return {
         email: data.email,
         address: data.flow_address,
@@ -26,8 +26,18 @@ async function getUser(email) {
         authMethod: data.auth_method,
         createdAt: data.created_at,
       }
-    } catch { /* fall through */ }
+      // PGRST116 = "no rows found" — expected for genuinely new users
+      if (error && error.code !== 'PGRST116') {
+        console.warn('[Accounts] Supabase getUser error:', error.code, error.message)
+      }
+      return null
+    } catch (err) {
+      // Network / connection failure — do NOT silently create a duplicate account
+      console.error('[Accounts] Supabase getUser FAILED — refusing to fall through:', err.message)
+      throw err
+    }
   }
+  // Supabase not configured — dev-mode in-memory fallback
   return userAccountsMemory.get(key) || null
 }
 
@@ -35,7 +45,7 @@ async function getUserByAddress(flowAddress) {
   const sb = getSupabase()
   if (sb) {
     try {
-      const { data } = await sb.from('users').select('*').eq('flow_address', flowAddress).single()
+      const { data, error } = await sb.from('users').select('*').eq('flow_address', flowAddress).single()
       if (data) return {
         email: data.email,
         address: data.flow_address,
@@ -44,9 +54,16 @@ async function getUserByAddress(flowAddress) {
         authMethod: data.auth_method,
         createdAt: data.created_at,
       }
-    } catch { /* fall through */ }
+      if (error && error.code !== 'PGRST116') {
+        console.warn('[Accounts] Supabase getUserByAddress error:', error.code, error.message)
+      }
+      return null
+    } catch (err) {
+      console.error('[Accounts] Supabase getUserByAddress FAILED:', err.message)
+      throw err
+    }
   }
-  // Fallback: search in-memory store by address
+  // Supabase not configured — search in-memory store by address
   for (const [, record] of userAccountsMemory) {
     if (record.address === flowAddress) return record
   }
@@ -94,8 +111,14 @@ router.post('/create', async (req, res) => {
   }
 
   // Check if user already has an account
-  const existing = await getUser(email)
+  let existing
+  try {
+    existing = await getUser(email)
+  } catch (err) {
+    return res.status(503).json({ error: 'Database lookup failed — please try again', details: err.message })
+  }
   if (existing) {
+    console.log(`[Accounts] Returning existing account ${existing.address} for ${email}`)
     return res.json({
       address: existing.address,
       isNew: false,
@@ -287,7 +310,12 @@ router.post('/mint-credential', async (req, res) => {
     return res.status(500).json({ error: 'Server signing not available' })
   }
 
-  const user = await getUser(email)
+  let user
+  try {
+    user = await getUser(email)
+  } catch (err) {
+    return res.status(503).json({ error: 'Database lookup failed — please try again', details: err.message })
+  }
   if (!user) {
     return res.status(404).json({ error: 'No custodial account found for this email' })
   }
