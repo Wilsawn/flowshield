@@ -132,7 +132,6 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           }
 
           setCompleted(true)
-          setTimeout(() => onComplete?.(), 2000)
         } else {
           const friendly = friendlyError(txData.error)
           setError(friendly)
@@ -258,6 +257,12 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                     <p className="text-[9px] text-white/20 font-mono truncate">{txResult.transactionId}</p>
                   </div>
                 </a>
+                <button
+                  onClick={() => onComplete?.()}
+                  className="w-full mt-3 h-9 rounded-lg bg-emerald-500 text-[#060a13] text-sm font-semibold hover:bg-emerald-400 transition-colors"
+                >
+                  Done
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
