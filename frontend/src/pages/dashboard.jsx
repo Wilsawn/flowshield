@@ -37,6 +37,22 @@ export default function Dashboard() {
   const [borrowAmount, setBorrowAmount] = useState('')
   const [repayAmount, setRepayAmount] = useState('')
   const [verifying, setVerifying] = useState(null) // null | { action, amount }
+  const [flowBalance, setFlowBalance] = useState(null)
+  const [isCustodial, setIsCustodial] = useState(false)
+
+  // Fetch real on-chain FLOW balance
+  const fetchBalance = useCallback(async () => {
+    const addr = walletAddr || '0x93c691a98b975493'
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+    try {
+      const res = await fetch(`${API}/api/accounts/balance/${addr}`)
+      const data = await res.json()
+      if (data.balance !== undefined) setFlowBalance(data.balance)
+      setIsCustodial(!!data.isCustodial)
+    } catch { /* ignore */ }
+  }, [walletAddr])
+
+  useEffect(() => { fetchBalance() }, [fetchBalance])
   const [showCompliance, setShowCompliance] = useState(false)
   const [jurisdictionCode, setJurisdictionCode] = useState(() => {
     try {
@@ -221,8 +237,9 @@ export default function Dashboard() {
     // Refresh live data to show updated pool stats from chain
     live.refresh?.()
     chain.refresh?.()
+    fetchBalance()
     // Second refresh after 3s to catch chain indexing lag
-    setTimeout(() => { live.refresh?.(); chain.refresh?.() }, 3000)
+    setTimeout(() => { live.refresh?.(); chain.refresh?.(); fetchBalance() }, 3000)
     setTimeout(() => setVerifying(null), 600)
   }
 
@@ -418,6 +435,33 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Wallet Status */}
+        {!isCustodial && walletAddr && (
+          <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+            <p className="text-xs text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
+              Connected as deployer — deposits won't move real FLOW. Complete onboarding to get a custodial account.
+            </p>
+          </div>
+        )}
+        {isCustodial && (
+          <div className="mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+            <p className="text-xs text-emerald-400">
+              <ShieldCheck className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
+              Custodial account active — real FLOW transfers enabled
+              {flowBalance !== null && <span className="ml-2 text-white/50">Balance: {flowBalance.toFixed(4)} FLOW</span>}
+            </p>
+          </div>
+        )}
+        {!walletAddr && (
+          <div className="mb-4 p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+            <p className="text-xs text-white/40">
+              <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
+              No wallet connected — complete onboarding or connect a wallet to enable real FLOW transfers
+            </p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -444,7 +488,7 @@ export default function Dashboard() {
                 Deposit
               </button>
               <p className="text-xs text-white/25 text-center">
-                Into DemoLendingPool · Gas sponsored
+                {flowBalance !== null ? `Balance: ${flowBalance.toFixed(4)} FLOW` : 'Into DemoLendingPool'} · Gas sponsored
               </p>
             </div>
           </div>
@@ -472,7 +516,7 @@ export default function Dashboard() {
                 Borrow
               </button>
               <p className="text-xs text-white/25 text-center">
-                ${maxBorrowRemaining.toFixed(0)} remaining · {live.maxLTVPercent ?? 75}% LTV
+                {maxBorrowRemaining.toFixed(2)} remaining · {live.maxLTVPercent ?? 75}% LTV
               </p>
             </div>
           </div>

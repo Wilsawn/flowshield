@@ -230,5 +230,44 @@ router.post('/sign', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/accounts/balance/:address
+ * Returns the real on-chain FLOW balance for a Flow address.
+ */
+router.get('/balance/:address', async (req, res) => {
+  const fcl = req.app.locals.fcl
+  const address = req.params.address
+
+  try {
+    const balance = await fcl.query({
+      cadence: `
+        import FungibleToken from 0x9a0766d93b6608b7
+        import FlowToken from 0x7e60df042a9c0868
+
+        access(all) fun main(addr: Address): UFix64 {
+          let acct = getAccount(addr)
+          let vaultRef = acct.capabilities.borrow<&{FungibleToken.Balance}>(
+            /public/flowTokenBalance
+          ) ?? panic("No balance capability")
+          return vaultRef.balance
+        }
+      `,
+      args: (arg, t) => [arg(address, t.Address)],
+    })
+
+    // Also check if this is a custodial account
+    const custodial = await getUserByAddress(address)
+
+    res.json({
+      address,
+      balance: parseFloat(balance),
+      isCustodial: !!custodial,
+      source: 'flow-testnet',
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message, address })
+  }
+})
+
 export { getUserByAddress }
 export default router
