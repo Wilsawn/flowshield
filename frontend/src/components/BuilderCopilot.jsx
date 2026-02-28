@@ -257,14 +257,35 @@ function InlineMarkdown({ text }) {
   )
 }
 
+// Unique session ID per browser — persists across refreshes
+function getSessionId() {
+  let id = localStorage.getItem('flowshield_copilot_session')
+  if (!id) {
+    id = `copilot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    localStorage.setItem('flowshield_copilot_session', id)
+  }
+  return id
+}
+
 export default function BuilderCopilot() {
-  const [messages, setMessages] = useState([])
+  const sessionId = useRef(getSessionId()).current
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('flowshield_copilot_messages')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const messagesEndRef = useRef(null)
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('flowshield_copilot_messages', JSON.stringify(messages)) } catch { /* ignore */ }
+  }, [messages])
 
   // Live context from user's on-chain state
   const [liveContext, setLiveContext] = useState(null)
@@ -366,7 +387,7 @@ export default function BuilderCopilot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: fullMessage,
-          sessionId: 'copilot-ui',
+          sessionId,
           context: liveContext,
         }),
       })
@@ -446,8 +467,26 @@ export default function BuilderCopilot() {
 
   const isEmptyState = messages.length === 0
 
+  const clearChat = () => {
+    setMessages([])
+    localStorage.removeItem('flowshield_copilot_messages')
+    localStorage.removeItem('flowshield_copilot_session')
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] max-w-[860px] mx-auto">
+
+      {/* New Chat button */}
+      {!isEmptyState && (
+        <div className="flex justify-end px-2 py-2">
+          <button
+            onClick={clearChat}
+            className="text-[11px] text-white/30 hover:text-white/60 px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12] transition-all"
+          >
+            New Chat
+          </button>
+        </div>
+      )}
 
       {/* ── Messages area ── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto relative">

@@ -24,7 +24,9 @@ const slideIn = {
 
 export default function OnboardingFlow({ onComplete, onBack }) {
   const [step, setStep] = useState('email')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem('flowshield_email') || '' } catch { return '' }
+  })
   const [authMethod, setAuthMethod] = useState('email') // 'email' | 'google'
   const [jurisdiction, setJurisdiction] = useState(null)
   const [currentVerifyStep, setCurrentVerifyStep] = useState(0)

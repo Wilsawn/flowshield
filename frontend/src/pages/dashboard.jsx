@@ -94,6 +94,15 @@ export default function Dashboard() {
               const balRes = await fetch(`${API}/api/accounts/balance/${acctData.address}`)
               const balData = await balRes.json()
               if (balData.balance !== undefined) setFlowBalance(balData.balance)
+              // Auto-mint credential so the user doesn't show as "Not Compliant"
+              try {
+                const jurisdiction = (() => { try { return JSON.parse(localStorage.getItem('flowshield_user') || '{}').jurisdiction } catch { return 'US' } })() || 'US'
+                await fetch(`${API}/api/accounts/mint-credential`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: w.email, jurisdiction, riskScore: 15 }),
+                })
+              } catch { /* mint will happen atomically during deposit/borrow anyway */ }
             }
           }
         } catch { /* ignore recovery errors */ }

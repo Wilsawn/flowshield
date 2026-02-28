@@ -23,15 +23,20 @@ export default function WalletButton() {
       }
     })
     // Also restore from localStorage for manual/demo connections
-    try {
-      const saved = localStorage.getItem('flowshield_wallet')
-      if (saved) {
-        const w = JSON.parse(saved)
-        setWalletUser(w)
-        if (w.addr) checkComplianceStatus(w.addr)
-      }
-    } catch { /* ignore */ }
-    return unsub
+    const loadFromStorage = () => {
+      try {
+        const saved = localStorage.getItem('flowshield_wallet')
+        if (saved) {
+          const w = JSON.parse(saved)
+          setWalletUser(w)
+          if (w.addr) checkComplianceStatus(w.addr)
+        }
+      } catch { /* ignore */ }
+    }
+    loadFromStorage()
+    // Re-check when onboarding or other tabs update localStorage
+    window.addEventListener('storage', loadFromStorage)
+    return () => { unsub(); window.removeEventListener('storage', loadFromStorage) }
   }, [])
 
   // Close dropdown on outside click
@@ -98,7 +103,13 @@ export default function WalletButton() {
     setWalletUser(null)
     setCompliance(null)
     setShowDropdown(false)
+    // Keep email in localStorage so re-onboarding reconnects to the same
+    // Supabase-persisted custodial account instead of creating a new one
+    const prev = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()
     localStorage.removeItem('flowshield_wallet')
+    if (prev.custodial && prev.email) {
+      localStorage.setItem('flowshield_email', prev.email)
+    }
   }
 
   const checkComplianceStatus = async (address) => {
