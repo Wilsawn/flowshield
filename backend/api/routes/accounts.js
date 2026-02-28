@@ -333,6 +333,9 @@ router.post('/mint-credential', async (req, res) => {
               return
             }
 
+            // Unpublish stale capability so mintCredential can publish a fresh one
+            self.userAcct.capabilities.unpublish(ComplianceCredential.PublicPath)
+
             let proofData = ZKVerifier.ProofData(
               proof: proof,
               claimsHash: claimsHash,

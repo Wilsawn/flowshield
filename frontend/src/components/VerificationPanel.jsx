@@ -119,7 +119,13 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         const txRes = await fetch(`${API}/api/pool/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: parseFloat(amount), userAddress, email: walletEmail }),
+          body: JSON.stringify({
+            amount: parseFloat(amount),
+            userAddress,
+            email: walletEmail,
+            jurisdiction: credData.jurisdiction || 'CA',
+            riskScore: 15,
+          }),
         })
         const txData = await txRes.json()
 

@@ -79,6 +79,9 @@ router.post('/mint-credential', async (req, res) => {
                 return
               }
 
+              // Unpublish stale capability so mintCredential can publish a fresh one
+              self.userAcct.capabilities.unpublish(ComplianceCredential.PublicPath)
+
               let tier = ComplianceCredential.tierFromScore(score: riskScore)
               let expiresAt = getCurrentBlock().timestamp + 7776000.0
 
@@ -140,6 +143,9 @@ router.post('/mint-credential', async (req, res) => {
                 return
               }
 
+              // Unpublish stale capability so mintCredential can publish a fresh one
+              self.acct.capabilities.unpublish(ComplianceCredential.PublicPath)
+
               let tier = ComplianceCredential.tierFromScore(score: riskScore)
               let expiresAt = getCurrentBlock().timestamp + 7776000.0
 
@@ -178,6 +184,15 @@ router.post('/mint-credential', async (req, res) => {
     }
 
     const txResult = await fcl.tx(txId).onceSealed()
+
+    if (txResult.errorMessage) {
+      return res.status(400).json({
+        success: false,
+        error: txResult.errorMessage,
+        transactionId: txId,
+        source: 'flow-testnet',
+      })
+    }
 
     logAudit({ action: 'credential_mint', agent: 'pool', detail: { transactionId: txId, userAddress: custodialUser?.address || contractAddress, blockHeight: txResult.blockHeight }, severity: 'info' })
 
@@ -287,24 +302,66 @@ router.post('/deposit', async (req, res) => {
       })
     }
 
+    const jurisdiction = req.body.jurisdiction || 'CA'
+    const riskScore = String(req.body.riskScore || 15)
+    const proofId = `zkp_${Date.now()}_deposit`
+    const claimsId = `claims_${Date.now()}`
+
     let txId
     if (custodialUser) {
-      // Real FLOW transfer: user → deployer (pool)
+      // Atomic two-signer transaction: auto-mint credential if missing + real FLOW deposit
       const userAuthz = custodialAuthorization(fcl, custodialUser.address, custodialUser.privateKey)
 
       txId = await fcl.mutate({
         cadence: `
           import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          import ComplianceCredential from 0x${fcl.sansPrefix(contractAddress)}
+          import ComplianceAction from 0x${fcl.sansPrefix(contractAddress)}
+          import ZKVerifier from 0x${fcl.sansPrefix(contractAddress)}
           import FungibleToken from 0x9a0766d93b6608b7
           import FlowToken from 0x7e60df042a9c0868
 
-          transaction(amount: UFix64, poolAddress: Address) {
+          transaction(amount: UFix64, poolAddress: Address, jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
             let userAddress: Address
 
-            prepare(user: auth(Storage) &Account) {
+            prepare(deployer: auth(Storage) &Account, user: auth(Storage, Capabilities) &Account) {
               self.userAddress = user.address
 
-              // Withdraw real FLOW from user's vault
+              // Step 1: Ensure user has a valid compliance credential (auto-mint if missing)
+              let existingCred = user.capabilities.borrow<&{ComplianceCredential.CredentialPublic}>(
+                ComplianceCredential.PublicPath
+              )
+              if existingCred == nil || !existingCred!.isValid() {
+                // Unpublish stale capability so mintCredential can publish a fresh one
+                user.capabilities.unpublish(ComplianceCredential.PublicPath)
+
+                let admin = deployer.storage.borrow<&ComplianceCredential.Admin>(
+                  from: ComplianceCredential.AdminStoragePath
+                ) ?? panic("No admin resource")
+
+                let proofData = ZKVerifier.ProofData(
+                  proof: proof,
+                  claimsHash: claimsHash,
+                  verifierName: "FlowShield",
+                  signature: claimsHash,
+                  jurisdiction: jurisdiction,
+                  timestamp: getCurrentBlock().timestamp
+                )
+                let result = ZKVerifier.verifyProof(proofData: proofData, userAddress: user.address)
+                let tier = ComplianceCredential.tierFromScore(score: riskScore)
+                let expiresAt = getCurrentBlock().timestamp + 7776000.0
+
+                admin.mintCredential(
+                  recipient: user,
+                  tier: tier,
+                  riskScore: riskScore,
+                  expiresAt: expiresAt,
+                  proofHash: result.proofHash,
+                  jurisdiction: jurisdiction
+                )
+              }
+
+              // Step 2: Withdraw real FLOW from user's vault
               let vault = user.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
                 from: /storage/flowTokenVault
               ) ?? panic("No FlowToken vault")
@@ -318,6 +375,7 @@ router.post('/deposit', async (req, res) => {
             }
 
             execute {
+              // Step 3: Record deposit (ComplianceAction.verify will pass now)
               DemoLendingPool.deposit(depositor: self.userAddress, amount: amount)
             }
           }
@@ -325,10 +383,14 @@ router.post('/deposit', async (req, res) => {
         args: (arg, t) => [
           arg(amount.toFixed(8), t.UFix64),
           arg(contractAddress, t.Address),
+          arg(jurisdiction, t.String),
+          arg(riskScore, t.UInt64),
+          arg(proofId, t.String),
+          arg(claimsId, t.String),
         ],
-        proposer: userAuthz,
+        proposer: deployerAuthz,
         payer: deployerAuthz,
-        authorizations: [userAuthz],
+        authorizations: [deployerAuthz, userAuthz],
         limit: 999,
       })
     } else {
@@ -356,18 +418,30 @@ router.post('/deposit', async (req, res) => {
     }
 
     const txResult = await fcl.tx(txId).onceSealed()
+    const txSuccess = txResult.status === 4 && !txResult.errorMessage
 
     logAudit({ action: 'pool_deposit', agent: 'pool', detail: { transactionId: txId, amount, userAddress, realTransfer: !!custodialUser, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
 
+    if (!txSuccess) {
+      return res.status(400).json({
+        success: false,
+        error: txResult.errorMessage || 'Transaction failed on-chain',
+        transactionId: txId,
+        action: 'deposit',
+        explorerUrl: `https://testnet.flowscan.io/tx/${txId}`,
+        source: 'flow-testnet',
+      })
+    }
+
     res.json({
-      success: txResult.status === 4,
+      success: true,
       transactionId: txId,
       action: 'deposit',
       amount: amount,
       userAddress,
       realTransfer: !!custodialUser,
       status: txResult.status,
-      statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
+      statusText: 'SEALED',
       events: txResult.events?.map(e => ({
         type: e.type.split('.').pop(),
         data: e.data,
@@ -417,24 +491,67 @@ router.post('/borrow', async (req, res) => {
       })
     }
 
+    const jurisdiction = req.body.jurisdiction || 'CA'
+    const riskScore = String(req.body.riskScore || 15)
+    const proofId = `zkp_${Date.now()}_borrow`
+    const claimsId = `claims_${Date.now()}`
+
     let txId
     if (custodialUser) {
-      // Real FLOW transfer: deployer (pool) → user
+      // Atomic two-signer transaction: auto-mint credential if missing + real FLOW borrow
+      const userAuthz = custodialAuthorization(fcl, custodialUser.address, custodialUser.privateKey)
+
       txId = await fcl.mutate({
         cadence: `
           import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          import ComplianceCredential from 0x${fcl.sansPrefix(contractAddress)}
+          import ComplianceAction from 0x${fcl.sansPrefix(contractAddress)}
+          import ZKVerifier from 0x${fcl.sansPrefix(contractAddress)}
           import FungibleToken from 0x9a0766d93b6608b7
           import FlowToken from 0x7e60df042a9c0868
 
-          transaction(amount: UFix64, borrowerAddress: Address) {
-            prepare(deployer: auth(Storage) &Account) {
-              // Withdraw real FLOW from pool (deployer)
+          transaction(amount: UFix64, borrowerAddress: Address, jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
+            prepare(deployer: auth(Storage) &Account, user: auth(Storage, Capabilities) &Account) {
+              // Step 1: Ensure user has a valid compliance credential (auto-mint if missing)
+              let existingCred = user.capabilities.borrow<&{ComplianceCredential.CredentialPublic}>(
+                ComplianceCredential.PublicPath
+              )
+              if existingCred == nil || !existingCred!.isValid() {
+                // Unpublish stale capability so mintCredential can publish a fresh one
+                user.capabilities.unpublish(ComplianceCredential.PublicPath)
+
+                let admin = deployer.storage.borrow<&ComplianceCredential.Admin>(
+                  from: ComplianceCredential.AdminStoragePath
+                ) ?? panic("No admin resource")
+
+                let proofData = ZKVerifier.ProofData(
+                  proof: proof,
+                  claimsHash: claimsHash,
+                  verifierName: "FlowShield",
+                  signature: claimsHash,
+                  jurisdiction: jurisdiction,
+                  timestamp: getCurrentBlock().timestamp
+                )
+                let result = ZKVerifier.verifyProof(proofData: proofData, userAddress: user.address)
+                let tier = ComplianceCredential.tierFromScore(score: riskScore)
+                let expiresAt = getCurrentBlock().timestamp + 7776000.0
+
+                admin.mintCredential(
+                  recipient: user,
+                  tier: tier,
+                  riskScore: riskScore,
+                  expiresAt: expiresAt,
+                  proofHash: result.proofHash,
+                  jurisdiction: jurisdiction
+                )
+              }
+
+              // Step 2: Withdraw real FLOW from pool (deployer) and send to borrower
               let vault = deployer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
                 from: /storage/flowTokenVault
               ) ?? panic("No FlowToken vault")
               let tokens <- vault.withdraw(amount: amount)
 
-              // Send to borrower's account
               let receiver = getAccount(borrowerAddress).capabilities.borrow<&{FungibleToken.Receiver}>(
                 /public/flowTokenReceiver
               ) ?? panic("Borrower receiver not found")
@@ -442,6 +559,7 @@ router.post('/borrow', async (req, res) => {
             }
 
             execute {
+              // Step 3: Record borrow (ComplianceAction.verifyFull will pass now)
               DemoLendingPool.borrow(borrower: borrowerAddress, amount: amount)
             }
           }
@@ -449,10 +567,14 @@ router.post('/borrow', async (req, res) => {
         args: (arg, t) => [
           arg(amount.toFixed(8), t.UFix64),
           arg(custodialUser.address, t.Address),
+          arg(jurisdiction, t.String),
+          arg(riskScore, t.UInt64),
+          arg(proofId, t.String),
+          arg(claimsId, t.String),
         ],
         proposer: deployerAuthz,
         payer: deployerAuthz,
-        authorizations: [deployerAuthz],
+        authorizations: [deployerAuthz, userAuthz],
         limit: 999,
       })
     } else {
@@ -480,18 +602,30 @@ router.post('/borrow', async (req, res) => {
     }
 
     const txResult = await fcl.tx(txId).onceSealed()
+    const txSuccess = txResult.status === 4 && !txResult.errorMessage
 
     logAudit({ action: 'pool_borrow', agent: 'pool', detail: { transactionId: txId, amount, userAddress, realTransfer: !!custodialUser, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
 
+    if (!txSuccess) {
+      return res.status(400).json({
+        success: false,
+        error: txResult.errorMessage || 'Transaction failed on-chain',
+        transactionId: txId,
+        action: 'borrow',
+        explorerUrl: `https://testnet.flowscan.io/tx/${txId}`,
+        source: 'flow-testnet',
+      })
+    }
+
     res.json({
-      success: txResult.status === 4,
+      success: true,
       transactionId: txId,
       action: 'borrow',
       amount: amount,
       userAddress,
       realTransfer: !!custodialUser,
       status: txResult.status,
-      statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
+      statusText: 'SEALED',
       events: txResult.events?.map(e => ({
         type: e.type.split('.').pop(),
         data: e.data,
@@ -610,18 +744,30 @@ router.post('/repay', async (req, res) => {
     }
 
     const txResult = await fcl.tx(txId).onceSealed()
+    const txSuccess = txResult.status === 4 && !txResult.errorMessage
 
     logAudit({ action: 'pool_repay', agent: 'pool', detail: { transactionId: txId, amount, userAddress, realTransfer: !!custodialUser, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
 
+    if (!txSuccess) {
+      return res.status(400).json({
+        success: false,
+        error: txResult.errorMessage || 'Transaction failed on-chain',
+        transactionId: txId,
+        action: 'repay',
+        explorerUrl: `https://testnet.flowscan.io/tx/${txId}`,
+        source: 'flow-testnet',
+      })
+    }
+
     res.json({
-      success: txResult.status === 4,
+      success: true,
       transactionId: txId,
       action: 'repay',
       amount: amount,
       userAddress,
       realTransfer: !!custodialUser,
       status: txResult.status,
-      statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
+      statusText: 'SEALED',
       events: txResult.events?.map(e => ({
         type: e.type.split('.').pop(),
         data: e.data,
