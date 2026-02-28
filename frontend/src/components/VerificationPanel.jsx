@@ -81,19 +81,24 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           // Attempt to mint credential for custodial user.
           // MUST pass userAddress so pool.js can look up the custodial key and
           // run a two-signer transaction — otherwise credential lands on deployer.
-          updateLastStep('No credential found — minting...', 'Calling ZKVerifier + ComplianceCredential.mint()', 'active')
-          const mintRes = await fetch(`${API}/api/pool/mint-credential`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userAddress, email: walletEmail, jurisdiction: credData.jurisdiction || 'US', riskScore: 15 }),
-          })
-          const mintData = await mintRes.json()
-          if (mintData.success) {
-            updateLastStep('Credential minted on-chain', `Tx: ${mintData.transactionId?.slice(0, 12)}... · Minted to: ${mintData.mintedTo?.slice(0, 10)}...`)
+          if (!walletEmail) {
+            // Skip pre-mint if no email (the atomic deposit/borrow tx will auto-mint anyway)
+            updateLastStep('No credential — will auto-mint during transaction', 'Skipping standalone mint (no email for custodial lookup)')
           } else {
-            updateLastStep('Credential minting failed', mintData.error || 'Unknown error', 'error')
-            setError(mintData.error || 'Credential minting failed. Please re-onboard.')
-            return
+            updateLastStep('No credential found — minting...', 'Calling ZKVerifier + ComplianceCredential.mint()', 'active')
+            const mintRes = await fetch(`${API}/api/accounts/mint-credential`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: walletEmail, jurisdiction: credData.jurisdiction || 'US', riskScore: 15 }),
+            })
+            const mintData = await mintRes.json()
+            if (mintData.success) {
+              updateLastStep('Credential minted on-chain', `Tx: ${mintData.transactionId?.slice(0, 12)}... · Minted to: ${mintData.mintedTo?.slice(0, 10)}...`)
+            } else {
+              updateLastStep('Credential minting failed', mintData.error || 'Unknown error', 'error')
+              setError(mintData.error || 'Credential minting failed. Please re-onboard.')
+              return
+            }
           }
         } else {
           updateLastStep('Credential verified: ACTIVE', `Tier: ${credData.tier} · Expires: ${credData.source}`)

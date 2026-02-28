@@ -78,6 +78,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     network: FLOW_NETWORK,
     contractAddress: CONTRACT_ADDRESS,
+    supabase: getSupabase() ? 'connected' : 'not configured',
     timestamp: new Date().toISOString(),
   })
 })
@@ -96,8 +97,19 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[FlowShield API] Running on 0.0.0.0:${PORT}`)
   console.log(`[FlowShield API] Flow network: ${FLOW_NETWORK}`)
   console.log(`[FlowShield API] Contract address: ${CONTRACT_ADDRESS}`)
-  console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`) 
+  console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`)
   console.log(`[FlowShield API] Supabase: ${getSupabase() ? 'connected ✓' : 'not configured (local mode)'}`)
+
+  // Loud warning: in production without Supabase, all user data lives only in memory
+  // and will be lost on every redeploy (Railway, Render, etc.)
+  if (process.env.NODE_ENV === 'production' && !getSupabase()) {
+    console.warn('╔══════════════════════════════════════════════════════════════╗')
+    console.warn('║  WARNING: SUPABASE NOT CONFIGURED IN PRODUCTION             ║')
+    console.warn('║  All user accounts are stored IN-MEMORY ONLY.               ║')
+    console.warn('║  Data WILL BE LOST on every redeploy.                       ║')
+    console.warn('║  Set SUPABASE_URL and SUPABASE_KEY environment variables.   ║')
+    console.warn('╚══════════════════════════════════════════════════════════════╝')
+  }
 })
 
 export default app
