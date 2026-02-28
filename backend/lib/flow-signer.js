@@ -79,6 +79,24 @@ export function hasPrivateKey() {
 }
 
 /**
+ * Create an FCL authorization function for a custodial user account.
+ * Uses the user's stored private key to sign on their behalf.
+ */
+export function custodialAuthorization(fcl, userAddress, userPrivateKey, keyIndex = 0) {
+  return (account) => ({
+    ...account,
+    tempId: `${userAddress}-${keyIndex}`,
+    addr: fcl.sansPrefix(userAddress),
+    keyId: Number(keyIndex),
+    signingFunction: async (signable) => ({
+      addr: fcl.withPrefix(userAddress),
+      keyId: Number(keyIndex),
+      signature: signWithKey(userPrivateKey, signable.message),
+    }),
+  })
+}
+
+/**
  * Generate a new ECDSA_P256 keypair for a custodial user account.
  * Returns { privateKey, publicKey } as hex strings.
  */

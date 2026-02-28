@@ -1,100 +1,175 @@
 // routes/pool.js
 // Sends REAL Flow transactions to DemoLendingPool on testnet.
-// Uses server-side signing with the deployer's private key.
+// Uses custodial signing for real FLOW token transfers.
 
 import { Router } from 'express'
-import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
+import { serverAuthorization, custodialAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { logAudit } from '../../lib/supabase.js'
+import { getUserByAddress } from './accounts.js'
 
 const router = Router()
 const PRIVATE_KEY = hasPrivateKey()
 
-// POST /api/pool/mint-credential — Mint a compliance credential to the address
+// POST /api/pool/mint-credential — Mint a compliance credential
+// If userAddress is a custodial account, mints TO the user's account (multi-auth).
+// Otherwise falls back to minting to the deployer's account.
 router.post('/mint-credential', async (req, res) => {
   const fcl = req.app.locals.fcl
-  const address = req.app.locals.contractAddress
+  const contractAddress = req.app.locals.contractAddress
+  const userAddress = req.body.userAddress
 
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available', source: 'error' })
   }
 
   try {
-    const authz = serverAuthorization(fcl, address)
-    const txId = await fcl.mutate({
-      cadence: `
-        import ComplianceCredential from 0x${fcl.sansPrefix(address)}
-        import ZKVerifier from 0x${fcl.sansPrefix(address)}
+    const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    const jurisdiction = req.body.jurisdiction || 'US'
+    const proofId = req.body.proofHash || `zkp_${Date.now()}_${jurisdiction}`
+    const claimsId = req.body.claimsHash || `claims_${Date.now()}`
+    const riskScore = String(req.body.riskScore || 15)
 
-        transaction(jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
-          let admin: &ComplianceCredential.Admin
-          let acct: auth(Storage, Capabilities) &Account
+    // Check if this is a custodial user (we have their private key)
+    let custodialUser = null
+    if (userAddress && userAddress !== contractAddress) {
+      custodialUser = await getUserByAddress(userAddress)
+    }
 
-          prepare(signer: auth(Storage, Capabilities) &Account) {
-            self.admin = signer.storage.borrow<&ComplianceCredential.Admin>(
-              from: ComplianceCredential.AdminStoragePath
-            ) ?? panic("No admin resource")
-            self.acct = signer
-          }
+    let txId
+    if (custodialUser) {
+      // Multi-auth: deployer (admin) + user (storage for credential)
+      const userAuthz = custodialAuthorization(fcl, custodialUser.address, custodialUser.privateKey)
 
-          execute {
-            // Check if credential already exists
-            let existing = self.acct.capabilities.borrow<&{ComplianceCredential.CredentialPublic}>(
-              ComplianceCredential.PublicPath
-            )
-            if existing != nil && existing!.isValid() {
-              // Already has valid credential — skip
-              return
+      txId = await fcl.mutate({
+        cadence: `
+          import ComplianceCredential from 0x${fcl.sansPrefix(contractAddress)}
+          import ZKVerifier from 0x${fcl.sansPrefix(contractAddress)}
+
+          transaction(jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
+            let admin: &ComplianceCredential.Admin
+            let userAcct: auth(Storage, Capabilities) &Account
+
+            prepare(deployer: auth(Storage) &Account, user: auth(Storage, Capabilities) &Account) {
+              self.admin = deployer.storage.borrow<&ComplianceCredential.Admin>(
+                from: ComplianceCredential.AdminStoragePath
+              ) ?? panic("No admin resource")
+              self.userAcct = user
             }
 
-            let tier = ComplianceCredential.tierFromScore(score: riskScore)
-            let expiresAt = getCurrentBlock().timestamp + 7776000.0
+            execute {
+              let existing = self.userAcct.capabilities.borrow<&{ComplianceCredential.CredentialPublic}>(
+                ComplianceCredential.PublicPath
+              )
+              if existing != nil && existing!.isValid() {
+                return
+              }
 
-            let proofData = ZKVerifier.ProofData(
-              proof: proof,
-              claimsHash: claimsHash,
-              verifierName: "FlowShield",
-              signature: claimsHash,
-              jurisdiction: jurisdiction,
-              timestamp: getCurrentBlock().timestamp
-            )
-            let result = ZKVerifier.verifyProof(proofData: proofData, userAddress: self.acct.address)
+              let tier = ComplianceCredential.tierFromScore(score: riskScore)
+              let expiresAt = getCurrentBlock().timestamp + 7776000.0
 
-            self.admin.mintCredential(
-              recipient: self.acct,
-              tier: tier,
-              riskScore: riskScore,
-              expiresAt: expiresAt,
-              proofHash: result.proofHash,
-              jurisdiction: jurisdiction
-            )
+              let proofData = ZKVerifier.ProofData(
+                proof: proof,
+                claimsHash: claimsHash,
+                verifierName: "FlowShield",
+                signature: claimsHash,
+                jurisdiction: jurisdiction,
+                timestamp: getCurrentBlock().timestamp
+              )
+              let result = ZKVerifier.verifyProof(proofData: proofData, userAddress: self.userAcct.address)
+
+              self.admin.mintCredential(
+                recipient: self.userAcct,
+                tier: tier,
+                riskScore: riskScore,
+                expiresAt: expiresAt,
+                proofHash: result.proofHash,
+                jurisdiction: jurisdiction
+              )
+            }
           }
-        }
-      `,
-      args: (arg, t) => {
-        const jurisdiction = req.body.jurisdiction || 'US'
-        const proofId = req.body.proofHash || `zkp_${Date.now()}_${jurisdiction}`
-        const claimsId = req.body.claimsHash || `claims_${Date.now()}`
-        return [
+        `,
+        args: (arg, t) => [
           arg(jurisdiction, t.String),
-          arg(String(req.body.riskScore || 15), t.UInt64),
+          arg(riskScore, t.UInt64),
           arg(proofId, t.String),
           arg(claimsId, t.String),
-        ]
-      },
-      proposer: authz,
-      payer: authz,
-      authorizations: [authz],
-      limit: 999,
-    })
+        ],
+        proposer: deployerAuthz,
+        payer: deployerAuthz,
+        authorizations: [deployerAuthz, userAuthz],
+        limit: 999,
+      })
+    } else {
+      // Fallback: deployer-only minting (for non-custodial or deployer address)
+      txId = await fcl.mutate({
+        cadence: `
+          import ComplianceCredential from 0x${fcl.sansPrefix(contractAddress)}
+          import ZKVerifier from 0x${fcl.sansPrefix(contractAddress)}
 
-    // Wait for transaction to be sealed
+          transaction(jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
+            let admin: &ComplianceCredential.Admin
+            let acct: auth(Storage, Capabilities) &Account
+
+            prepare(signer: auth(Storage, Capabilities) &Account) {
+              self.admin = signer.storage.borrow<&ComplianceCredential.Admin>(
+                from: ComplianceCredential.AdminStoragePath
+              ) ?? panic("No admin resource")
+              self.acct = signer
+            }
+
+            execute {
+              let existing = self.acct.capabilities.borrow<&{ComplianceCredential.CredentialPublic}>(
+                ComplianceCredential.PublicPath
+              )
+              if existing != nil && existing!.isValid() {
+                return
+              }
+
+              let tier = ComplianceCredential.tierFromScore(score: riskScore)
+              let expiresAt = getCurrentBlock().timestamp + 7776000.0
+
+              let proofData = ZKVerifier.ProofData(
+                proof: proof,
+                claimsHash: claimsHash,
+                verifierName: "FlowShield",
+                signature: claimsHash,
+                jurisdiction: jurisdiction,
+                timestamp: getCurrentBlock().timestamp
+              )
+              let result = ZKVerifier.verifyProof(proofData: proofData, userAddress: self.acct.address)
+
+              self.admin.mintCredential(
+                recipient: self.acct,
+                tier: tier,
+                riskScore: riskScore,
+                expiresAt: expiresAt,
+                proofHash: result.proofHash,
+                jurisdiction: jurisdiction
+              )
+            }
+          }
+        `,
+        args: (arg, t) => [
+          arg(jurisdiction, t.String),
+          arg(riskScore, t.UInt64),
+          arg(proofId, t.String),
+          arg(claimsId, t.String),
+        ],
+        proposer: deployerAuthz,
+        payer: deployerAuthz,
+        authorizations: [deployerAuthz],
+        limit: 999,
+      })
+    }
+
     const txResult = await fcl.tx(txId).onceSealed()
 
-    logAudit({ action: 'credential_mint', agent: 'pool', detail: { transactionId: txId, blockHeight: txResult.blockHeight }, severity: 'info' })
+    logAudit({ action: 'credential_mint', agent: 'pool', detail: { transactionId: txId, userAddress: custodialUser?.address || contractAddress, blockHeight: txResult.blockHeight }, severity: 'info' })
 
     res.json({
       success: true,
       transactionId: txId,
+      mintedTo: custodialUser ? custodialUser.address : contractAddress,
       status: txResult.status,
       events: txResult.events?.map(e => ({
         type: e.type,
@@ -162,7 +237,8 @@ router.get('/position/:userAddress', async (req, res) => {
 })
 
 // POST /api/pool/deposit — Real deposit into DemoLendingPool
-// Accepts userAddress in body — deposits for THAT user (server sponsors the tx)
+// Custodial users: real FLOW transfer from user's vault to pool (deployer).
+// Non-custodial: deployer-only signing (ledger update + self-transfer events).
 router.post('/deposit', async (req, res) => {
   const fcl = req.app.locals.fcl
   const contractAddress = req.app.locals.contractAddress
@@ -177,51 +253,83 @@ router.post('/deposit', async (req, res) => {
   }
 
   try {
-    const authz = serverAuthorization(fcl, contractAddress)
+    const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    let custodialUser = null
+    if (userAddress && userAddress !== contractAddress) {
+      custodialUser = await getUserByAddress(userAddress)
+    }
 
-    // Scale: 0.001 FLOW per USDC unit, capped at 0.1 FLOW per tx
-    const flowAmount = Math.min(amount * 0.001, 0.1)
+    let txId
+    if (custodialUser) {
+      // Real FLOW transfer: user → deployer (pool)
+      const userAuthz = custodialAuthorization(fcl, custodialUser.address, custodialUser.privateKey)
 
-    const txId = await fcl.mutate({
-      cadence: `
-        import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
-        import FungibleToken from 0x9a0766d93b6608b7
-        import FlowToken from 0x7e60df042a9c0868
+      txId = await fcl.mutate({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          import FungibleToken from 0x9a0766d93b6608b7
+          import FlowToken from 0x7e60df042a9c0868
 
-        transaction(amount: UFix64, depositor: Address, flowAmount: UFix64) {
-          prepare(signer: auth(Storage) &Account) {
-            // Real FLOW token transfer — visible on Flowscan
-            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-              from: /storage/flowTokenVault
-            )
-            if vault != nil {
-              let tokens <- vault!.withdraw(amount: flowAmount)
-              // Deposit back to self (creates real FlowToken events on-chain)
-              let receiver = signer.storage.borrow<&{FungibleToken.Receiver}>(
+          transaction(amount: UFix64, poolAddress: Address) {
+            let userAddress: Address
+
+            prepare(user: auth(Storage) &Account) {
+              self.userAddress = user.address
+
+              // Withdraw real FLOW from user's vault
+              let vault = user.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
                 from: /storage/flowTokenVault
-              )!
+              ) ?? panic("No FlowToken vault")
+              let tokens <- vault.withdraw(amount: amount)
+
+              // Send to pool (deployer address)
+              let receiver = getAccount(poolAddress).capabilities.borrow<&{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver
+              ) ?? panic("Pool receiver not found")
               receiver.deposit(from: <- tokens)
             }
+
+            execute {
+              DemoLendingPool.deposit(depositor: self.userAddress, amount: amount)
+            }
           }
-          execute {
-            DemoLendingPool.deposit(depositor: depositor, amount: amount)
+        `,
+        args: (arg, t) => [
+          arg(amount.toFixed(8), t.UFix64),
+          arg(contractAddress, t.Address),
+        ],
+        proposer: userAuthz,
+        payer: deployerAuthz,
+        authorizations: [userAuthz],
+        limit: 999,
+      })
+    } else {
+      // Non-custodial fallback: deployer signs everything
+      txId = await fcl.mutate({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+
+          transaction(amount: UFix64, depositor: Address) {
+            prepare(signer: auth(Storage) &Account) {}
+            execute {
+              DemoLendingPool.deposit(depositor: depositor, amount: amount)
+            }
           }
-        }
-      `,
-      args: (arg, t) => [
-        arg(amount.toFixed(8), t.UFix64),
-        arg(userAddress, t.Address),
-        arg(flowAmount.toFixed(8), t.UFix64),
-      ],
-      proposer: authz,
-      payer: authz,
-      authorizations: [authz],
-      limit: 999,
-    })
+        `,
+        args: (arg, t) => [
+          arg(amount.toFixed(8), t.UFix64),
+          arg(userAddress, t.Address),
+        ],
+        proposer: deployerAuthz,
+        payer: deployerAuthz,
+        authorizations: [deployerAuthz],
+        limit: 999,
+      })
+    }
 
     const txResult = await fcl.tx(txId).onceSealed()
 
-    logAudit({ action: 'pool_deposit', agent: 'pool', detail: { transactionId: txId, amount, userAddress, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
+    logAudit({ action: 'pool_deposit', agent: 'pool', detail: { transactionId: txId, amount, userAddress, realTransfer: !!custodialUser, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
 
     res.json({
       success: txResult.status === 4,
@@ -229,6 +337,7 @@ router.post('/deposit', async (req, res) => {
       action: 'deposit',
       amount: amount,
       userAddress,
+      realTransfer: !!custodialUser,
       status: txResult.status,
       statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
       events: txResult.events?.map(e => ({
@@ -245,7 +354,8 @@ router.post('/deposit', async (req, res) => {
 })
 
 // POST /api/pool/borrow — Real borrow from DemoLendingPool
-// Accepts userAddress in body — borrows for THAT user (server sponsors the tx)
+// Custodial users: deployer sends real FLOW to user's account.
+// Non-custodial: deployer-only signing (ledger update only).
 router.post('/borrow', async (req, res) => {
   const fcl = req.app.locals.fcl
   const contractAddress = req.app.locals.contractAddress
@@ -260,49 +370,77 @@ router.post('/borrow', async (req, res) => {
   }
 
   try {
-    const authz = serverAuthorization(fcl, contractAddress)
+    const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    let custodialUser = null
+    if (userAddress && userAddress !== contractAddress) {
+      custodialUser = await getUserByAddress(userAddress)
+    }
 
-    const flowAmount = Math.min(amount * 0.001, 0.1)
+    let txId
+    if (custodialUser) {
+      // Real FLOW transfer: deployer (pool) → user
+      txId = await fcl.mutate({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          import FungibleToken from 0x9a0766d93b6608b7
+          import FlowToken from 0x7e60df042a9c0868
 
-    const txId = await fcl.mutate({
-      cadence: `
-        import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
-        import FungibleToken from 0x9a0766d93b6608b7
-        import FlowToken from 0x7e60df042a9c0868
-
-        transaction(amount: UFix64, borrower: Address, flowAmount: UFix64) {
-          prepare(signer: auth(Storage) &Account) {
-            // Real FLOW token transfer — visible on Flowscan
-            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-              from: /storage/flowTokenVault
-            )
-            if vault != nil {
-              let tokens <- vault!.withdraw(amount: flowAmount)
-              let receiver = signer.storage.borrow<&{FungibleToken.Receiver}>(
+          transaction(amount: UFix64, borrowerAddress: Address) {
+            prepare(deployer: auth(Storage) &Account) {
+              // Withdraw real FLOW from pool (deployer)
+              let vault = deployer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
                 from: /storage/flowTokenVault
-              )!
+              ) ?? panic("No FlowToken vault")
+              let tokens <- vault.withdraw(amount: amount)
+
+              // Send to borrower's account
+              let receiver = getAccount(borrowerAddress).capabilities.borrow<&{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver
+              ) ?? panic("Borrower receiver not found")
               receiver.deposit(from: <- tokens)
             }
+
+            execute {
+              DemoLendingPool.borrow(borrower: borrowerAddress, amount: amount)
+            }
           }
-          execute {
-            DemoLendingPool.borrow(borrower: borrower, amount: amount)
+        `,
+        args: (arg, t) => [
+          arg(amount.toFixed(8), t.UFix64),
+          arg(custodialUser.address, t.Address),
+        ],
+        proposer: deployerAuthz,
+        payer: deployerAuthz,
+        authorizations: [deployerAuthz],
+        limit: 999,
+      })
+    } else {
+      // Non-custodial fallback
+      txId = await fcl.mutate({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+
+          transaction(amount: UFix64, borrower: Address) {
+            prepare(signer: auth(Storage) &Account) {}
+            execute {
+              DemoLendingPool.borrow(borrower: borrower, amount: amount)
+            }
           }
-        }
-      `,
-      args: (arg, t) => [
-        arg(amount.toFixed(8), t.UFix64),
-        arg(userAddress, t.Address),
-        arg(flowAmount.toFixed(8), t.UFix64),
-      ],
-      proposer: authz,
-      payer: authz,
-      authorizations: [authz],
-      limit: 999,
-    })
+        `,
+        args: (arg, t) => [
+          arg(amount.toFixed(8), t.UFix64),
+          arg(userAddress, t.Address),
+        ],
+        proposer: deployerAuthz,
+        payer: deployerAuthz,
+        authorizations: [deployerAuthz],
+        limit: 999,
+      })
+    }
 
     const txResult = await fcl.tx(txId).onceSealed()
 
-    logAudit({ action: 'pool_borrow', agent: 'pool', detail: { transactionId: txId, amount, userAddress, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
+    logAudit({ action: 'pool_borrow', agent: 'pool', detail: { transactionId: txId, amount, userAddress, realTransfer: !!custodialUser, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
 
     res.json({
       success: txResult.status === 4,
@@ -310,6 +448,7 @@ router.post('/borrow', async (req, res) => {
       action: 'borrow',
       amount: amount,
       userAddress,
+      realTransfer: !!custodialUser,
       status: txResult.status,
       statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
       events: txResult.events?.map(e => ({
@@ -326,6 +465,8 @@ router.post('/borrow', async (req, res) => {
 })
 
 // POST /api/pool/repay — Repay a borrow in DemoLendingPool
+// Custodial users: real FLOW transfer from user's vault back to pool (deployer).
+// Non-custodial: deployer-only signing (ledger update only).
 router.post('/repay', async (req, res) => {
   const fcl = req.app.locals.fcl
   const contractAddress = req.app.locals.contractAddress
@@ -340,49 +481,83 @@ router.post('/repay', async (req, res) => {
   }
 
   try {
-    const authz = serverAuthorization(fcl, contractAddress)
+    const deployerAuthz = serverAuthorization(fcl, contractAddress)
+    let custodialUser = null
+    if (userAddress && userAddress !== contractAddress) {
+      custodialUser = await getUserByAddress(userAddress)
+    }
 
-    const flowAmount = Math.min(amount * 0.001, 0.1)
+    let txId
+    if (custodialUser) {
+      // Real FLOW transfer: user → deployer (pool)
+      const userAuthz = custodialAuthorization(fcl, custodialUser.address, custodialUser.privateKey)
 
-    const txId = await fcl.mutate({
-      cadence: `
-        import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
-        import FungibleToken from 0x9a0766d93b6608b7
-        import FlowToken from 0x7e60df042a9c0868
+      txId = await fcl.mutate({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+          import FungibleToken from 0x9a0766d93b6608b7
+          import FlowToken from 0x7e60df042a9c0868
 
-        transaction(amount: UFix64, borrower: Address, flowAmount: UFix64) {
-          prepare(signer: auth(Storage) &Account) {
-            // Real FLOW token transfer — visible on Flowscan
-            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-              from: /storage/flowTokenVault
-            )
-            if vault != nil {
-              let tokens <- vault!.withdraw(amount: flowAmount)
-              let receiver = signer.storage.borrow<&{FungibleToken.Receiver}>(
+          transaction(amount: UFix64, poolAddress: Address) {
+            let userAddress: Address
+
+            prepare(user: auth(Storage) &Account) {
+              self.userAddress = user.address
+
+              // Withdraw real FLOW from user's vault
+              let vault = user.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
                 from: /storage/flowTokenVault
-              )!
+              ) ?? panic("No FlowToken vault")
+              let tokens <- vault.withdraw(amount: amount)
+
+              // Send back to pool (deployer address)
+              let receiver = getAccount(poolAddress).capabilities.borrow<&{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver
+              ) ?? panic("Pool receiver not found")
               receiver.deposit(from: <- tokens)
             }
+
+            execute {
+              DemoLendingPool.repay(borrower: self.userAddress, amount: amount)
+            }
           }
-          execute {
-            DemoLendingPool.repay(borrower: borrower, amount: amount)
+        `,
+        args: (arg, t) => [
+          arg(amount.toFixed(8), t.UFix64),
+          arg(contractAddress, t.Address),
+        ],
+        proposer: userAuthz,
+        payer: deployerAuthz,
+        authorizations: [userAuthz],
+        limit: 999,
+      })
+    } else {
+      // Non-custodial fallback
+      txId = await fcl.mutate({
+        cadence: `
+          import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
+
+          transaction(amount: UFix64, borrower: Address) {
+            prepare(signer: auth(Storage) &Account) {}
+            execute {
+              DemoLendingPool.repay(borrower: borrower, amount: amount)
+            }
           }
-        }
-      `,
-      args: (arg, t) => [
-        arg(amount.toFixed(8), t.UFix64),
-        arg(userAddress, t.Address),
-        arg(flowAmount.toFixed(8), t.UFix64),
-      ],
-      proposer: authz,
-      payer: authz,
-      authorizations: [authz],
-      limit: 999,
-    })
+        `,
+        args: (arg, t) => [
+          arg(amount.toFixed(8), t.UFix64),
+          arg(userAddress, t.Address),
+        ],
+        proposer: deployerAuthz,
+        payer: deployerAuthz,
+        authorizations: [deployerAuthz],
+        limit: 999,
+      })
+    }
 
     const txResult = await fcl.tx(txId).onceSealed()
 
-    logAudit({ action: 'pool_repay', agent: 'pool', detail: { transactionId: txId, amount, userAddress, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
+    logAudit({ action: 'pool_repay', agent: 'pool', detail: { transactionId: txId, amount, userAddress, realTransfer: !!custodialUser, blockHeight: txResult.blockHeight }, severity: 'info', operatorAddress: userAddress })
 
     res.json({
       success: txResult.status === 4,
@@ -390,6 +565,7 @@ router.post('/repay', async (req, res) => {
       action: 'repay',
       amount: amount,
       userAddress,
+      realTransfer: !!custodialUser,
       status: txResult.status,
       statusText: txResult.status === 4 ? 'SEALED' : 'FAILED',
       events: txResult.events?.map(e => ({

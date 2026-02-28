@@ -3,7 +3,7 @@
 // Creates a real Flow account for each user, funded by the deployer.
 
 import { Router } from 'express'
-import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, PRIVATE_KEY } from '../../lib/flow-signer.js'
+import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, PRIVATE_KEY } from '../../lib/flow-signer.js'
 import { logAudit, getSupabase } from '../../lib/supabase.js'
 
 const router = Router()
@@ -29,6 +29,28 @@ async function getUser(email) {
     } catch { /* fall through */ }
   }
   return userAccountsMemory.get(key) || null
+}
+
+async function getUserByAddress(flowAddress) {
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      const { data } = await sb.from('users').select('*').eq('flow_address', flowAddress).single()
+      if (data) return {
+        email: data.email,
+        address: data.flow_address,
+        publicKey: data.public_key,
+        privateKey: data.encrypted_private_key,
+        authMethod: data.auth_method,
+        createdAt: data.created_at,
+      }
+    } catch { /* fall through */ }
+  }
+  // Fallback: search in-memory store by address
+  for (const [, record] of userAccountsMemory) {
+    if (record.address === flowAddress) return record
+  }
+  return null
 }
 
 async function saveUser(record) {
@@ -117,11 +139,48 @@ router.post('/create', async (req, res) => {
       severity: 'info',
     })
 
+    // Fund the new account with testnet FLOW so they can deposit
+    try {
+      const fundAuthz = serverAuthorization(fcl, deployerAddress)
+      const fundTxId = await fcl.mutate({
+        cadence: `
+          import FungibleToken from 0x9a0766d93b6608b7
+          import FlowToken from 0x7e60df042a9c0868
+
+          transaction(amount: UFix64, recipient: Address) {
+            prepare(signer: auth(Storage) &Account) {
+              let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+                from: /storage/flowTokenVault
+              )!
+              let tokens <- vault.withdraw(amount: amount)
+              let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver
+              ) ?? panic("Could not borrow receiver")
+              receiverRef.deposit(from: <- tokens)
+            }
+          }
+        `,
+        args: (arg, t) => [
+          arg('1.00000000', t.UFix64),  // Fund with 1.0 FLOW
+          arg(result.address, t.Address),
+        ],
+        proposer: fundAuthz,
+        payer: fundAuthz,
+        authorizations: [fundAuthz],
+        limit: 999,
+      })
+      await fcl.tx(fundTxId).onceSealed()
+      console.log(`[Accounts] Funded ${result.address} with 1.0 FLOW`)
+    } catch (fundErr) {
+      console.warn('[Accounts] Funding failed (non-fatal):', fundErr.message)
+    }
+
     res.json({
       address: result.address,
       isNew: true,
       transactionId: result.transactionId,
       blockHeight: result.blockHeight,
+      funded: true,
       source: 'flow-testnet',
     })
   } catch (err) {
@@ -171,4 +230,5 @@ router.post('/sign', async (req, res) => {
   }
 })
 
+export { getUserByAddress }
 export default router

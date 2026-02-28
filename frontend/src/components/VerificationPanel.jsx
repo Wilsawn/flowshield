@@ -101,7 +101,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         await new Promise(r => setTimeout(r, 300))
 
         // Step 3: Send REAL transaction
-        addStep(`Sending ${action} transaction to Flow testnet...`, `DemoLendingPool.${action}(${amount} USDC)`, 'active')
+        addStep(`Sending ${action} transaction to Flow testnet...`, `DemoLendingPool.${action}(${amount} FLOW)`, 'active')
 
         const txRes = await fetch(`${API}/api/pool/${action}`, {
           method: 'POST',
@@ -174,7 +174,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                 {completed ? 'Transaction Sealed' : error ? 'Transaction Failed' : `Processing ${action}`}
               </h3>
               <p className="text-[12px] text-white/30 mt-0.5">
-                {completed ? 'Real transaction on Flow testnet' : `${amount} USDC · DemoLendingPool`}
+                {completed ? 'Real transaction on Flow testnet' : `${amount} FLOW · DemoLendingPool`}
               </p>
             </div>
             <button onClick={onClose} className="text-white/20 hover:text-white/50 transition-colors">

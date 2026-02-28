@@ -199,7 +199,7 @@ export default function Dashboard() {
   const handleBorrow = () => {
     if (!borrowAmount || parseFloat(borrowAmount) <= 0) return
     if (parseFloat(borrowAmount) > maxBorrowRemaining) {
-      setVerifying({ action: 'borrow', amount: borrowAmount, error: `Exceeds borrow limit. Max remaining: $${maxBorrowRemaining.toFixed(0)} USDC (75% LTV)` })
+      setVerifying({ action: 'borrow', amount: borrowAmount, error: `Exceeds borrow limit. Max remaining: ${maxBorrowRemaining.toFixed(2)} FLOW (75% LTV)` })
       return
     }
     setVerifying({ action: 'borrow', amount: borrowAmount })
@@ -426,7 +426,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-5">
               <ArrowDownToLine className="w-4 h-4 text-white/40" />
               <h3 className="text-sm font-semibold text-white/80">Deposit</h3>
-              <span className="text-xs text-white/20 ml-auto">USDC</span>
+              <span className="text-xs text-white/20 ml-auto">FLOW</span>
             </div>
             <div className="space-y-3">
               <input
@@ -454,7 +454,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-5">
               <ArrowUpFromLine className="w-4 h-4 text-white/40" />
               <h3 className="text-sm font-semibold text-white/80">Borrow</h3>
-              <span className="text-xs text-white/20 ml-auto">USDC</span>
+              <span className="text-xs text-white/20 ml-auto">FLOW</span>
             </div>
             <div className="space-y-3">
               <input
@@ -482,7 +482,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-5">
               <RotateCcw className="w-4 h-4 text-white/40" />
               <h3 className="text-sm font-semibold text-white/80">Repay</h3>
-              <span className="text-xs text-white/20 ml-auto">USDC</span>
+              <span className="text-xs text-white/20 ml-auto">FLOW</span>
             </div>
             <div className="space-y-3">
               <input
@@ -950,7 +950,7 @@ export default function Dashboard() {
 
                   {showStatDetail === 'deposited' && (<>
                     <div className="text-center py-3">
-                      <p className="text-[32px] font-bold text-white">{(live.deposited ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
+                      <p className="text-[32px] font-bold text-white">{(live.deposited ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">FLOW</span></p>
                       <p className="text-[11px] text-emerald-400/70 mt-1">Earning {live.baseAPYPercent ?? '—'}% APY</p>
                     </div>
                     <div className="space-y-2">
@@ -960,7 +960,7 @@ export default function Dashboard() {
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Pool Total Deposits</span>
-                        <span className="text-[11px] text-white/70 font-medium">{live.totalDeposits?.toLocaleString() ?? '—'} USDC</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.totalDeposits?.toLocaleString() ?? '—'} FLOW</span>
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Utilization Rate</span>
@@ -980,17 +980,17 @@ export default function Dashboard() {
 
                   {showStatDetail === 'borrowed' && (<>
                     <div className="text-center py-3">
-                      <p className="text-[32px] font-bold text-white">{(live.borrowed ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">USDC</span></p>
+                      <p className="text-[32px] font-bold text-white">{(live.borrowed ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">FLOW</span></p>
                       <p className="text-[11px] text-cyan-400/70 mt-1">{live.borrowRatePercent ?? '—'}% interest rate</p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Max Borrow ({live.maxLTVPercent ?? '—'}% LTV)</span>
-                        <span className="text-[11px] text-white/70 font-medium">${((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100).toFixed(0)} USDC</span>
+                        <span className="text-[11px] text-white/70 font-medium">{((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100).toFixed(2)} FLOW</span>
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Available Liquidity</span>
-                        <span className="text-[11px] text-white/70 font-medium">{live.availableLiquidity?.toLocaleString() ?? '—'} USDC</span>
+                        <span className="text-[11px] text-white/70 font-medium">{live.availableLiquidity?.toLocaleString() ?? '—'} FLOW</span>
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                         <span className="text-[11px] text-white/40">Compliance Required</span>
