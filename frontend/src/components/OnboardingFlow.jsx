@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe, Wallet } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe } from 'lucide-react'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
-import { connectWallet } from '@/utils/fcl-config'
 import { API } from '@/lib/api'
 
 const VERIFY_STEPS = [
@@ -34,52 +33,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
   const [error, setError] = useState(null)
   const [scanPulse, setScanPulse] = useState(false)
   const [veriffUrl, setVeriffUrl] = useState(null)
-  const [walletLoading, setWalletLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
-
-  // ── Connect Flow Wallet (self-custodial) ──
-  const handleWalletConnect = async () => {
-    setWalletLoading(true)
-    setError(null)
-    try {
-      const user = await connectWallet()
-      if (!user?.addr) {
-        setError('Wallet connection cancelled')
-        setWalletLoading(false)
-        return
-      }
-
-      // Register wallet user with backend (no private key stored)
-      const res = await fetch(`${API}/api/accounts/register-wallet`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: user.addr }),
-      })
-      const data = await res.json()
-
-      // Store session
-      if (data.token) localStorage.setItem('flowshield_token', data.token)
-      localStorage.setItem('flowshield_wallet', JSON.stringify({
-        loggedIn: true,
-        addr: user.addr,
-        custodial: false,
-        email: null,
-      }))
-      localStorage.setItem('flowshield_user', JSON.stringify({
-        flowAddress: user.addr,
-        displayName: user.addr.slice(0, 6) + '...' + user.addr.slice(-4),
-        authMethod: 'wallet',
-        createdAt: data.createdAt || new Date().toISOString(),
-      }))
-      window.dispatchEvent(new Event('storage'))
-      setWalletLoading(false)
-      onComplete()
-    } catch (err) {
-      console.warn('[FlowShield] Wallet connect:', err.message)
-      setError('Wallet connection failed. Please try again.')
-      setWalletLoading(false)
-    }
-  }
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
@@ -432,27 +386,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       ) : 'Continue with Email'}
                     </button>
 
-                    {/* Divider */}
-                    <div className="flex items-center gap-3 my-1">
-                      <div className="flex-1 h-px bg-white/[0.06]" />
-                      <span className="text-[11px] text-white/20">or</span>
-                      <div className="flex-1 h-px bg-white/[0.06]" />
-                    </div>
-
-                    {/* Connect Flow Wallet (self-custodial) */}
-                    <button
-                      type="button"
-                      onClick={handleWalletConnect}
-                      disabled={walletLoading}
-                      className="w-full h-12 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white font-medium text-[14px] flex items-center justify-center gap-3 hover:bg-white/[0.06] transition-all disabled:opacity-50"
-                    >
-                      {walletLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Wallet className="w-4 h-4 text-emerald-400" />
-                      )}
-                      Connect Flow Wallet
-                    </button>
                   </div>
                   <p className="text-[11px] text-white/20 mt-5 text-center leading-relaxed">
                     Your account is secured with industry-standard encryption.
