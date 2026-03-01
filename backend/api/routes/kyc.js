@@ -203,7 +203,9 @@ router.post('/webhook', async (req, res) => {
       .createHmac('sha256', sharedSecret)
       .update(JSON.stringify(payload))
       .digest('hex')
-    if (signature !== expectedSig) {
+    const sigBuf = Buffer.from(signature, 'hex')
+    const expectedBuf = Buffer.from(expectedSig, 'hex')
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       console.log('[KYC Webhook] HMAC signature mismatch — rejecting')
       return res.status(401).json({ error: 'Invalid signature' })
     }
