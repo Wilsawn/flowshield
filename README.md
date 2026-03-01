@@ -121,18 +121,18 @@ flowshield/
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  User Experience                                  │
-│  React · Vite · TailwindCSS · FCL Wallet          │
+│  User Experience                                 │
+│  React · Vite · TailwindCSS · FCL Wallet         │
 ├──────────────────────────────────────────────────┤
-│  Compliance Engine (On-Chain Cadence)             │
-│  7 contracts · Fee treasury · Multi-sig governance │
+│  Compliance Engine (On-Chain Cadence)            │
+│  7 contracts·Fee treasury·Multi-sig governance   │
 ├──────────────────────────────────────────────────┤
-│  Zero-Knowledge Verification (Cross-VM)           │
-│  circom → snarkjs (browser) → FlowEVM Groth16     │
+│  Zero-Knowledge Verification (Cross-VM)          │
+│  circom → snarkjs (browser) → FlowEVM Groth16    │
 ├──────────────────────────────────────────────────┤
-│  AI Intelligence (Off-Chain)                      │
-│  Risk Scoring · Anomaly Monitor                   │
-│  Builder Copilot · Regulatory Radar               │
+│  AI Intelligence (Off-Chain)                     │
+│  Risk Scoring · Anomaly Monitor                  │
+│  Builder Copilot · Regulatory Radar              │
 └──────────────────────────────────────────────────┘
 ```
 
