@@ -1,5 +1,5 @@
 // lib/supabase.js
-// Frontend Supabase client for authentication (Google OAuth, etc.)
+// Frontend Supabase client for data access.
 // Uses the ANON key (safe for browser). Service key stays on the backend only.
 
 import { createClient } from '@supabase/supabase-js'

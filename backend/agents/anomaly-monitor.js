@@ -47,33 +47,41 @@ async function gatherOnChainData(address, fcl) {
  * high balances and multiple contracts are NORMAL and won't flag.
  * Only genuinely suspicious patterns trigger anomalies.
  */
+// Thresholds configurable via env vars (override for mainnet vs testnet)
+const THRESHOLDS = {
+  highFrequencyTxs: parseInt(process.env.ANOMALY_HIGH_FREQ_TXS || '500'),
+  extremeBalance: parseFloat(process.env.ANOMALY_EXTREME_BALANCE || '1000000'),
+  maxKeys: parseInt(process.env.ANOMALY_MAX_KEYS || '5'),
+  dormantBalance: parseFloat(process.env.ANOMALY_DORMANT_BALANCE || '10000'),
+}
+
 const ANOMALY_RULES = [
   {
     id: 'high_frequency',
     label: 'Automated transaction pattern',
     severity: 'medium',
-    check: (d) => d.sequenceNumber > 500,
-    detail: (d) => `${d.sequenceNumber} lifetime transactions — consistent with bot/automated activity`,
+    check: (d) => d.sequenceNumber > THRESHOLDS.highFrequencyTxs,
+    detail: (d) => `${d.sequenceNumber} lifetime transactions — exceeds ${THRESHOLDS.highFrequencyTxs} threshold`,
   },
   {
     id: 'extreme_balance',
     label: 'Extremely large balance',
     severity: 'high',
-    check: (d) => d.balance > 1000000, // > 1M FLOW is genuinely unusual
-    detail: (d) => `${d.balance.toFixed(2)} FLOW — exceeds 1M threshold, requires review`,
+    check: (d) => d.balance > THRESHOLDS.extremeBalance,
+    detail: (d) => `${d.balance.toFixed(2)} FLOW — exceeds ${THRESHOLDS.extremeBalance.toLocaleString()} threshold, requires review`,
   },
   {
     id: 'multi_key_risk',
     label: 'Excessive signing keys',
     severity: 'medium',
-    check: (d) => d.keyCount > 5,
+    check: (d) => d.keyCount > THRESHOLDS.maxKeys,
     detail: (d) => `${d.keyCount} keys on account — potential shared access or key management issue`,
   },
   {
     id: 'dormant_reactivation',
     label: 'Dormant account suddenly active',
     severity: 'medium',
-    check: (d) => d.sequenceNumber === 0 && d.balance > 10000,
+    check: (d) => d.sequenceNumber === 0 && d.balance > THRESHOLDS.dormantBalance,
     detail: (d) => `Account funded with ${d.balance.toFixed(2)} FLOW but zero transactions — potential sleeper account`,
   },
 ]

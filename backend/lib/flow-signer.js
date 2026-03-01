@@ -156,4 +156,4 @@ export async function createFlowAccount(fcl, deployerAddress, userPublicKey) {
   }
 }
 
-export { PRIVATE_KEY }
+// PRIVATE_KEY is intentionally NOT exported — use hasPrivateKey() and serverAuthorization() instead.

@@ -3,6 +3,7 @@
 // No mocking, no fallbacks — if it fails, it says so.
 
 import { Router } from 'express'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 
@@ -32,7 +33,7 @@ router.get('/account/:address', async (req, res) => {
       source: 'flow-testnet-rest',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Account lookup failed'), source: 'error' })
   }
 })
 
@@ -124,7 +125,7 @@ router.get('/transactions/:address', async (req, res) => {
       source: 'flow-testnet-rest',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Transaction lookup failed'), source: 'error' })
   }
 })
 
@@ -143,7 +144,7 @@ router.get('/blocks/latest', async (req, res) => {
       source: 'flow-testnet-rest',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Block lookup failed'), source: 'error' })
   }
 })
 
@@ -166,7 +167,7 @@ router.get('/contracts/:address', async (req, res) => {
       source: 'flow-testnet-rest',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Contract lookup failed'), source: 'error' })
   }
 })
 

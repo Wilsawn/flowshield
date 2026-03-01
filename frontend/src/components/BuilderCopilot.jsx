@@ -303,7 +303,9 @@ export default function BuilderCopilot() {
   useEffect(() => {
     const fetchContext = async () => {
       try {
-        const address = '0x93c691a98b975493'
+        const walletData = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()
+        const address = walletData.addr
+        if (!address) { setContextLoading(false); return }
         const [riskRes, monitorRes, demoRes] = await Promise.allSettled([
           fetch(`${API}/api/risk/score`, {
             method: 'POST',
@@ -396,12 +398,12 @@ export default function BuilderCopilot() {
         const data = await res.json()
         setMessages((prev) => [...prev, { role: 'assistant', content: data.response }])
       } else {
-        await new Promise((r) => setTimeout(r, 800 + Math.random() * 600))
-        setMessages((prev) => [...prev, { role: 'assistant', content: getFallbackResponse(fullMessage) }])
+        const offlineNotice = '**AI is currently offline.** Showing general guidance:\n\n'
+        setMessages((prev) => [...prev, { role: 'assistant', content: offlineNotice + getFallbackResponse(fullMessage) }])
       }
     } catch {
-      await new Promise((r) => setTimeout(r, 800 + Math.random() * 600))
-      setMessages((prev) => [...prev, { role: 'assistant', content: getFallbackResponse(fullMessage) }])
+      const offlineNotice = '**AI is currently offline.** Showing general guidance:\n\n'
+      setMessages((prev) => [...prev, { role: 'assistant', content: offlineNotice + getFallbackResponse(fullMessage) }])
     }
 
     setIsLoading(false)

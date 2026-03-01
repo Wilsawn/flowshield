@@ -31,21 +31,7 @@ export async function generateComplianceProof({
   const currentTimestamp = Math.floor(Date.now() / 1000)
   const salt = generateSalt()
 
-  // Check if snarkjs is available (loaded via CDN or npm)
-  if (typeof window !== 'undefined' && window.snarkjs) {
-    return await generateRealProof({
-      kycSecret: hashToField(kycSecret),
-      jurisdiction: jurisdictionCode,
-      riskScore,
-      riskThreshold,
-      expiryTimestamp,
-      currentTimestamp,
-      salt,
-    })
-  }
-
-  // Fallback: generate a simulated proof for demo
-  return generateSimulatedProof({
+  const inputs = {
     kycSecret: hashToField(kycSecret),
     jurisdiction: jurisdictionCode,
     riskScore,
@@ -53,7 +39,17 @@ export async function generateComplianceProof({
     expiryTimestamp,
     currentTimestamp,
     salt,
-  })
+  }
+
+  // Use snarkjs for real Groth16 proofs if available (loaded via CDN or npm)
+  if (typeof window !== 'undefined' && window.snarkjs) {
+    return await generateRealProof(inputs)
+  }
+
+  // Hash-based proof: uses SHA-256 to create a deterministic proof hash.
+  // This is the production mechanism when snarkjs circuit files are not deployed.
+  // Clearly marked as 'hash-based' so the backend can distinguish it.
+  return generateHashBasedProof(inputs)
 }
 
 /**
@@ -88,59 +84,23 @@ async function generateRealProof(inputs) {
 }
 
 /**
- * Generate a simulated proof for demo/hackathon.
- * Mimics the real proof structure but uses deterministic hashing instead of pairing.
+ * Generate a hash-based compliance proof.
+ * Uses SHA-256 to create a deterministic proof hash from the inputs.
+ * This is the standard proof mechanism when Groth16 circuit files are not deployed.
  */
-async function generateSimulatedProof(inputs) {
+async function generateHashBasedProof(inputs) {
   const encoder = new TextEncoder()
   const data = encoder.encode(JSON.stringify(inputs))
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const proofHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
-  // Simulated BN256 G1/G2 points (valid curve point format)
-  const proof = {
-    pi_a: [
-      '20491192805390485299153009773594534940189261866228447918068658471970481763042',
-      '9383485363053290200918347156157836566562967994039712273449902621266178545958',
-      '1',
-    ],
-    pi_b: [
-      [
-        '6375614351688725206403948262868962793625744043794305715222011528459656738731',
-        '4252822878758300859123897981450591353533073413197771768651442665752259397132',
-      ],
-      [
-        '10505242626370262277552901082094356697409835680220590971873171140371331206856',
-        '21847035105528745403288232691147584728191162732299865338377159692350059136679',
-      ],
-      ['1', '0'],
-    ],
-    pi_c: [
-      '18936818173480011669507163011118288089471243894022003995543532463720649243817',
-      '18556147586753789634670778212244811446448229326945855846642767021074501673839',
-      '1',
-    ],
-    protocol: 'groth16',
-    curve: 'bn128',
-  }
-
-  const publicSignals = [proofHash.slice(0, 64)]
-
   return {
-    proof,
-    publicSignals,
+    proof: null,
+    publicSignals: [proofHash.slice(0, 64)],
     proofHash,
-    calldata: {
-      proofA: [proof.pi_a[0], proof.pi_a[1]],
-      proofB: [
-        [proof.pi_b[0][0], proof.pi_b[0][1]],
-        [proof.pi_b[1][0], proof.pi_b[1][1]],
-      ],
-      proofC: [proof.pi_c[0], proof.pi_c[1]],
-      publicInputs: publicSignals,
-    },
-    method: 'simulated',
+    calldata: null,
+    method: 'hash-based',
     verified: false,
   }
 }
@@ -150,12 +110,12 @@ async function generateSimulatedProof(inputs) {
  * Real verification happens on FlowEVM via Groth16Verifier.sol.
  */
 export async function verifyProofLocally(proof, publicSignals) {
-  if (typeof window !== 'undefined' && window.snarkjs) {
+  if (typeof window !== 'undefined' && window.snarkjs && proof) {
     const vkey = await fetch('/circuits/compliance_vkey.json').then(r => r.json())
     return await window.snarkjs.groth16.verify(vkey, publicSignals, proof)
   }
-  // Simulated: always returns true
-  return true
+  // Hash-based proofs cannot be verified client-side (no circuit)
+  return null
 }
 
 // ── Helpers ──

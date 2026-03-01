@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -15,7 +16,7 @@ import adminRoutes from './routes/admin.js'
 import subscriptionRoutes from './routes/subscription.js'
 import governanceRoutes from './routes/governance.js'
 import accountsRoutes from './routes/accounts.js'
-import { requireApiKey, rateLimit } from '../lib/middleware.js'
+import { requireApiKey, requireAuth, rateLimit } from '../lib/middleware.js'
 import { getSupabase } from '../lib/supabase.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -25,12 +26,60 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 // Load backend-specific .env (overrides root if both exist)
 dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true })
 
+// ── Production env var validation ──
+// Refuse to start in production if critical secrets are missing.
+if (process.env.NODE_ENV === 'production') {
+  const required = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    KEY_ENCRYPTION_KEY: process.env.KEY_ENCRYPTION_KEY,
+    JWT_SECRET: process.env.JWT_SECRET,
+    FLOW_PRIVATE_KEY: process.env.FLOW_PRIVATE_KEY,
+  }
+  const missing = Object.entries(required).filter(([, v]) => !v).map(([k]) => k)
+  if (missing.length > 0) {
+    console.error('╔══════════════════════════════════════════════════════════════╗')
+    console.error('║  FATAL: Missing required environment variables              ║')
+    console.error(`║  ${missing.join(', ')}`)
+    console.error('║  Server cannot start in production without these.           ║')
+    console.error('╚══════════════════════════════════════════════════════════════╝')
+    process.exit(1)
+  }
+}
+
 const app = express()
 // Railway sets PORT automatically. Locally, use BACKEND_PORT to avoid conflict with frontend.
 const PORT = process.env.PORT || process.env.BACKEND_PORT || 3002
 
 // ── Middleware ──
-app.use(cors({ origin: true }))
+// CORS: restrict to frontend origin in production
+const ALLOWED_ORIGINS = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, process.env.FRONTEND_URL.replace(/\/$/, '')]
+  : ['http://localhost:5173', 'http://localhost:3000']
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (curl, server-to-server, mobile apps)
+    if (!origin || ALLOWED_ORIGINS.some(o => origin.startsWith(o))) return cb(null, true)
+    // In dev, allow any origin
+    if (process.env.NODE_ENV !== 'production') return cb(null, true)
+    cb(new Error(`CORS: origin ${origin} not allowed`))
+  },
+  credentials: true,
+}))
+// Security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://rest-testnet.onflow.org', 'https://rest-mainnet.onflow.org', 'https://api.anthropic.com', ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow FCL wallet popups
+}))
 app.use(express.json())
 app.use(rateLimit({ windowMs: 60000, max: 200 }))
 
@@ -40,8 +89,9 @@ const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x93c691a98b975493'
 
 fcl.config()
   .put('flow.network', FLOW_NETWORK)
-  .put('accessNode.api', FLOW_NETWORK === 'testnet'
-    ? 'https://rest-testnet.onflow.org'
+  .put('accessNode.api',
+    FLOW_NETWORK === 'mainnet' ? 'https://rest-mainnet.onflow.org'
+    : FLOW_NETWORK === 'testnet' ? 'https://rest-testnet.onflow.org'
     : 'http://localhost:8888'
   )
   .put('0xComplianceCredential', CONTRACT_ADDRESS)
@@ -62,12 +112,12 @@ app.use('/api/risk', riskRoutes)
 app.use('/api/chain', chainRoutes)
 app.use('/api/kyc', kycRoutes)
 
-// User-facing write endpoints — protected by API key in production
-app.use('/api/pool', poolRoutes)
-app.use('/api/copilot', copilotRoutes)
-app.use('/api/subscription', subscriptionRoutes)
-app.use('/api/governance', governanceRoutes)
-app.use('/api/accounts', accountsRoutes)
+// User-facing write endpoints — protected by session auth in production
+app.use('/api/pool', requireAuth, poolRoutes)
+app.use('/api/copilot', requireAuth, copilotRoutes)
+app.use('/api/subscription', subscriptionRoutes)  // Pricing — public access needed
+app.use('/api/governance', requireAuth, governanceRoutes)
+app.use('/api/accounts', accountsRoutes)  // Has its own auth (create/login are public, others protected)
 
 // Admin-only — always require API key when Supabase is configured
 app.use('/api/admin', requireApiKey, adminRoutes)
@@ -81,6 +131,43 @@ app.get('/health', (req, res) => {
     supabase: getSupabase() ? 'connected' : 'not configured',
     timestamp: new Date().toISOString(),
   })
+})
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    network: FLOW_NETWORK,
+    supabase: !!getSupabase(),
+    flow: true,
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// ── Public stats (for landing page) ──
+app.get('/api/stats', async (_req, res) => {
+  try {
+    // Count contracts deployed on the deployer account
+    const account = await fcl.account(CONTRACT_ADDRESS)
+    const contractCount = Object.keys(account.contracts || {}).length
+
+    // Count registered users from Supabase
+    let userCount = 0
+    const sb = getSupabase()
+    if (sb) {
+      const { count } = await sb.from('users').select('*', { count: 'exact', head: true })
+      userCount = count || 0
+    }
+
+    res.json({
+      contracts: contractCount,
+      jurisdictions: 5,  // Currently supported: US, EU, UK, SG, CA
+      onChainPII: 0,     // By design: ZK proofs mean zero PII on-chain
+      users: userCount,
+      network: FLOW_NETWORK,
+    })
+  } catch {
+    // Return error instead of hardcoded fake numbers
+    res.status(503).json({ error: 'Stats unavailable', network: FLOW_NETWORK })
+  }
 })
 
 // ── Process-level error handlers (prevent silent crashes on Railway) ──
@@ -100,15 +187,10 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[FlowShield API] Veriff: ${process.env.VERIFF_API_KEY ? 'configured ✓' : 'demo mode (no VERIFF_API_KEY)'}`)
   console.log(`[FlowShield API] Supabase: ${getSupabase() ? 'connected ✓' : 'not configured (local mode)'}`)
 
-  // Loud warning: in production without Supabase, all user data lives only in memory
-  // and will be lost on every redeploy (Railway, Render, etc.)
-  if (process.env.NODE_ENV === 'production' && !getSupabase()) {
-    console.warn('╔══════════════════════════════════════════════════════════════╗')
-    console.warn('║  WARNING: SUPABASE NOT CONFIGURED IN PRODUCTION             ║')
-    console.warn('║  All user accounts are stored IN-MEMORY ONLY.               ║')
-    console.warn('║  Data WILL BE LOST on every redeploy.                       ║')
-    console.warn('║  Set SUPABASE_URL and SUPABASE_KEY environment variables.   ║')
-    console.warn('╚══════════════════════════════════════════════════════════════╝')
+  // In production, startup validation already enforces Supabase is configured.
+  // In dev, log a reminder.
+  if (process.env.NODE_ENV !== 'production' && !getSupabase()) {
+    console.warn('[FlowShield] Supabase not configured — using in-memory storage (dev mode)')
   }
 })
 

@@ -5,6 +5,7 @@
 import { Router } from 'express'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { logAudit } from '../../lib/supabase.js'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 const PRIVATE_KEY = hasPrivateKey()
@@ -42,7 +43,7 @@ router.get('/stats', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Governance status unavailable'), source: 'error' })
   }
 })
 
@@ -85,7 +86,7 @@ router.get('/proposals', async (req, res) => {
 
     res.json({ proposals, source: 'flow-testnet' })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Failed to fetch proposals'), source: 'error' })
   }
 })
 
@@ -125,7 +126,7 @@ router.get('/proposals/:id', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Failed to fetch proposal'), source: 'error' })
   }
 })
 
@@ -187,7 +188,7 @@ router.post('/setup', async (req, res) => {
     })
   } catch (err) {
     console.error('[Governance] Setup failed:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Governance setup failed') })
   }
 })
 
@@ -247,7 +248,7 @@ router.post('/create', async (req, res) => {
     })
   } catch (err) {
     console.error('[Governance] Create proposal failed:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Proposal creation failed') })
   }
 })
 
@@ -301,7 +302,7 @@ router.post('/approve', async (req, res) => {
     })
   } catch (err) {
     console.error('[Governance] Approve failed:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Proposal approval failed') })
   }
 })
 

@@ -14,6 +14,24 @@ export default function WalletStatus({ isCustodial, walletAddr, flowBalance, onN
   }
 
   if (!isCustodial && walletAddr) {
+    // Self-custodial wallet connected via FCL
+    const walletData = (() => {
+      try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} }
+    })()
+    const isWalletUser = walletData.custodial === false
+
+    if (isWalletUser) {
+      return (
+        <div className="mb-4 p-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5">
+          <p className="text-xs text-cyan-400">
+            <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
+            Self-custodial wallet connected — you sign all transactions
+            {flowBalance !== null && <span className="ml-2 text-white/50">Balance: {flowBalance.toFixed(4)} FLOW</span>}
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
         <p className="text-xs text-amber-400">
@@ -34,7 +52,7 @@ export default function WalletStatus({ isCustodial, walletAddr, flowBalance, onN
     <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
       <p className="text-xs text-amber-400">
         <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-        No custodial account — complete onboarding to get a funded Flow account with real FLOW transfers
+        No account — complete onboarding or connect your Flow wallet
       </p>
       <button
         onClick={() => onNavigate('/')}

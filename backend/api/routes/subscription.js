@@ -5,6 +5,7 @@
 import { Router } from 'express'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { getPricing, registerProtocol, getProtocol, requireTier, TIERS } from '../../lib/subscription.js'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 const PRIVATE_KEY = hasPrivateKey()
@@ -15,7 +16,7 @@ router.get('/pricing', (req, res) => {
 })
 
 // ── Register a new protocol (get API key) ──
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, contactEmail, tier } = req.body
 
   if (!name || !contactEmail) {
@@ -24,7 +25,7 @@ router.post('/register', (req, res) => {
 
   // Generate API key
   const apiKey = `fs_${tier || 'free'}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
-  const result = registerProtocol(apiKey, { name, tier: tier || 'free', contactEmail })
+  const result = await registerProtocol(apiKey, { name, tier: tier || 'free', contactEmail })
 
   res.json({
     success: true,
@@ -36,11 +37,11 @@ router.post('/register', (req, res) => {
 })
 
 // ── Get protocol info (authenticated) ──
-router.get('/info', (req, res) => {
+router.get('/info', async (req, res) => {
   const apiKey = req.headers['x-api-key']
   if (!apiKey) return res.status(401).json({ error: 'X-Api-Key header required' })
 
-  const protocol = getProtocol(apiKey)
+  const protocol = await getProtocol(apiKey)
   if (!protocol) return res.status(404).json({ error: 'Protocol not found' })
 
   const tier = TIERS[protocol.tier]
@@ -66,15 +67,21 @@ router.post('/checkout', async (req, res) => {
   // Free tier — just register directly
   if (tierData.price === 0) {
     const apiKey = `fs_${tier}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
-    registerProtocol(apiKey, { name: protocolName || 'My Protocol', tier, contactEmail: email || '' })
+    await registerProtocol(apiKey, { name: protocolName || 'My Protocol', tier, contactEmail: email || '' })
     return res.json({ success: true, apiKey, tier, free: true })
   }
 
   // Check if Stripe is configured
   if (!process.env.STRIPE_SECRET_KEY) {
-    // No Stripe — generate API key directly (demo/development mode)
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({
+        error: 'Payment system not configured',
+        message: 'Stripe is not set up. Contact support@flowshield.xyz for access.',
+      })
+    }
+    // Dev mode — generate API key directly (demo)
     const apiKey = `fs_${tier}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
-    registerProtocol(apiKey, { name: protocolName || 'My Protocol', tier, contactEmail: email || '' })
+    await registerProtocol(apiKey, { name: protocolName || 'My Protocol', tier, contactEmail: email || '' })
     return res.json({
       success: true,
       apiKey,
@@ -130,7 +137,7 @@ router.post('/checkout', async (req, res) => {
     })
   } catch (err) {
     console.error('[Subscription] Stripe checkout error:', err.message)
-    res.status(500).json({ error: 'Failed to create checkout session', details: err.message })
+    res.status(500).json({ error: 'Failed to create checkout session', details: safeError(err) })
   }
 })
 

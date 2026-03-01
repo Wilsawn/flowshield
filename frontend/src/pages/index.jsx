@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, Fingerprint, Zap, Bot, Lock, Scale, Cpu } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -19,6 +19,20 @@ export default function LandingPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [redirectTarget, setRedirectTarget] = useState('/dashboard')
   const navigate = useNavigate()
+
+  // Fetch live stats from backend
+  const [stats, setStats] = useState(null)
+  const [statsError, setStatsError] = useState(false)
+  useEffect(() => {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+    fetch(`${API}/api/stats`).then(r => {
+      if (!r.ok) throw new Error('Stats unavailable')
+      return r.json()
+    }).then(data => {
+      if (data.error) throw new Error(data.error)
+      setStats({ contracts: data.contracts, jurisdictions: data.jurisdictions, onChainPII: data.onChainPII })
+    }).catch(() => { setStatsError(true) })
+  }, [])
 
   const isLoggedIn = () => {
     try {
@@ -137,25 +151,40 @@ export default function LandingPage() {
       <section className="relative z-10 py-16 md:py-24">
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="grid grid-cols-3 gap-8 border-b border-white/[0.04] pb-16">
-            {[
-              { val: 7, suffix: '', label: 'Cadence contracts deployed' },
-              { val: 5, suffix: '', label: 'Jurisdictions supported' },
-              { val: 0, suffix: '%', label: 'Identity data on-chain' },
-            ].map((s, i) => (
-              <motion.div
-                key={i}
-                className="text-center"
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-              >
-                <p className="text-[2.5rem] md:text-[3rem] font-bold tracking-tight text-white">
-                  <AnimatedTicker value={s.val} suffix={s.suffix} />
-                </p>
-                <p className="text-sm text-white/40 mt-1">{s.label}</p>
-              </motion.div>
-            ))}
+            {statsError ? (
+              <div className="col-span-3 text-center py-4">
+                <p className="text-sm text-white/25">Stats unavailable — connect to backend to see live data</p>
+              </div>
+            ) : !stats ? (
+              <div className="col-span-3 flex justify-center gap-12">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="text-center animate-pulse">
+                    <div className="h-12 w-16 mx-auto rounded bg-white/[0.04] mb-2" />
+                    <div className="h-4 w-24 mx-auto rounded bg-white/[0.03]" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              [
+                { val: stats.contracts, suffix: '', label: 'Cadence contracts deployed' },
+                { val: stats.jurisdictions, suffix: '', label: 'Jurisdictions supported' },
+                { val: stats.onChainPII, suffix: '%', label: 'Identity data on-chain' },
+              ].map((s, i) => (
+                <motion.div
+                  key={i}
+                  className="text-center"
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                >
+                  <p className="text-[2.5rem] md:text-[3rem] font-bold tracking-tight text-white">
+                    <AnimatedTicker value={s.val} suffix={s.suffix} />
+                  </p>
+                  <p className="text-sm text-white/40 mt-1">{s.label}</p>
+                </motion.div>
+              ))
+            )}
           </div>
 
           <div className="pt-8 flex items-center justify-center gap-8 flex-wrap">

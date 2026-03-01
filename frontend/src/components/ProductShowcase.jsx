@@ -22,6 +22,7 @@ function DashboardNode() {
         <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         <span className="ml-3 text-[11px] text-white/25 font-medium">FlowShield — Dashboard</span>
+        <span className="ml-auto text-[8px] text-white/15 italic">Illustrative example</span>
       </div>
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between">
@@ -103,6 +104,7 @@ function RadarNode() {
         <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         <span className="ml-3 text-[11px] text-white/25 font-medium">Regulatory Radar</span>
+        <span className="ml-auto text-[8px] text-white/15 italic">Sample data</span>
       </div>
       <div className="p-4">
         <div className="flex items-center gap-1 mb-4">

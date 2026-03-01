@@ -52,30 +52,65 @@ const TIERS = {
   },
 }
 
-// In-memory store for demo. Production: Supabase or Stripe.
-const apiKeys = new Map()
-const dailyUsage = new Map()
+import { getSupabase } from './supabase.js'
+
+// In-memory fallback (dev mode or when Supabase is down)
+const apiKeysMemory = new Map()
+const dailyUsageMemory = new Map()
 
 // Register a new protocol with an API key
-function registerProtocol(apiKey, { name, tier = 'free', contactEmail }) {
-  apiKeys.set(apiKey, {
+async function registerProtocol(apiKey, { name, tier = 'free', contactEmail }) {
+  const record = {
     name,
     tier,
     contactEmail,
     createdAt: new Date().toISOString(),
     active: true,
-  })
+  }
+  apiKeysMemory.set(apiKey, record)
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      await sb.from('api_keys').upsert({
+        key: apiKey,
+        protocol_name: name,
+        tier,
+        contact_email: contactEmail,
+        created_at: record.createdAt,
+      }, { onConflict: 'key' })
+    } catch (err) {
+      console.warn('[Subscription] Supabase api_keys save failed:', err.message)
+    }
+  }
   return { apiKey, tier: TIERS[tier], protocol: name }
 }
 
 // Get protocol info from API key
-function getProtocol(apiKey) {
-  return apiKeys.get(apiKey) || null
+async function getProtocol(apiKey) {
+  if (apiKeysMemory.has(apiKey)) return apiKeysMemory.get(apiKey)
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      const { data } = await sb.from('api_keys').select('*').eq('key', apiKey).single()
+      if (data) {
+        const record = {
+          name: data.protocol_name,
+          tier: data.tier,
+          contactEmail: data.contact_email,
+          createdAt: data.created_at,
+          active: true,
+        }
+        apiKeysMemory.set(apiKey, record)
+        return record
+      }
+    } catch { /* fall through */ }
+  }
+  return null
 }
 
 // Check if a protocol has access to a feature
-function hasFeature(apiKey, feature) {
-  const protocol = apiKeys.get(apiKey)
+async function hasFeature(apiKey, feature) {
+  const protocol = await getProtocol(apiKey)
   if (!protocol || !protocol.active) return false
   const tier = TIERS[protocol.tier]
   if (!tier) return false
@@ -83,8 +118,8 @@ function hasFeature(apiKey, feature) {
 }
 
 // Check and increment monthly usage
-function checkUsage(apiKey) {
-  const protocol = apiKeys.get(apiKey)
+async function checkUsage(apiKey) {
+  const protocol = await getProtocol(apiKey)
   if (!protocol) return { allowed: false, reason: 'Invalid API key' }
 
   const tier = TIERS[protocol.tier]
@@ -94,19 +129,29 @@ function checkUsage(apiKey) {
   if (tier.monthlyLimit === -1) return { allowed: true, remaining: -1 }
 
   const month = new Date().toISOString().slice(0, 7) // YYYY-MM
-  const key = `${apiKey}:${month}`
-  const current = dailyUsage.get(key) || 0
+  const usageKey = `${apiKey}:${month}`
 
-  if (current >= tier.monthlyLimit) {
-    return {
-      allowed: false,
-      reason: `Monthly limit reached (${tier.monthlyLimit.toLocaleString()} requests). Upgrade for more.`,
-      limit: tier.monthlyLimit,
-      used: current,
-    }
+  // Try Supabase first
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      const { data } = await sb.from('api_usage').select('count').eq('key', apiKey).eq('date', month).single()
+      const current = data?.count || 0
+
+      if (current >= tier.monthlyLimit) {
+        return { allowed: false, reason: `Monthly limit reached (${tier.monthlyLimit.toLocaleString()} requests). Upgrade for more.`, limit: tier.monthlyLimit, used: current }
+      }
+
+      await sb.from('api_usage').upsert({ key: apiKey, date: month, count: current + 1 }, { onConflict: 'key,date' })
+      return { allowed: true, remaining: tier.monthlyLimit - current - 1 }
+    } catch { /* fall through to memory */ }
   }
 
-  dailyUsage.set(key, current + 1)
+  const current = dailyUsageMemory.get(usageKey) || 0
+  if (current >= tier.monthlyLimit) {
+    return { allowed: false, reason: `Monthly limit reached (${tier.monthlyLimit.toLocaleString()} requests). Upgrade for more.`, limit: tier.monthlyLimit, used: current }
+  }
+  dailyUsageMemory.set(usageKey, current + 1)
   return { allowed: true, remaining: tier.monthlyLimit - current - 1 }
 }
 
@@ -114,7 +159,7 @@ function checkUsage(apiKey) {
 function requireTier(minimumTier) {
   const tierOrder = ['starter', 'growth', 'scale']
 
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const apiKey = req.headers['x-api-key'] || req.query.apiKey
 
     // Allow unauthenticated requests in demo mode (no API key = free tier)
@@ -124,7 +169,7 @@ function requireTier(minimumTier) {
       return next()
     }
 
-    const protocol = apiKeys.get(apiKey)
+    const protocol = await getProtocol(apiKey)
     if (!protocol || !protocol.active) {
       return res.status(401).json({ error: 'Invalid or inactive API key' })
     }
@@ -140,8 +185,8 @@ function requireTier(minimumTier) {
       })
     }
 
-    // Check daily usage
-    const usage = checkUsage(apiKey)
+    // Check usage
+    const usage = await checkUsage(apiKey)
     if (!usage.allowed) {
       return res.status(429).json({ error: usage.reason, limit: usage.limit, used: usage.used })
     }
@@ -171,10 +216,12 @@ function getPricing() {
   }))
 }
 
-// Seed demo protocols
-registerProtocol('demo-starter-key', { name: 'Demo DeFi Protocol', tier: 'starter', contactEmail: 'demo@example.com' })
-registerProtocol('demo-growth-key', { name: 'FlowShield Growth Demo', tier: 'growth', contactEmail: 'growth@flowshield.xyz' })
-registerProtocol('demo-scale-key', { name: 'FlowShield Scale', tier: 'scale', contactEmail: 'scale@flowshield.xyz' })
+// Seed demo protocols (dev only — never in production)
+if (process.env.NODE_ENV !== 'production') {
+  registerProtocol('demo-starter-key', { name: 'Demo DeFi Protocol', tier: 'starter', contactEmail: 'demo@example.com' })
+  registerProtocol('demo-growth-key', { name: 'FlowShield Growth Demo', tier: 'growth', contactEmail: 'growth@flowshield.xyz' })
+  registerProtocol('demo-scale-key', { name: 'FlowShield Scale', tier: 'scale', contactEmail: 'scale@flowshield.xyz' })
+}
 
 export {
   TIERS,

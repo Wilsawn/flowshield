@@ -329,6 +329,12 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
             </div>
             <p className="text-[11px] text-white/25 -mt-2">{scanResult.overallAssessment}</p>
 
+            {scanResult.demoMode && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-500/15 bg-cyan-500/[0.04]">
+                <span className="text-[10px] text-cyan-400/70 font-medium">Simulated results — not a real compliance audit</span>
+              </div>
+            )}
+
             {scanResult.gaps.map((gap, i) => (
               <motion.div
                 key={i}

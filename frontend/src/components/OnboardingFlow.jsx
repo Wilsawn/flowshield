@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe, Wallet } from 'lucide-react'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
-import { getSupabase } from '@/lib/supabase'
+import { connectWallet } from '@/utils/fcl-config'
 
 const VERIFY_STEPS = [
   { label: 'Creating your Flow account', detail: 'Unique on-chain account — funded by FlowShield', delay: 800 },
@@ -27,84 +27,110 @@ export default function OnboardingFlow({ onComplete, onBack }) {
   const [email, setEmail] = useState(() => {
     try { return localStorage.getItem('flowshield_email') || '' } catch { return '' }
   })
-  const [authMethod, setAuthMethod] = useState('email') // 'email' | 'google'
+  const [authMethod, setAuthMethod] = useState('email')
   const [jurisdiction, setJurisdiction] = useState(null)
   const [currentVerifyStep, setCurrentVerifyStep] = useState(0)
   const [error, setError] = useState(null)
   const [scanPulse, setScanPulse] = useState(false)
   const [veriffUrl, setVeriffUrl] = useState(null)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const [walletLoading, setWalletLoading] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
 
-  const handleEmailSubmit = (e) => {
+  // ── Connect Flow Wallet (self-custodial) ──
+  const handleWalletConnect = async () => {
+    setWalletLoading(true)
+    setError(null)
+    try {
+      const user = await connectWallet()
+      if (!user?.addr) {
+        setError('Wallet connection cancelled')
+        setWalletLoading(false)
+        return
+      }
+
+      // Register wallet user with backend (no private key stored)
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+      const res = await fetch(`${API}/api/accounts/register-wallet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: user.addr }),
+      })
+      const data = await res.json()
+
+      // Store session
+      if (data.token) localStorage.setItem('flowshield_token', data.token)
+      localStorage.setItem('flowshield_wallet', JSON.stringify({
+        loggedIn: true,
+        addr: user.addr,
+        custodial: false,
+        email: null,
+      }))
+      localStorage.setItem('flowshield_user', JSON.stringify({
+        flowAddress: user.addr,
+        displayName: user.addr.slice(0, 6) + '...' + user.addr.slice(-4),
+        authMethod: 'wallet',
+        createdAt: data.createdAt || new Date().toISOString(),
+      }))
+      window.dispatchEvent(new Event('storage'))
+      setWalletLoading(false)
+      onComplete()
+    } catch (err) {
+      console.warn('[FlowShield] Wallet connect:', err.message)
+      setError('Wallet connection failed. Please try again.')
+      setWalletLoading(false)
+    }
+  }
+
+  const handleEmailSubmit = async (e) => {
     e.preventDefault()
-    if (!email.includes('@')) {
+    if (emailLoading) return
+    if (!email.includes('@') || !email.includes('.')) {
       setError('Please enter a valid email')
       return
     }
     setError(null)
     setAuthMethod('email')
+    setEmailLoading(true)
+
+    // Check if user already has an account — skip full onboarding if so
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+    try {
+      const res = await fetch(`${API}/api/accounts/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        // Existing user — restore session and go straight to dashboard
+        if (data.token) localStorage.setItem('flowshield_token', data.token)
+        localStorage.setItem('flowshield_wallet', JSON.stringify({
+          loggedIn: true,
+          addr: data.address,
+          custodial: true,
+          email: email,
+        }))
+        localStorage.setItem('flowshield_user', JSON.stringify({
+          email,
+          flowAddress: data.address,
+          displayName: email.split('@')[0],
+          authMethod: data.authMethod || 'passkey',
+          createdAt: data.createdAt,
+        }))
+        localStorage.setItem('flowshield_email', email)
+        window.dispatchEvent(new Event('storage'))
+        onComplete()
+        return
+      }
+    } catch {
+      // Login failed (backend down, etc.) — continue with new account flow
+    }
+
+    // New user — continue onboarding
+    setEmailLoading(false)
     setStep('jurisdiction')
   }
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true)
-    setError(null)
-
-    const supabase = getSupabase()
-
-    if (!supabase) {
-      setError('Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then enable Google provider in Supabase → Authentication → Providers.')
-      setGoogleLoading(false)
-      return
-    }
-
-    try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/onboarding?auth=google',
-          queryParams: { prompt: 'select_account' },
-        },
-      })
-
-      if (oauthError) {
-        setError(oauthError.message)
-        setGoogleLoading(false)
-      }
-      // If no error, the browser redirects to Google — we handle the callback below
-    } catch (err) {
-      setError(err.message || 'Google sign-in failed')
-      setGoogleLoading(false)
-    }
-  }
-
-  // Handle Google OAuth callback — Supabase redirects back with session
-  useEffect(() => {
-    const supabase = getSupabase()
-    if (!supabase) return
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user?.email) {
-        setEmail(session.user.email)
-        setAuthMethod('google')
-        setGoogleLoading(false)
-        setStep('jurisdiction')
-      }
-    })
-
-    // Also check if we're returning from an OAuth redirect
-    if (window.location.search.includes('auth=google')) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.email) {
-          setEmail(session.user.email)
-          setAuthMethod('google')
-          setStep('jurisdiction')
-        }
-      })
-    }
-
-    return () => subscription.unsubscribe()
-  }, [])
 
   const handlePasskeySetup = async () => {
     setScanPulse(true)
@@ -189,9 +215,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setCurrentVerifyStep(1)
     let userFlowAddress = null
     try {
-      // Always create a fresh custodial account — clear any stale wallet entry
-      localStorage.removeItem('flowshield_wallet')
-
       const acctRes = await fetch(`${API}/api/accounts/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -200,6 +223,10 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       const acctData = await acctRes.json()
       if (acctData.address) {
         userFlowAddress = acctData.address
+        // Store session token for authenticated API calls
+        if (acctData.token) {
+          localStorage.setItem('flowshield_token', acctData.token)
+        }
         // Store as the user's wallet so the dashboard picks it up
         localStorage.setItem('flowshield_wallet', JSON.stringify({
           loggedIn: true,
@@ -209,7 +236,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         }))
         // Dispatch storage event so dashboard reacts immediately
         window.dispatchEvent(new Event('storage'))
-        console.log('[FlowShield] Custodial account:', acctData.address, 'isNew:', acctData.isNew, 'funded:', acctData.funded)
       } else if (acctData.error) {
         console.error('[FlowShield] Account creation failed:', acctData.error)
       }
@@ -275,9 +301,13 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
     let mintResult = null
     try {
+      const token = localStorage.getItem('flowshield_token')
       const mintRes = await fetch(`${API}/api/accounts/mint-credential`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           email,
           jurisdiction: jurisdiction || 'US',
@@ -395,9 +425,14 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                     {error && <p className="text-[12px] text-red-400">{error}</p>}
                     <button
                       type="submit"
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500"
+                      disabled={emailLoading}
+                      className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500 disabled:opacity-60"
                     >
-                      Continue with Email
+                      {emailLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Checking...
+                        </span>
+                      ) : 'Continue with Email'}
                     </button>
 
                     {/* Divider */}
@@ -407,24 +442,19 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       <div className="flex-1 h-px bg-white/[0.06]" />
                     </div>
 
-                    {/* Google Sign-In */}
+                    {/* Connect Flow Wallet (self-custodial) */}
                     <button
                       type="button"
-                      onClick={handleGoogleLogin}
-                      disabled={googleLoading}
+                      onClick={handleWalletConnect}
+                      disabled={walletLoading}
                       className="w-full h-12 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white font-medium text-[14px] flex items-center justify-center gap-3 hover:bg-white/[0.06] transition-all disabled:opacity-50"
                     >
-                      {googleLoading ? (
+                      {walletLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
-                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
+                        <Wallet className="w-4 h-4 text-emerald-400" />
                       )}
-                      Continue with Google
+                      Connect Flow Wallet
                     </button>
                   </div>
                   <p className="text-[11px] text-white/20 mt-5 text-center leading-relaxed">

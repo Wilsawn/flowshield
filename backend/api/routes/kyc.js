@@ -5,13 +5,82 @@
 
 import { Router } from 'express'
 import crypto from 'crypto'
+import { getSupabase } from '../../lib/supabase.js'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 
 const VERIFF_API = 'https://stationapi.veriff.com/v1'
 
-// In-memory session store (production: use database)
-const kycSessions = new Map()
+// In-memory session store (fallback when Supabase is not configured)
+const kycSessionsMemory = new Map()
+
+// ── Supabase-backed KYC session store ──
+const kycSessions = {
+  async get(transactionId) {
+    const sb = getSupabase()
+    if (sb) {
+      try {
+        const { data } = await sb.from('kyc_sessions').select('*').eq('id', transactionId).single()
+        if (data) return {
+          email: data.email,
+          jurisdiction: data.jurisdiction,
+          walletAddress: data.wallet_address,
+          veriffSessionId: data.veriff_id,
+          sessionToken: data.session_token,
+          status: data.status,
+          createdAt: data.created_at,
+          completedAt: data.completed_at,
+          mode: data.mode,
+          veriffDecision: data.veriff_decision,
+          veriffCode: data.veriff_code,
+          proofHash: data.proof_hash,
+          riskScore: data.risk_score,
+        }
+        return null
+      } catch { return kycSessionsMemory.get(transactionId) || null }
+    }
+    return kycSessionsMemory.get(transactionId) || null
+  },
+  async set(transactionId, session) {
+    kycSessionsMemory.set(transactionId, session)
+    const sb = getSupabase()
+    if (sb) {
+      try {
+        await sb.from('kyc_sessions').upsert({
+          id: transactionId,
+          email: session.email,
+          jurisdiction: session.jurisdiction,
+          wallet_address: session.walletAddress,
+          veriff_id: session.veriffSessionId || null,
+          session_token: session.sessionToken || null,
+          status: session.status,
+          mode: session.mode || 'demo',
+          veriff_decision: session.veriffDecision || null,
+          veriff_code: session.veriffCode || null,
+          proof_hash: session.proofHash || null,
+          risk_score: session.riskScore || null,
+          completed_at: session.completedAt || null,
+        }, { onConflict: 'id' })
+      } catch (err) {
+        console.warn('[KYC] Supabase session save failed:', err.message)
+      }
+    }
+  },
+  async findByVeriffId(veriffSessionId) {
+    const sb = getSupabase()
+    if (sb) {
+      try {
+        const { data } = await sb.from('kyc_sessions').select('*').eq('veriff_id', veriffSessionId).single()
+        if (data) return { transactionId: data.id, session: await kycSessions.get(data.id) }
+      } catch { /* fall through */ }
+    }
+    for (const [txnId, s] of kycSessionsMemory.entries()) {
+      if (s.veriffSessionId === veriffSessionId) return { transactionId: txnId, session: s }
+    }
+    return null
+  },
+}
 
 /**
  * POST /api/kyc/start — Start a Veriff KYC session
@@ -64,7 +133,7 @@ router.post('/start', async (req, res) => {
       const veriffSession = sessionData.verification
 
       // Store session
-      kycSessions.set(transactionId, {
+      await kycSessions.set(transactionId, {
         email,
         jurisdiction,
         walletAddress,
@@ -84,12 +153,20 @@ router.post('/start', async (req, res) => {
         mode: 'veriff',
       })
     } catch (err) {
-      console.log('[KYC] Veriff API error, falling back to demo mode:', err.message)
+      console.error('[KYC] Veriff API error:', err.message)
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(502).json({ error: 'KYC provider unavailable', details: safeError(err, 'Service unavailable') })
+      }
+      // Fall through to demo mode in dev only
     }
   }
 
-  // Demo mode — no Veriff credentials configured
-  kycSessions.set(transactionId, {
+  // Demo mode — no Veriff credentials configured (dev only)
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(503).json({ error: 'KYC not configured — set VERIFF_API_KEY' })
+  }
+
+  await kycSessions.set(transactionId, {
     email,
     jurisdiction,
     walletAddress,
@@ -135,18 +212,16 @@ router.post('/webhook', async (req, res) => {
   // Find session by Veriff session ID
   let transactionId = null
   let session = null
-  for (const [txnId, s] of kycSessions.entries()) {
-    if (s.veriffSessionId === veriffSessionId) {
-      transactionId = txnId
-      session = s
-      break
-    }
+  const found = await kycSessions.findByVeriffId(veriffSessionId)
+  if (found) {
+    transactionId = found.transactionId
+    session = found.session
   }
 
   if (!session) {
     // Try vendorData lookup
     transactionId = payload?.verification?.vendorData
-    session = kycSessions.get(transactionId)
+    session = await kycSessions.get(transactionId)
   }
 
   if (!session) {
@@ -173,7 +248,7 @@ router.post('/webhook', async (req, res) => {
     session.riskScore = 10 // Low risk if Veriff approved
   }
 
-  kycSessions.set(transactionId, session)
+  await kycSessions.set(transactionId, session)
 
   res.json({ status: 'received' })
 })
@@ -182,13 +257,17 @@ router.post('/webhook', async (req, res) => {
  * POST /api/kyc/demo-complete — Simulate KYC completion (demo mode)
  * Used when Veriff credentials aren't configured
  */
-router.post('/demo-complete', (req, res) => {
+router.post('/demo-complete', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' })
+  }
+
   const { transactionId } = req.body
   if (!transactionId) {
     return res.status(400).json({ error: 'transactionId is required' })
   }
 
-  const session = kycSessions.get(transactionId)
+  const session = await kycSessions.get(transactionId)
   if (!session) {
     return res.status(404).json({ error: 'Session not found' })
   }
@@ -207,7 +286,7 @@ router.post('/demo-complete', (req, res) => {
   session.proofHash = crypto.createHash('sha256').update(proofData).digest('hex')
   session.riskScore = 12 // Low risk for demo
 
-  kycSessions.set(transactionId, session)
+  await kycSessions.set(transactionId, session)
 
   res.json({
     status: 'approved',
@@ -220,8 +299,8 @@ router.post('/demo-complete', (req, res) => {
 /**
  * GET /api/kyc/status/:transactionId — Check KYC session status
  */
-router.get('/status/:transactionId', (req, res) => {
-  const session = kycSessions.get(req.params.transactionId)
+router.get('/status/:transactionId', async (req, res) => {
+  const session = await kycSessions.get(req.params.transactionId)
   if (!session) {
     return res.status(404).json({ error: 'Session not found' })
   }

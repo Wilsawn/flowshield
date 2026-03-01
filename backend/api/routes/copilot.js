@@ -4,16 +4,45 @@
 import { Router } from 'express'
 import { chat, scanCode } from '../../agents/builder-copilot.js'
 import { scanForGaps, parseRegulation } from '../../agents/regulatory-radar.js'
-import { logAudit, storeScanResult, fireWebhooks } from '../../lib/supabase.js'
+import { logAudit, storeScanResult, fireWebhooks, getSupabase } from '../../lib/supabase.js'
 import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps } from '../../lib/demo-state.js'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
+import { safeError } from '../../lib/middleware.js'
 
 const PRIVATE_KEY = hasPrivateKey()
 
 const router = Router()
 
-// In-memory session store (production: use Redis)
-const sessions = new Map()
+// In-memory session fallback
+const sessionsMemory = new Map()
+
+// ── Supabase-backed copilot session store ──
+async function getSession(sessionId) {
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      const { data } = await sb.from('copilot_sessions').select('messages').eq('id', sessionId).single()
+      if (data) return data.messages || []
+    } catch { /* fall through */ }
+  }
+  return sessionsMemory.get(sessionId) || []
+}
+
+async function saveSession(sessionId, messages) {
+  sessionsMemory.set(sessionId, messages)
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      await sb.from('copilot_sessions').upsert({
+        id: sessionId,
+        messages,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
+    } catch (err) {
+      console.warn('[Copilot] Supabase session save failed:', err.message)
+    }
+  }
+}
 
 // POST /api/copilot/chat — Send message to Builder Copilot
 // Accepts optional `context` for personalized responses based on user's on-chain state.
@@ -24,9 +53,9 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    const history = sessions.get(sessionId) || []
+    const history = await getSession(sessionId)
     const result = await chat(message, history, context)
-    sessions.set(sessionId, result.conversationHistory)
+    await saveSession(sessionId, result.conversationHistory)
 
     res.json({
       response: result.response,
@@ -34,7 +63,7 @@ router.post('/chat', async (req, res) => {
       messageCount: result.conversationHistory.length,
     })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Chat request failed') })
   }
 })
 
@@ -55,7 +84,7 @@ router.post('/scan-code', async (req, res) => {
     })
     res.json(result)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Code scan failed') })
   }
 })
 
@@ -114,7 +143,7 @@ router.post('/radar/scan', async (req, res) => {
     res.json(result)
   } catch (err) {
     console.error('[Radar] Scan failed:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Regulatory scan failed') })
   }
 })
 
@@ -129,7 +158,7 @@ router.post('/radar/parse', async (req, res) => {
     const result = await parseRegulation(text, jurisdiction)
     res.json(result)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Regulation parsing failed') })
   }
 })
 
@@ -236,7 +265,7 @@ router.post('/radar/approve', async (req, res) => {
     })
   } catch (err) {
     console.error('[Radar] On-chain push failed:', err.message)
-    res.status(500).json({ error: err.message, source: 'flow-testnet' })
+    res.status(500).json({ error: safeError(err, 'On-chain rule update failed'), source: 'flow-testnet' })
   }
 })
 

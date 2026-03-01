@@ -2,6 +2,7 @@
 // Middleware for FlowShield API — authentication, rate limiting, etc.
 
 import { validateApiKey } from './supabase.js'
+import { createHmac, timingSafeEqual } from 'crypto'
 
 /**
  * API key authentication middleware.
@@ -12,8 +13,11 @@ import { validateApiKey } from './supabase.js'
  * Public endpoints (health, docs) should be mounted BEFORE this middleware.
  */
 export function requireApiKey(req, res, next) {
-  // Dev mode — no Supabase means no key enforcement
   if (!process.env.SUPABASE_URL) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Auth backend not configured' })
+    }
+    // Dev mode — no Supabase means no key enforcement
     return next()
   }
 
@@ -88,6 +92,93 @@ export function rateLimit({ windowMs = 60000, max = 100 } = {}) {
 
     next()
   }
+}
+
+/**
+ * Generate a session token for a user (HMAC-based, no external deps).
+ * Format: base64(email):expiry:hmac
+ */
+export function generateSessionToken(email, expiresInMs = 3600000) {
+  const secret = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'flowshield-dev-secret' : undefined)
+  const expiry = Date.now() + expiresInMs
+  const payload = `${Buffer.from(email.toLowerCase()).toString('base64')}:${expiry}`
+  const hmac = createHmac('sha256', secret).update(payload).digest('hex')
+  return `${payload}:${hmac}`
+}
+
+/**
+ * Verify a session token. Returns { email, expiry } or null.
+ */
+export function verifySessionToken(token) {
+  if (!token) return null
+  const secret = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'flowshield-dev-secret' : undefined)
+
+  const parts = token.split(':')
+  if (parts.length !== 3) return null
+
+  const [emailB64, expiryStr, providedHmac] = parts
+  const payload = `${emailB64}:${expiryStr}`
+  const expectedHmac = createHmac('sha256', secret).update(payload).digest('hex')
+
+  // Timing-safe comparison
+  try {
+    const a = Buffer.from(providedHmac, 'hex')
+    const b = Buffer.from(expectedHmac, 'hex')
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null
+  } catch {
+    return null
+  }
+
+  const expiry = parseInt(expiryStr, 10)
+  if (Date.now() > expiry) return null
+
+  try {
+    const email = Buffer.from(emailB64, 'base64').toString('utf8')
+    return { email, expiry }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * User authentication middleware.
+ * Checks Authorization: Bearer <token> header.
+ * In dev mode (no JWT_SECRET and no SUPABASE_URL): passes through.
+ * Sets req.userEmail on success.
+ */
+export function requireAuth(req, res, next) {
+  if (!process.env.JWT_SECRET && !process.env.SUPABASE_URL) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Auth backend not configured' })
+    }
+    // Dev mode — no auth enforcement
+    req.userEmail = req.body?.email || null
+    return next()
+  }
+
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required', message: 'Include a Bearer token in the Authorization header.' })
+  }
+
+  const token = authHeader.slice(7)
+  const session = verifySessionToken(token)
+
+  if (!session) {
+    return res.status(401).json({ error: 'Invalid or expired session', message: 'Please log in again.' })
+  }
+
+  req.userEmail = session.email
+  next()
+}
+
+/**
+ * Production-safe error message helper.
+ * In production: returns a generic fallback to avoid leaking internal details.
+ * In dev: returns the full error message for debugging.
+ */
+export function safeError(err, fallback = 'Internal error') {
+  return process.env.NODE_ENV === 'production' ? fallback : err.message
 }
 
 // Clean up rate limit store every 5 minutes

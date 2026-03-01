@@ -3,9 +3,12 @@
 // Uses custodial signing for real FLOW token transfers.
 
 import { Router } from 'express'
+import { createHash } from 'crypto'
 import { serverAuthorization, custodialAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { logAudit } from '../../lib/supabase.js'
 import { getUserByAddress, getUser } from './accounts.js'
+import { getAddress } from '../../lib/flow-addresses.js'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 const PRIVATE_KEY = hasPrivateKey()
@@ -59,7 +62,7 @@ router.get('/position/:userAddress', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Position lookup failed'), source: 'error' })
   }
 })
 
@@ -99,10 +102,16 @@ router.post('/deposit', async (req, res) => {
       })
     }
 
-    const jurisdiction = req.body.jurisdiction || 'CA'
-    const riskScore = String(req.body.riskScore || 15)
-    const proofId = `zkp_${Date.now()}_deposit`
-    const claimsId = `claims_${Date.now()}`
+    const jurisdiction = req.body.jurisdiction
+    const riskScore = req.body.riskScore != null ? String(req.body.riskScore) : null
+    if (!jurisdiction) {
+      return res.status(400).json({ error: 'jurisdiction is required', source: 'error' })
+    }
+    if (riskScore === null) {
+      return res.status(400).json({ error: 'riskScore is required', source: 'error' })
+    }
+    const proofId = createHash('sha256').update(`proof:deposit:${userAddress}:${Date.now()}`).digest('hex')
+    const claimsId = createHash('sha256').update(`claims:deposit:${userAddress}:${Date.now()}`).digest('hex')
 
     let txId
     if (custodialUser) {
@@ -115,8 +124,8 @@ router.post('/deposit', async (req, res) => {
           import ComplianceCredential from 0x${fcl.sansPrefix(contractAddress)}
           import ComplianceAction from 0x${fcl.sansPrefix(contractAddress)}
           import ZKVerifier from 0x${fcl.sansPrefix(contractAddress)}
-          import FungibleToken from 0x9a0766d93b6608b7
-          import FlowToken from 0x7e60df042a9c0868
+          import FungibleToken from ${getAddress('FungibleToken')}
+          import FlowToken from ${getAddress('FlowToken')}
 
           transaction(amount: UFix64, poolAddress: Address, jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
             let userAddress: Address
@@ -248,7 +257,7 @@ router.post('/deposit', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, action: 'deposit', source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Deposit failed'), action: 'deposit', source: 'error' })
   }
 })
 
@@ -288,10 +297,16 @@ router.post('/borrow', async (req, res) => {
       })
     }
 
-    const jurisdiction = req.body.jurisdiction || 'CA'
-    const riskScore = String(req.body.riskScore || 15)
-    const proofId = `zkp_${Date.now()}_borrow`
-    const claimsId = `claims_${Date.now()}`
+    const jurisdiction = req.body.jurisdiction
+    const riskScore = req.body.riskScore != null ? String(req.body.riskScore) : null
+    if (!jurisdiction) {
+      return res.status(400).json({ error: 'jurisdiction is required', source: 'error' })
+    }
+    if (riskScore === null) {
+      return res.status(400).json({ error: 'riskScore is required', source: 'error' })
+    }
+    const proofId = createHash('sha256').update(`proof:borrow:${userAddress}:${Date.now()}`).digest('hex')
+    const claimsId = createHash('sha256').update(`claims:borrow:${userAddress}:${Date.now()}`).digest('hex')
 
     let txId
     if (custodialUser) {
@@ -304,8 +319,8 @@ router.post('/borrow', async (req, res) => {
           import ComplianceCredential from 0x${fcl.sansPrefix(contractAddress)}
           import ComplianceAction from 0x${fcl.sansPrefix(contractAddress)}
           import ZKVerifier from 0x${fcl.sansPrefix(contractAddress)}
-          import FungibleToken from 0x9a0766d93b6608b7
-          import FlowToken from 0x7e60df042a9c0868
+          import FungibleToken from ${getAddress('FungibleToken')}
+          import FlowToken from ${getAddress('FlowToken')}
 
           transaction(amount: UFix64, borrowerAddress: Address, jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
             prepare(deployer: auth(Storage) &Account, user: auth(Storage, Capabilities) &Account) {
@@ -432,7 +447,7 @@ router.post('/borrow', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, action: 'borrow', source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Borrow failed'), action: 'borrow', source: 'error' })
   }
 })
 
@@ -480,8 +495,8 @@ router.post('/repay', async (req, res) => {
       txId = await fcl.mutate({
         cadence: `
           import DemoLendingPool from 0x${fcl.sansPrefix(contractAddress)}
-          import FungibleToken from 0x9a0766d93b6608b7
-          import FlowToken from 0x7e60df042a9c0868
+          import FungibleToken from ${getAddress('FungibleToken')}
+          import FlowToken from ${getAddress('FlowToken')}
 
           transaction(amount: UFix64, poolAddress: Address) {
             let userAddress: Address
@@ -574,7 +589,7 @@ router.post('/repay', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, action: 'repay', source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Repay failed'), action: 'repay', source: 'error' })
   }
 })
 
@@ -628,7 +643,7 @@ router.get('/status', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Pool status unavailable'), source: 'error' })
   }
 })
 

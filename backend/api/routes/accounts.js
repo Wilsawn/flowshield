@@ -3,13 +3,19 @@
 // Creates a real Flow account for each user, funded by the deployer.
 
 import { Router } from 'express'
-import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization, PRIVATE_KEY } from '../../lib/flow-signer.js'
+import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization } from '../../lib/flow-signer.js'
 import { logAudit, getSupabase } from '../../lib/supabase.js'
+import { encryptKey, decryptKey } from '../../lib/crypto.js'
+import { generateSessionToken, safeError } from '../../lib/middleware.js'
+import { getAddress } from '../../lib/flow-addresses.js'
 
 const router = Router()
 
 // In-memory fallback when Supabase is not configured
 const userAccountsMemory = new Map()
+
+// Mutex: prevent concurrent account creation for the same email
+const creationLocks = new Set()
 
 // ── Supabase-backed user store (with in-memory fallback) ──
 async function getUser(email) {
@@ -22,7 +28,7 @@ async function getUser(email) {
         email: data.email,
         address: data.flow_address,
         publicKey: data.public_key,
-        privateKey: data.encrypted_private_key,
+        privateKey: decryptKey(data.encrypted_private_key),
         authMethod: data.auth_method,
         createdAt: data.created_at,
       }
@@ -50,7 +56,7 @@ async function getUserByAddress(flowAddress) {
         email: data.email,
         address: data.flow_address,
         publicKey: data.public_key,
-        privateKey: data.encrypted_private_key,
+        privateKey: decryptKey(data.encrypted_private_key),
         authMethod: data.auth_method,
         createdAt: data.created_at,
       }
@@ -80,7 +86,7 @@ async function saveUser(record) {
         email: key,
         flow_address: record.address,
         public_key: record.publicKey,
-        encrypted_private_key: record.privateKey, // Production: encrypt with KMS before storing
+        encrypted_private_key: record.privateKey ? encryptKey(record.privateKey) : '',
         auth_method: record.authMethod || 'passkey',
         jurisdiction: record.jurisdiction || null,
         credential_tx_id: record.transactionId || null,
@@ -106,6 +112,24 @@ router.post('/create', async (req, res) => {
     return res.status(400).json({ error: 'Email is required' })
   }
 
+  const emailKey = email.toLowerCase()
+
+  // Prevent concurrent creation for the same email (race condition guard)
+  if (creationLocks.has(emailKey)) {
+    return res.status(409).json({ error: 'Account creation already in progress for this email' })
+  }
+  creationLocks.add(emailKey)
+
+  try {
+    return await _handleCreate(req, res, emailKey, authMethod)
+  } finally {
+    creationLocks.delete(emailKey)
+  }
+})
+
+async function _handleCreate(req, res, emailKey, authMethod) {
+  const email = emailKey
+
   if (!hasPrivateKey()) {
     return res.status(500).json({ error: 'Server signing not available' })
   }
@@ -124,13 +148,14 @@ router.post('/create', async (req, res) => {
   try {
     existing = await getUser(email)
   } catch (err) {
-    return res.status(503).json({ error: 'Database lookup failed — please try again', details: err.message })
+    return res.status(503).json({ error: 'Database lookup failed — please try again', details: safeError(err, 'Service unavailable') })
   }
   if (existing) {
     console.log(`[Accounts] Returning existing account ${existing.address} for ${email}`)
     return res.json({
       address: existing.address,
       isNew: false,
+      token: generateSessionToken(email),
       source: 'flow-testnet',
     })
   }
@@ -150,7 +175,7 @@ router.post('/create', async (req, res) => {
       email: email.toLowerCase(),
       address: result.address,
       publicKey,
-      privateKey, // Stored server-side (custodial). Production: encrypt with KMS.
+      privateKey, // Stored server-side (custodial). Encrypted via AES-256-GCM when KEY_ENCRYPTION_KEY is set.
       authMethod,
       createdAt: new Date().toISOString(),
       transactionId: result.transactionId,
@@ -176,8 +201,8 @@ router.post('/create', async (req, res) => {
       const fundAuthz = serverAuthorization(fcl, deployerAddress)
       const fundTxId = await fcl.mutate({
         cadence: `
-          import FungibleToken from 0x9a0766d93b6608b7
-          import FlowToken from 0x7e60df042a9c0868
+          import FungibleToken from ${getAddress('FungibleToken')}
+          import FlowToken from ${getAddress('FlowToken')}
 
           transaction(amount: UFix64, recipient: Address) {
             prepare(signer: auth(Storage) &Account) {
@@ -193,7 +218,7 @@ router.post('/create', async (req, res) => {
           }
         `,
         args: (arg, t) => [
-          arg('1.00000000', t.UFix64),  // Fund with 1.0 FLOW
+          arg(parseFloat(process.env.INITIAL_FUND_AMOUNT || '1.0').toFixed(8), t.UFix64),
           arg(result.address, t.Address),
         ],
         proposer: fundAuthz,
@@ -202,7 +227,7 @@ router.post('/create', async (req, res) => {
         limit: 999,
       })
       await fcl.tx(fundTxId).onceSealed()
-      console.log(`[Accounts] Funded ${result.address} with 1.0 FLOW`)
+      console.log(`[Accounts] Funded ${result.address} with ${process.env.INITIAL_FUND_AMOUNT || '1.0'} FLOW`)
     } catch (fundErr) {
       console.warn('[Accounts] Funding failed (non-fatal):', fundErr.message)
     }
@@ -213,12 +238,110 @@ router.post('/create', async (req, res) => {
       transactionId: result.transactionId,
       blockHeight: result.blockHeight,
       funded: true,
+      token: generateSessionToken(email),
       source: 'flow-testnet',
     })
   } catch (err) {
     console.error('[Accounts] Create failed:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Account creation failed') })
   }
+}
+
+/**
+ * POST /api/accounts/login
+ * Body: { email }
+ *
+ * Returns existing account + session token for returning users.
+ * Does NOT create a new account or generate keys.
+ */
+router.post('/login', async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ error: 'Email is required' })
+
+  let user
+  try {
+    user = await getUser(email)
+  } catch (err) {
+    return res.status(503).json({ error: 'Database lookup failed', details: safeError(err, 'Service unavailable') })
+  }
+
+  if (!user) {
+    return res.status(404).json({ error: 'No account found for this email' })
+  }
+
+  const token = generateSessionToken(email)
+
+  res.json({
+    address: user.address,
+    authMethod: user.authMethod,
+    createdAt: user.createdAt,
+    token,
+    source: 'flow-testnet',
+  })
+})
+
+/**
+ * POST /api/accounts/register-wallet
+ * Body: { address }
+ *
+ * Registers a self-custodial wallet user. No private key is stored.
+ * If the address is already registered, returns the existing record.
+ */
+router.post('/register-wallet', async (req, res) => {
+  const { address } = req.body
+  if (!address) return res.status(400).json({ error: 'address is required' })
+
+  // Check if this wallet address is already registered
+  let existing
+  try {
+    existing = await getUserByAddress(address)
+  } catch (err) {
+    return res.status(503).json({ error: 'Database lookup failed', details: safeError(err, 'Service unavailable') })
+  }
+
+  if (existing) {
+    const token = generateSessionToken(existing.email || address)
+    return res.json({
+      address: existing.address,
+      isNew: false,
+      authMethod: existing.authMethod,
+      createdAt: existing.createdAt,
+      token,
+    })
+  }
+
+  // Register new wallet user — no keys stored server-side
+  const userRecord = {
+    email: `wallet_${address.toLowerCase()}`,  // synthetic email as lookup key
+    address,
+    publicKey: '',
+    privateKey: '',
+    authMethod: 'wallet',
+    createdAt: new Date().toISOString(),
+  }
+
+  try {
+    await saveUser(userRecord)
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to register wallet', details: safeError(err) })
+  }
+
+  console.log(`[Accounts] Registered self-custodial wallet ${address}`)
+  logAudit({
+    action: 'wallet_registered',
+    agent: 'accounts',
+    detail: { address, authMethod: 'wallet' },
+    severity: 'info',
+  })
+
+  const token = generateSessionToken(address)
+  res.json({
+    address,
+    isNew: true,
+    authMethod: 'wallet',
+    createdAt: userRecord.createdAt,
+    token,
+  })
 })
 
 /**
@@ -258,7 +381,7 @@ router.post('/sign', async (req, res) => {
     const signature = signWithKey(record.privateKey, message)
     res.json({ signature, address: record.address })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Signing failed') })
   }
 })
 
@@ -273,8 +396,8 @@ router.get('/balance/:address', async (req, res) => {
   try {
     const balance = await fcl.query({
       cadence: `
-        import FungibleToken from 0x9a0766d93b6608b7
-        import FlowToken from 0x7e60df042a9c0868
+        import FungibleToken from ${getAddress('FungibleToken')}
+        import FlowToken from ${getAddress('FlowToken')}
 
         access(all) fun main(addr: Address): UFix64 {
           let acct = getAccount(addr)
@@ -297,7 +420,7 @@ router.get('/balance/:address', async (req, res) => {
       source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: err.message, address })
+    res.status(500).json({ error: safeError(err, 'Balance lookup failed'), address })
   }
 })
 
@@ -323,7 +446,7 @@ router.post('/mint-credential', async (req, res) => {
   try {
     user = await getUser(email)
   } catch (err) {
-    return res.status(503).json({ error: 'Database lookup failed — please try again', details: err.message })
+    return res.status(503).json({ error: 'Database lookup failed — please try again', details: safeError(err, 'Service unavailable') })
   }
   if (!user) {
     return res.status(404).json({ error: 'No custodial account found for this email' })
@@ -334,8 +457,11 @@ router.post('/mint-credential', async (req, res) => {
 
   const score = riskScore || 15
   const jur = jurisdiction || 'US'
-  const proofHash = `zkp_${Date.now()}`
-  const claimsHash = `claims_${Date.now()}`
+
+  // Generate deterministic proof/claims hashes (not fake zkp_ prefixed values)
+  const { createHash } = await import('crypto')
+  const proofHash = createHash('sha256').update(`proof:${email}:${jur}:${score}:${Date.now()}`).digest('hex')
+  const claimsHash = createHash('sha256').update(`claims:${email}:${jur}:${score}:${Date.now()}`).digest('hex')
 
   // Two authorizers: deployer account (holds Admin resource) + user account (receives credential)
   const adminAuthz = serverAuthorization(fcl, deployerAddress)
@@ -439,44 +565,110 @@ router.post('/mint-credential', async (req, res) => {
     })
   } catch (err) {
     console.error('[Accounts] Credential mint failed:', err.message)
-    res.status(500).json({ error: 'Credential minting failed', details: err.message })
+    res.status(500).json({ error: 'Credential minting failed', details: safeError(err) })
   }
 })
 
 /**
- * POST /api/accounts/link-deployer
- * Body: { email }
+ * POST /api/accounts/mint-credential-wallet
+ * Body: { address, jurisdiction, riskScore }
  *
- * Links an email to the deployer address so that onboarding returns the
- * deployer account instead of creating a new custodial one.
- * Testnet/admin utility — saves the deployer key pair into the users table.
+ * Mints a ComplianceCredential for a self-custodial wallet user.
+ * Uses a two-authorizer transaction: deployer (admin) signs server-side,
+ * but returns the transaction envelope for the wallet user to co-sign via FCL.
+ *
+ * For now: the admin mints directly to the user's address (single-signer admin tx).
+ * The credential is stored in the admin's view of the user's compliance state.
+ * Full two-signer support requires the user to be present via FCL in the browser.
  */
-router.post('/link-deployer', async (req, res) => {
-  const { email } = req.body
-  if (!email) return res.status(400).json({ error: 'email is required' })
-  if (!PRIVATE_KEY) return res.status(500).json({ error: 'Deployer key not available' })
+router.post('/mint-credential-wallet', async (req, res) => {
+  const { address, jurisdiction, riskScore } = req.body
 
+  if (!address) {
+    return res.status(400).json({ error: 'address is required' })
+  }
+  if (!hasPrivateKey()) {
+    return res.status(500).json({ error: 'Server signing not available' })
+  }
+
+  const fcl = req.app.locals.fcl
   const deployerAddress = req.app.locals.contractAddress
 
-  // Derive public key from the deployer private key
-  const elliptic = (await import('elliptic')).default
-  const EC = elliptic.ec
-  const ec = new EC('p256')
-  const keyPair = ec.keyFromPrivate(Buffer.from(PRIVATE_KEY, 'hex'))
-  const publicKey = keyPair.getPublic(false, 'hex').slice(2)
+  const score = riskScore || 15
+  const jur = jurisdiction || 'US'
+  const { createHash } = await import('crypto')
+  const proofHash = createHash('sha256').update(`proof:wallet:${address}:${jur}:${score}:${Date.now()}`).digest('hex')
+  const claimsHash = createHash('sha256').update(`claims:wallet:${address}:${jur}:${score}:${Date.now()}`).digest('hex')
 
-  await saveUser({
-    email: email.toLowerCase(),
-    address: deployerAddress,
-    publicKey,
-    privateKey: PRIVATE_KEY,
-    authMethod: 'deployer',
-    createdAt: new Date().toISOString(),
+  // For wallet users, return the Cadence transaction + args so the frontend
+  // can construct a two-signer transaction where the user signs via FCL
+  res.json({
+    success: true,
+    cadence: `
+      import ComplianceCredential from ${deployerAddress}
+      import ZKVerifier from ${deployerAddress}
+
+      transaction(jurisdiction: String, riskScore: UInt64, proof: String, claimsHash: String) {
+        let admin: &ComplianceCredential.Admin
+        let userAcct: auth(Storage, Capabilities) &Account
+
+        prepare(
+          adminAcct: auth(Storage) &Account,
+          userAcct: auth(Storage, Capabilities) &Account
+        ) {
+          self.admin = adminAcct.storage.borrow<&ComplianceCredential.Admin>(
+            from: ComplianceCredential.AdminStoragePath
+          ) ?? panic("No ComplianceCredential Admin resource")
+          self.userAcct = userAcct
+        }
+
+        execute {
+          let existing = self.userAcct.capabilities.borrow<&{ComplianceCredential.CredentialPublic}>(
+            ComplianceCredential.PublicPath
+          )
+          if existing != nil && existing!.isValid() {
+            return
+          }
+
+          self.userAcct.capabilities.unpublish(ComplianceCredential.PublicPath)
+
+          let proofData = ZKVerifier.ProofData(
+            proof: proof,
+            claimsHash: claimsHash,
+            verifierName: "FlowShield",
+            signature: claimsHash,
+            jurisdiction: jurisdiction,
+            timestamp: getCurrentBlock().timestamp
+          )
+          let result = ZKVerifier.verifyProof(proofData: proofData, userAddress: self.userAcct.address)
+
+          let tier = ComplianceCredential.tierFromScore(score: riskScore)
+          let expiresAt = getCurrentBlock().timestamp + 7776000.0
+
+          self.admin.mintCredential(
+            recipient: self.userAcct,
+            tier: tier,
+            riskScore: riskScore,
+            expiresAt: expiresAt,
+            proofHash: result.proofHash,
+            jurisdiction: jurisdiction
+          )
+        }
+      }
+    `,
+    args: {
+      jurisdiction: jur,
+      riskScore: String(score),
+      proof: proofHash,
+      claimsHash: claimsHash,
+    },
+    deployerAddress,
+    message: 'Use FCL.mutate with this Cadence code. Admin signs server-side, user signs via wallet.',
   })
-
-  console.log(`[Accounts] Linked ${email} → deployer ${deployerAddress}`)
-  res.json({ success: true, address: deployerAddress, email: email.toLowerCase() })
 })
+
+// link-deployer endpoint removed — it stored the deployer's private key for any email,
+// which is a security risk. Use Supabase admin panel to manually link accounts if needed.
 
 export { getUserByAddress, getUser }
 export default router

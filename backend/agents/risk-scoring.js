@@ -63,20 +63,34 @@ export async function fetchWalletData(address, fcl) {
     // Query the Flow Access API for account info
     const account = await fcl.account(address)
 
-    // Calculate account age from keys (creation isn't directly available,
-    // so we use sequence number as a proxy for activity)
     const keySeqNum = account.keys?.[0]?.sequenceNumber || 0
     const contractCount = Object.keys(account.contracts || {}).length
 
-    // Estimate account age based on activity patterns
-    // In production: query an indexer for exact creation time
-    const estimatedAgeDays = Math.max(keySeqNum * 2, 30) // rough estimate
+    // Account age: check Supabase for real creation timestamp, else estimate from activity.
+    // sequenceNumber is cumulative tx count — NOT a reliable age proxy.
+    // Without an indexer, we estimate conservatively: low seq = new, high seq = established.
+    let accountAgeDays = null
+    try {
+      const { getSupabase } = await import('../lib/supabase.js')
+      const sb = getSupabase()
+      if (sb) {
+        const { data } = await sb.from('users').select('created_at').eq('flow_address', address).single()
+        if (data?.created_at) {
+          accountAgeDays = Math.floor((Date.now() - new Date(data.created_at).getTime()) / 86400000)
+        }
+      }
+    } catch { /* Supabase unavailable — fall through to estimate */ }
+
+    if (accountAgeDays === null) {
+      // Conservative estimate: accounts with very few txs are likely new
+      accountAgeDays = keySeqNum <= 5 ? 1 : keySeqNum <= 50 ? 14 : 60
+    }
 
     return {
       address,
       balance: parseFloat(account.balance) / 100000000, // Convert from UFix64
-      accountAgeDays: estimatedAgeDays,
-      txCount24h: keySeqNum > 100 ? 60 : keySeqNum > 10 ? 15 : 3,
+      accountAgeDays,
+      txCount24h: keySeqNum, // Best available proxy (lifetime tx count, not 24h)
       rapidInOut: false,
       flaggedContracts: 0,
       mixerInteractions: 0,

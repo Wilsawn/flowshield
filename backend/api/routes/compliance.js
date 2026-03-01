@@ -2,6 +2,7 @@
 // Compliance-related API routes — reads real data from Flow blockchain.
 
 import { Router } from 'express'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 
@@ -66,7 +67,7 @@ router.get('/status/:address', async (req, res) => {
       proofHash: '',
       issuedAt: 0,
       source: 'error',
-      error: err.message,
+      error: safeError(err, 'Compliance check failed'),
     })
   }
 })
@@ -94,7 +95,7 @@ router.get('/rules/:jurisdiction', async (req, res) => {
       res.status(404).json({ error: `Jurisdiction ${jurisdiction} not found` })
     }
   } catch (err) {
-    res.status(500).json({ error: err.message, source: 'error' })
+    res.status(500).json({ error: safeError(err, 'Compliance check failed'), source: 'error' })
   }
 })
 
@@ -126,7 +127,7 @@ router.get('/pool', async (req, res) => {
       availableLiquidity: 0,
       utilizationRate: 0,
       source: 'error',
-      error: err.message,
+      error: safeError(err, 'Pool stats unavailable'),
     })
   }
 })

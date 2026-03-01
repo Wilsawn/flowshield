@@ -35,7 +35,11 @@ export default function useDashboardData(address) {
   })
 
   const fetchAll = useCallback(async () => {
-    const targetAddress = address || '0x93c691a98b975493'
+    if (!address) {
+      setData(prev => ({ ...prev, loading: false }))
+      return
+    }
+    const targetAddress = address
     const sources = {}
     let riskData = null
     let complianceData = null
@@ -94,9 +98,9 @@ export default function useDashboardData(address) {
       contractCount: riskData?.walletData?.contractCount || null,
       keyCount: riskData?.walletData?.keyCount || null,
       fundingSources: riskData?.walletData?.fundingSources || null,
-      // Risk — real score from backend
-      riskScore: riskData?.score ?? 0,
-      riskTier: riskData?.tier || 'unknown',
+      // Risk — real score from backend (null = unavailable, distinct from 0 = low risk)
+      riskScore: riskData?.score ?? null,
+      riskTier: riskData?.tier || null,
       riskFactors: riskData?.factors || [],
       // Compliance — real from on-chain
       hasCredential: complianceData?.hasCredential || false,

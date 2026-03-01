@@ -164,6 +164,12 @@ export default function FlowAutomation({ onAuditEntry }) {
 
   return (
     <div className="space-y-4">
+      {/* Persistence warning */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/10 bg-amber-500/[0.03]">
+        <Timer className="w-3 h-3 text-amber-400/50 shrink-0" />
+        <p className="text-[10px] text-amber-400/50">Automation state is local-only and resets on page refresh.</p>
+      </div>
+
       {/* Summary bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

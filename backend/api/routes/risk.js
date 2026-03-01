@@ -6,6 +6,7 @@ import { assessRisk, RISK_FACTORS } from '../../agents/risk-scoring.js'
 import { monitorAddress } from '../../agents/anomaly-monitor.js'
 import { logAudit, storeScanResult, fireWebhooks } from '../../lib/supabase.js'
 import { getDemoThreats, isDemoActive, activateDemo, clearDemo } from '../../lib/demo-state.js'
+import { safeError } from '../../lib/middleware.js'
 
 const router = Router()
 
@@ -49,7 +50,7 @@ router.post('/score', async (req, res) => {
 
     res.json(result)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Risk scoring failed') })
   }
 })
 
@@ -95,7 +96,7 @@ router.post('/monitor', async (req, res) => {
 
     res.json(result)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: safeError(err, 'Anomaly monitoring failed') })
   }
 })
 
@@ -103,7 +104,11 @@ router.post('/monitor', async (req, res) => {
 // Uses shared demo-state so both anomaly monitor AND regulatory radar respond.
 
 // POST /api/risk/monitor/simulate — Inject demo anomalies + radar gaps
+// BLOCKED in production to prevent fake data injection
 router.post('/monitor/simulate', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' })
+  }
   const { scenario } = req.body
   const result = activateDemo(scenario)
 
@@ -126,6 +131,9 @@ router.post('/monitor/simulate', (req, res) => {
 
 // POST /api/risk/monitor/clear — Clear all demo state
 router.post('/monitor/clear', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' })
+  }
   clearDemo()
   logAudit({ action: 'demo-clear', agent: 'demo', detail: { message: 'All demo threats and radar gaps cleared' }, severity: 'info' })
   res.json({ ok: true, message: 'Demo threats cleared' })
@@ -133,11 +141,15 @@ router.post('/monitor/clear', (req, res) => {
 
 // GET /api/risk/monitor/demo-status — Check demo state
 router.get('/monitor/demo-status', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' })
+  }
   const threats = getDemoThreats()
   res.json({ active: isDemoActive(), threatCount: threats?.length || 0 })
 })
 
-// Override: make the monitor endpoint return demo threats if active
+// Override: make the monitor endpoint return demo threats if active (dev only)
+if (process.env.NODE_ENV !== 'production') {
 const originalMonitorHandler = router.stack.find(
   r => r.route?.path === '/monitor' && r.route?.methods?.post
 )
@@ -148,7 +160,10 @@ if (originalMonitorHandler) {
     if (demoThreats) {
       try {
         const fcl = req.app.locals.fcl
-        const real = await monitorAddress(req.body.address || '0x93c691a98b975493', fcl)
+        if (!req.body.address) {
+          return res.status(400).json({ error: 'address is required' })
+        }
+        const real = await monitorAddress(req.body.address, fcl)
         const allAnomalies = [...demoThreats, ...real.anomalies]
         let highestSeverity = 'none'
         const SEV = { low: 1, medium: 2, high: 3 }
@@ -180,5 +195,6 @@ if (originalMonitorHandler) {
     return origHandler(req, res)
   }
 }
+} // end NODE_ENV !== 'production' guard
 
 export default router
