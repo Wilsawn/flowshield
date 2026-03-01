@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShieldCheck, Fingerprint, Zap, FileCheck, Loader2, CheckCircle2, X, ExternalLink, AlertTriangle } from 'lucide-react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+import { API } from '@/lib/api'
 
 function friendlyError(raw) {
   if (!raw) return 'Transaction failed'

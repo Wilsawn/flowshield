@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+import { API } from '@/lib/api'
 
 // No fake fallbacks — always show real chain data or 0
 

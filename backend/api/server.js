@@ -55,7 +55,7 @@ const PORT = process.env.PORT || process.env.BACKEND_PORT || 3002
 // CORS: restrict to frontend origin in production
 const ALLOWED_ORIGINS = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL, process.env.FRONTEND_URL.replace(/\/$/, '')]
-  : ['http://localhost:5173', 'http://localhost:3000']
+  : (process.env.NODE_ENV === 'production' ? [] : ['http://localhost:5173', 'http://localhost:3000'])
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (curl, server-to-server, mobile apps)

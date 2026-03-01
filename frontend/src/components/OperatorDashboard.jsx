@@ -7,6 +7,7 @@ import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import useOperatorData from '@/hooks/useOperatorData'
 import RegulatoryRadar from '@/components/RegulatoryRadar'
 import FlowAutomation from '@/components/FlowAutomation'
+import { API } from '@/lib/api'
 
 const severityColors = {
   success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -44,7 +45,6 @@ export default function OperatorDashboard() {
   const [demoActive, setDemoActive] = useState(false)
 
   const handleSimulateThreat = async () => {
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     try {
       const res = await fetch(`${API}/api/risk/monitor/simulate`, {
         method: 'POST',
@@ -64,7 +64,6 @@ export default function OperatorDashboard() {
   }
 
   const handleClearThreat = async () => {
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     try {
       await fetch(`${API}/api/risk/monitor/clear`, { method: 'POST' })
       setDemoActive(false)
@@ -78,7 +77,6 @@ export default function OperatorDashboard() {
 
   // Shared cycle runner — used by both manual button and auto-refresh
   const runCycleInternal = async (silent = false) => {
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     const [monitorRes, riskRes] = await Promise.all([
       fetch(`${API}/api/risk/monitor`, {
         method: 'POST',

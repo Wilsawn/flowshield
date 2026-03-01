@@ -9,6 +9,7 @@ import Marquee from '@/components/ui/marquee'
 import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
+import { API } from '@/lib/api'
 
 const fade = {
   hidden: { opacity: 0, y: 24 },
@@ -24,7 +25,6 @@ export default function LandingPage() {
   const [stats, setStats] = useState(null)
   const [statsError, setStatsError] = useState(false)
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     fetch(`${API}/api/stats`).then(r => {
       if (!r.ok) throw new Error('Stats unavailable')
       return r.json()

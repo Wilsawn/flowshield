@@ -9,6 +9,7 @@ import { JURISDICTION_LIST, getJurisdiction } from '@/data/jurisdictions'
 import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
 
+import { API } from '@/lib/api'
 import StatsRow from '@/components/dashboard/StatsRow'
 import NetworkBar from '@/components/dashboard/NetworkBar'
 import WalletStatus from '@/components/dashboard/WalletStatus'
@@ -60,7 +61,6 @@ export default function Dashboard() {
   // Fetch real on-chain FLOW balance
   const fetchBalance = useCallback(async () => {
     if (!walletAddr) return // Don't fall back to deployer address
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     try {
       const res = await fetch(`${API}/api/accounts/balance/${walletAddr}`)
       const data = await res.json()
@@ -123,8 +123,6 @@ export default function Dashboard() {
     setReVerifySteps([])
 
     const newJ = getJurisdiction(newCode)
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
-
     // Step 1: Switching
     setReVerifySteps([{ label: `Switching jurisdiction to ${newJ.name}`, done: true }])
     await new Promise((r) => setTimeout(r, 600))
@@ -198,7 +196,6 @@ export default function Dashboard() {
   const handleRenewCredential = useCallback(async () => {
     setRenewing(true)
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
       // Use the custodial mint endpoint (two-signer tx) so the credential lands
       // in the user's own account, not the deployer's.
       const walletInfo = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()

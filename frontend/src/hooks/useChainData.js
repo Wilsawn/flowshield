@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+import { API } from '@/lib/api'
 
 export default function useChainData(address) {
   const [data, setData] = useState({

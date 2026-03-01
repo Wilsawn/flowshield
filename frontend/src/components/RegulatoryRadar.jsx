@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AlertTriangle, FileSearch, CheckCircle2, ArrowUpCircle, Loader2, X, ExternalLink, ChevronRight, ShieldCheck, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { API } from '@/lib/api'
 
 const STEPS = [
   { id: 'scan', label: 'AI Scans On-Chain', icon: FileSearch, description: 'Reads current RuleEngine rules from Flow blockchain' },
@@ -25,8 +26,6 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
   const [isLoading, setIsLoading] = useState(false)
   const [pushResult, setPushResult] = useState(null)
   const [editedRules, setEditedRules] = useState({})
-
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
   // Step 1: AI scans on-chain rules and compares against real regulations
   const handleScan = async () => {

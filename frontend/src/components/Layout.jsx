@@ -4,6 +4,7 @@ import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerpri
 import { motion, AnimatePresence } from 'framer-motion'
 import GlowOrbs from '@/components/GlowOrbs'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
+import { API } from '@/lib/api'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -56,7 +57,6 @@ export default function Layout() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
         const res = await fetch(`${API}/health`)
         if (res.ok) {
           const data = await res.json()

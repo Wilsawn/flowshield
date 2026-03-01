@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
+import { API } from '@/lib/api'
 
 const BASE_SUGGESTION_CARDS = [
   { icon: Shield, label: 'Risk Score', prompt: 'Why is my risk score what it is and how can I improve it?', color: 'emerald' },
@@ -296,8 +297,6 @@ export default function BuilderCopilot() {
   const [codeInput, setCodeInput] = useState('')
   const [codeLanguage, setCodeLanguage] = useState('cadence')
   const [isScanning, setIsScanning] = useState(false)
-
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
   // Fetch user's live context on mount
   useEffect(() => {

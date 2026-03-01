@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, X, Zap, Building2, Rocket, Copy, CheckCircle2, Loader2, ArrowRight, Mail, Send } from 'lucide-react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+import { API } from '@/lib/api'
 
 const TIERS = [
   {

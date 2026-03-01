@@ -5,6 +5,7 @@ import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
 import { connectWallet } from '@/utils/fcl-config'
+import { API } from '@/lib/api'
 
 const VERIFY_STEPS = [
   { label: 'Creating your Flow account', detail: 'Unique on-chain account — funded by FlowShield', delay: 800 },
@@ -49,7 +50,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       }
 
       // Register wallet user with backend (no private key stored)
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
       const res = await fetch(`${API}/api/accounts/register-wallet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +93,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setEmailLoading(true)
 
     // Check if user already has an account — skip full onboarding if so
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     try {
       const res = await fetch(`${API}/api/accounts/login`, {
         method: 'POST',
@@ -208,8 +207,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
     setScanPulse(false)
     setStep('verifying')
-
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
     // Step 1: Create a Flow account for this user (or retrieve existing)
     setCurrentVerifyStep(1)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, LogOut, ShieldCheck, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
 import { connectWallet, disconnectWallet, subscribeToWallet } from '@/utils/fcl-config'
+import { API } from '@/lib/api'
 
 export default function WalletButton() {
   const [walletUser, setWalletUser] = useState(null)
@@ -115,7 +116,6 @@ export default function WalletButton() {
   const checkComplianceStatus = async (address) => {
     setCheckingCompliance(true)
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
       const res = await fetch(`${API}/api/compliance/status/${address}`)
       if (res.ok) {
         const data = await res.json()

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Vote, Plus, Clock, CheckCircle2, XCircle, Users, Shield, Coins, FileText, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react'
+import { API } from '@/lib/api'
 
 const PROPOSAL_TYPES = [
   { id: 'setFee', label: 'Update Fee', icon: Coins, description: 'Change verification or issuance fee' },
@@ -17,8 +18,6 @@ const STATUS_STYLES = {
   expired: { label: 'Expired', color: 'white', icon: XCircle },
   rejected: { label: 'Rejected', color: 'red', icon: XCircle },
 }
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
 export default function GovernancePanel() {
   const [proposals, setProposals] = useState([])

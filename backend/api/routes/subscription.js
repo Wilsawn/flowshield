@@ -95,12 +95,11 @@ router.post('/checkout', async (req, res) => {
   try {
     const stripe = (await import('stripe')).default(process.env.STRIPE_SECRET_KEY)
 
-    const successUrl = process.env.FRONTEND_URL
-      ? `${process.env.FRONTEND_URL}/dashboard?checkout=success&tier=${tier}`
-      : `http://localhost:5173/dashboard?checkout=success&tier=${tier}`
-    const cancelUrl = process.env.FRONTEND_URL
-      ? `${process.env.FRONTEND_URL}/pricing?checkout=cancelled`
-      : `http://localhost:5173/pricing?checkout=cancelled`
+    if (!process.env.FRONTEND_URL) {
+      return res.status(503).json({ error: 'FRONTEND_URL not configured — cannot create checkout session' })
+    }
+    const successUrl = `${process.env.FRONTEND_URL}/dashboard?checkout=success&tier=${tier}`
+    const cancelUrl = `${process.env.FRONTEND_URL}/pricing?checkout=cancelled`
 
     const sessionParams = {
       mode: 'subscription',
