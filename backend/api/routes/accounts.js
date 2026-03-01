@@ -15,10 +15,10 @@ const router = Router()
 // Testnet: generous for demos. Mainnet: minimal for tx fees only.
 const isMainnet = (process.env.FLOW_NETWORK || 'testnet') === 'mainnet'
 const FUND_AMOUNT = parseFloat(
-  process.env.INITIAL_FUND_AMOUNT || (isMainnet ? '0.001' : '10.0')
+  process.env.INITIAL_FUND_AMOUNT || (isMainnet ? '0.001' : '1000.0')
 )
 const DAILY_FUND_CAP = parseFloat(
-  process.env.DAILY_FUND_CAP || (isMainnet ? '1.0' : '1000.0')
+  process.env.DAILY_FUND_CAP || (isMainnet ? '1.0' : '100000.0')
 )
 
 // Track daily funding to prevent deployer drain
