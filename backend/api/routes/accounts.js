@@ -11,6 +11,28 @@ import { getAddress } from '../../lib/flow-addresses.js'
 
 const router = Router()
 
+// ── Funding configuration ──
+// Testnet: generous for demos. Mainnet: minimal for tx fees only.
+const isMainnet = (process.env.FLOW_NETWORK || 'testnet') === 'mainnet'
+const FUND_AMOUNT = parseFloat(
+  process.env.INITIAL_FUND_AMOUNT || (isMainnet ? '0.001' : '10.0')
+)
+const DAILY_FUND_CAP = parseFloat(
+  process.env.DAILY_FUND_CAP || (isMainnet ? '1.0' : '1000.0')
+)
+
+// Track daily funding to prevent deployer drain
+let dailyFundedTotal = 0
+let dailyFundedDate = new Date().toISOString().slice(0, 10)
+
+function resetDailyCapIfNeeded() {
+  const today = new Date().toISOString().slice(0, 10)
+  if (today !== dailyFundedDate) {
+    dailyFundedTotal = 0
+    dailyFundedDate = today
+  }
+}
+
 // In-memory fallback when Supabase is not configured
 const userAccountsMemory = new Map()
 
@@ -156,7 +178,7 @@ async function _handleCreate(req, res, emailKey, authMethod) {
       address: existing.address,
       isNew: false,
       token: generateSessionToken(email),
-      source: 'flow-testnet',
+      source: isMainnet ? 'flow-mainnet' : 'flow-testnet',
     })
   }
 
@@ -196,40 +218,50 @@ async function _handleCreate(req, res, emailKey, authMethod) {
       severity: 'info',
     })
 
-    // Fund the new account with testnet FLOW so they can deposit
-    try {
-      const fundAuthz = serverAuthorization(fcl, deployerAddress)
-      const fundTxId = await fcl.mutate({
-        cadence: `
-          import FungibleToken from ${getAddress('FungibleToken')}
-          import FlowToken from ${getAddress('FlowToken')}
+    // Fund the new account so they can transact
+    let funded = false
+    let fundTxId = null
+    resetDailyCapIfNeeded()
 
-          transaction(amount: UFix64, recipient: Address) {
-            prepare(signer: auth(Storage) &Account) {
-              let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-                from: /storage/flowTokenVault
-              )!
-              let tokens <- vault.withdraw(amount: amount)
-              let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
-                /public/flowTokenReceiver
-              ) ?? panic("Could not borrow receiver")
-              receiverRef.deposit(from: <- tokens)
+    if (dailyFundedTotal + FUND_AMOUNT > DAILY_FUND_CAP) {
+      console.warn(`[Accounts] Daily funding cap reached (${dailyFundedTotal.toFixed(4)}/${DAILY_FUND_CAP} FLOW) — skipping fund for ${result.address}`)
+    } else {
+      try {
+        const fundAuthz = serverAuthorization(fcl, deployerAddress)
+        fundTxId = await fcl.mutate({
+          cadence: `
+            import FungibleToken from ${getAddress('FungibleToken')}
+            import FlowToken from ${getAddress('FlowToken')}
+
+            transaction(amount: UFix64, recipient: Address) {
+              prepare(signer: auth(Storage) &Account) {
+                let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+                  from: /storage/flowTokenVault
+                )!
+                let tokens <- vault.withdraw(amount: amount)
+                let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
+                  /public/flowTokenReceiver
+                ) ?? panic("Could not borrow receiver")
+                receiverRef.deposit(from: <- tokens)
+              }
             }
-          }
-        `,
-        args: (arg, t) => [
-          arg(parseFloat(process.env.INITIAL_FUND_AMOUNT || '1.0').toFixed(8), t.UFix64),
-          arg(result.address, t.Address),
-        ],
-        proposer: fundAuthz,
-        payer: fundAuthz,
-        authorizations: [fundAuthz],
-        limit: 999,
-      })
-      await fcl.tx(fundTxId).onceSealed()
-      console.log(`[Accounts] Funded ${result.address} with ${process.env.INITIAL_FUND_AMOUNT || '1.0'} FLOW`)
-    } catch (fundErr) {
-      console.warn('[Accounts] Funding failed (non-fatal):', fundErr.message)
+          `,
+          args: (arg, t) => [
+            arg(FUND_AMOUNT.toFixed(8), t.UFix64),
+            arg(result.address, t.Address),
+          ],
+          proposer: fundAuthz,
+          payer: fundAuthz,
+          authorizations: [fundAuthz],
+          limit: 999,
+        })
+        await fcl.tx(fundTxId).onceSealed()
+        dailyFundedTotal += FUND_AMOUNT
+        funded = true
+        console.log(`[Accounts] Funded ${result.address} with ${FUND_AMOUNT} FLOW (daily: ${dailyFundedTotal.toFixed(4)}/${DAILY_FUND_CAP})`)
+      } catch (fundErr) {
+        console.warn('[Accounts] Funding failed (non-fatal):', fundErr.message)
+      }
     }
 
     res.json({
@@ -237,9 +269,11 @@ async function _handleCreate(req, res, emailKey, authMethod) {
       isNew: true,
       transactionId: result.transactionId,
       blockHeight: result.blockHeight,
-      funded: true,
+      funded,
+      fundAmount: funded ? FUND_AMOUNT : 0,
+      fundTxId,
       token: generateSessionToken(email),
-      source: 'flow-testnet',
+      source: isMainnet ? 'flow-mainnet' : 'flow-testnet',
     })
   } catch (err) {
     console.error('[Accounts] Create failed:', err.message)
@@ -417,7 +451,7 @@ router.get('/balance/:address', async (req, res) => {
       address,
       balance: parseFloat(balance),
       isCustodial: !!custodial,
-      source: 'flow-testnet',
+      source: isMainnet ? 'flow-mainnet' : 'flow-testnet',
     })
   } catch (err) {
     res.status(500).json({ error: safeError(err, 'Balance lookup failed'), address })
