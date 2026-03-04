@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Zap, Shield, Activity, Globe, Play, ChevronRight, Timer, Loader2 } from 'lucide-react'
+import { Zap, Shield, Activity, Globe, Play, ChevronRight, Timer, Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { API } from '@/lib/api'
 import { authFetch } from '@/lib/utils'
@@ -101,6 +101,74 @@ transaction {
   },
 ]
 
+// Format results from each automation type into a readable summary
+function formatResult(id, data) {
+  if (!data) return null
+  switch (id) {
+    case 'kyc-reverify':
+      return {
+        status: data.hasCredential ? 'pass' : 'fail',
+        title: data.hasCredential ? 'Credential Valid' : 'No Credential Found',
+        items: [
+          { label: 'Has Credential', value: data.hasCredential ? 'Yes' : 'No' },
+          { label: 'Valid', value: data.isValid ? 'Yes' : 'Expired' },
+          data.tier && { label: 'Tier', value: data.tier },
+          data.jurisdiction && { label: 'Jurisdiction', value: data.jurisdiction },
+          data.expiresAt && { label: 'Expires', value: new Date(data.expiresAt).toLocaleDateString() },
+        ].filter(Boolean),
+      }
+    case 'anomaly-scan':
+      return {
+        status: data.anomalyCount > 0 ? 'warning' : 'pass',
+        title: data.anomalyCount > 0 ? `${data.anomalyCount} Anomaly Pattern${data.anomalyCount !== 1 ? 's' : ''} Detected` : 'No Anomalies Detected',
+        items: [
+          { label: 'Anomalies', value: data.anomalyCount ?? 0 },
+          { label: 'Severity', value: data.highestSeverity || 'none' },
+          data.recommendedAction && { label: 'Action', value: data.recommendedAction },
+          data.analysisSource && { label: 'Source', value: data.analysisSource },
+          ...(data.anomalies || []).slice(0, 3).map(a => ({
+            label: a.severity?.toUpperCase() || 'ALERT',
+            value: a.label || a.detail?.slice(0, 60) + '...',
+            danger: a.severity === 'high',
+          })),
+        ].filter(Boolean),
+      }
+    case 'rule-sync':
+      return {
+        status: (data.gaps?.length || 0) > 0 ? 'warning' : 'pass',
+        title: (data.gaps?.length || 0) > 0 ? `${data.gaps.length} Compliance Gap${data.gaps.length !== 1 ? 's' : ''} Found` : 'All Rules Compliant',
+        items: [
+          { label: 'Gaps', value: data.gaps?.length ?? 0 },
+          data.compliantJurisdictions && { label: 'Compliant', value: data.compliantJurisdictions.join(', ') },
+          data.source && { label: 'Source', value: data.source.includes('ai') ? 'AI Agent' : 'Checklist' },
+          ...(data.gaps || []).slice(0, 3).map(g => ({
+            label: g.jurisdiction,
+            value: g.title || g.summary?.slice(0, 60) + '...',
+            danger: g.severity === 'high',
+          })),
+        ].filter(Boolean),
+      }
+    case 'compliance-batch':
+      return {
+        status: (data.score ?? 0) <= 30 ? 'pass' : (data.score ?? 0) <= 70 ? 'warning' : 'fail',
+        title: `Risk Score: ${data.score ?? '—'}/100 — ${data.tier || 'unknown'}`,
+        items: [
+          { label: 'Score', value: data.score ?? '—' },
+          { label: 'Tier', value: data.tier || '—' },
+          { label: 'Factors', value: data.factors?.length ?? 0 },
+          data.walletData?.balance != null && { label: 'Balance', value: `${parseFloat(data.walletData.balance).toFixed(2)} FLOW` },
+          ...(data.factors || []).slice(0, 3).map(f => ({
+            label: `+${f.points}`,
+            value: f.label,
+            danger: f.points >= 20,
+          })),
+        ].filter(Boolean),
+      }
+    default:
+      return null
+  }
+}
+
 export default function FlowAutomation({ onAuditEntry }) {
   const [automations, setAutomations] = useState(
     AUTOMATION_PRESETS.map(p => ({
@@ -110,37 +178,10 @@ export default function FlowAutomation({ onAuditEntry }) {
       lastRun: null,
       nextRun: null,
       runCount: 0,
+      lastResult: null,
     }))
   )
   const [expandedId, setExpandedId] = useState(null)
-  const [configuring, setConfiguring] = useState(null)
-
-  const toggleAutomation = (id) => {
-    setAutomations(prev => prev.map(a => {
-      if (a.id !== id) return a
-      const nowEnabled = !a.enabled
-      if (nowEnabled) {
-        onAuditEntry?.('automation', `Enabled ${a.label} — runs every ${a.interval} ${a.unit}`, 'success')
-        // Trigger initial run when enabling
-        runNow(id)
-        return {
-          ...a,
-          enabled: true,
-          nextRun: getNextRun(a.interval, a.unit),
-        }
-      } else {
-        onAuditEntry?.('automation', `Disabled ${a.label}`, 'info')
-        return { ...a, enabled: false, nextRun: null }
-      }
-    }))
-  }
-
-  const updateInterval = (id, interval) => {
-    setAutomations(prev => prev.map(a =>
-      a.id === id ? { ...a, interval: parseInt(interval) || a.defaultInterval } : a
-    ))
-  }
-
   const [running, setRunning] = useState(null)
 
   const runNow = async (id) => {
@@ -148,7 +189,6 @@ export default function FlowAutomation({ onAuditEntry }) {
     onAuditEntry?.('automation', `Running: ${AUTOMATION_PRESETS.find(a => a.id === id)?.label}...`, 'info')
 
     try {
-      // Map automation IDs to real backend API calls
       const apiCalls = {
         'kyc-reverify': async () => {
           const res = await authFetch(`${API}/api/compliance/status/0x93c691a98b975493`)
@@ -177,6 +217,7 @@ export default function FlowAutomation({ onAuditEntry }) {
       }
 
       const result = await apiCalls[id]?.()
+      const formatted = formatResult(id, result)
 
       setAutomations(prev => prev.map(a => {
         if (a.id !== id) return a
@@ -185,19 +226,45 @@ export default function FlowAutomation({ onAuditEntry }) {
           lastRun: new Date().toLocaleTimeString(),
           nextRun: a.enabled ? getNextRun(a.interval, a.unit) : null,
           runCount: a.runCount + 1,
+          lastResult: formatted,
         }
       }))
 
-      if (result) {
+      if (formatted) {
         const label = AUTOMATION_PRESETS.find(a => a.id === id)?.label
-        onAuditEntry?.('automation', `${label} completed successfully`, 'success')
+        const severity = formatted.status === 'pass' ? 'success' : formatted.status === 'warning' ? 'warning' : 'danger'
+        onAuditEntry?.('automation', `${label}: ${formatted.title}`, severity)
       } else {
         onAuditEntry?.('automation', `${AUTOMATION_PRESETS.find(a => a.id === id)?.label} — no response from backend`, 'warning')
       }
     } catch (err) {
       onAuditEntry?.('automation', `Run failed: ${err.message}`, 'danger')
+      setAutomations(prev => prev.map(a =>
+        a.id === id ? { ...a, lastResult: { status: 'fail', title: `Error: ${err.message}`, items: [] } } : a
+      ))
     }
     setRunning(null)
+  }
+
+  const toggleAutomation = (id) => {
+    setAutomations(prev => prev.map(a => {
+      if (a.id !== id) return a
+      const nowEnabled = !a.enabled
+      if (nowEnabled) {
+        onAuditEntry?.('automation', `Enabled ${a.label} — runs every ${a.interval} ${a.unit}`, 'success')
+        runNow(id)
+        return { ...a, enabled: true, nextRun: getNextRun(a.interval, a.unit) }
+      } else {
+        onAuditEntry?.('automation', `Disabled ${a.label}`, 'info')
+        return { ...a, enabled: false, nextRun: null }
+      }
+    }))
+  }
+
+  const updateInterval = (id, interval) => {
+    setAutomations(prev => prev.map(a =>
+      a.id === id ? { ...a, interval: parseInt(interval) || a.defaultInterval } : a
+    ))
   }
 
   const getNextRun = (interval, unit) => {
@@ -210,14 +277,20 @@ export default function FlowAutomation({ onAuditEntry }) {
 
   const enabledCount = automations.filter(a => a.enabled).length
 
+  const statusIcon = (status) => {
+    if (status === 'pass') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+    if (status === 'warning') return <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+    return <XCircle className="w-3.5 h-3.5 text-red-400" />
+  }
+
+  const statusBorder = (status) => {
+    if (status === 'pass') return 'border-emerald-500/20 bg-emerald-500/[0.03]'
+    if (status === 'warning') return 'border-amber-500/20 bg-amber-500/[0.03]'
+    return 'border-red-500/20 bg-red-500/[0.03]'
+  }
+
   return (
     <div className="space-y-4">
-      {/* Persistence warning */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/10 bg-amber-500/[0.03]">
-        <Timer className="w-3 h-3 text-amber-400/50 shrink-0" />
-        <p className="text-[10px] text-amber-400/50">Automation state is local-only and resets on page refresh.</p>
-      </div>
-
       {/* Summary bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -262,6 +335,9 @@ export default function FlowAutomation({ onAuditEntry }) {
                   <div className="flex items-center gap-2">
                     <span className={`text-[12px] font-medium ${auto.enabled ? 'text-white/80' : 'text-white/50'}`}>{auto.label}</span>
                     <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/20 font-medium">{auto.flowPrimitive}</span>
+                    {auto.lastResult && (
+                      <span className="ml-auto mr-1">{statusIcon(auto.lastResult.status)}</span>
+                    )}
                   </div>
                   <p className="text-[10px] text-white/25 mt-0.5">{auto.description}</p>
                 </div>
@@ -334,6 +410,48 @@ export default function FlowAutomation({ onAuditEntry }) {
                           <span className="text-[10px] text-white/50 font-medium">{auto.runCount}</span>
                         </div>
                       </div>
+
+                      {/* Last Result */}
+                      <AnimatePresence>
+                        {auto.lastResult && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className={`rounded-lg border p-3 mb-3 ${statusBorder(auto.lastResult.status)}`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              {statusIcon(auto.lastResult.status)}
+                              <span className="text-[11px] font-semibold text-white/70">{auto.lastResult.title}</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {auto.lastResult.items.map((item, j) => (
+                                <div key={j} className="flex items-start justify-between gap-2">
+                                  <span className={`text-[9px] font-medium shrink-0 ${item.danger ? 'text-red-400/70' : 'text-white/25'}`}>{item.label}</span>
+                                  <span className={`text-[10px] text-right ${item.danger ? 'text-red-400/80' : 'text-white/50'}`}>{String(item.value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Running indicator */}
+                      <AnimatePresence>
+                        {running === auto.id && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3 mb-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                              <span className="text-[11px] text-cyan-400/70">Querying Flow testnet and running analysis...</span>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {/* Cadence snippet */}
                       <div className="rounded-lg bg-[#0a0f1a] border border-white/[0.04] overflow-hidden">
