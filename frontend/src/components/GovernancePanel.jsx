@@ -14,7 +14,7 @@ const PROPOSAL_TYPES = [
 const STATUS_STYLES = {
   pending: { label: 'Pending', color: 'amber', icon: Clock },
   approved: { label: 'Approved', color: 'emerald', icon: CheckCircle2 },
-  executed: { label: 'Executed', color: 'cyan', icon: CheckCircle2 },
+  executed: { label: 'Executed', color: 'emerald', icon: CheckCircle2 },
   expired: { label: 'Expired', color: 'white', icon: XCircle },
   rejected: { label: 'Rejected', color: 'red', icon: XCircle },
 }
@@ -151,14 +151,14 @@ export default function GovernancePanel() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Vote className="w-5 h-5 text-violet-400" />
+            <Vote className="w-5 h-5 text-emerald-400" />
             Governance
           </h3>
           <p className="text-[12px] text-white/30 mt-0.5">Multi-sig proposals for admin operations</p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-500/30 bg-violet-500/[0.06] text-[12px] font-medium text-violet-400 hover:bg-violet-500/[0.1] transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] text-[12px] font-medium text-emerald-400 hover:bg-emerald-500/[0.1] transition-all"
         >
           <Plus className="w-3.5 h-3.5" /> New Proposal
         </button>
@@ -185,13 +185,13 @@ export default function GovernancePanel() {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Signers', value: stats.totalSigners, icon: Users, color: 'violet' },
+          { label: 'Signers', value: stats.totalSigners, icon: Users, color: 'emerald' },
           { label: 'Quorum', value: `${stats.requiredApprovals}-of-${stats.totalSigners}`, icon: Shield, color: 'emerald' },
-          { label: 'Proposals', value: proposals.length, icon: FileText, color: 'cyan' },
+          { label: 'Proposals', value: proposals.length, icon: FileText, color: 'emerald' },
         ].map((stat, i) => (
           <div
             key={i}
-            className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 flex items-center gap-3"
+            className="rounded-lg border border-emerald-500/[0.08] bg-white/[0.02] p-3 flex items-center gap-3"
           >
             <stat.icon className={`w-4 h-4 text-${stat.color}-400/60`} />
             <div>
@@ -211,8 +211,8 @@ export default function GovernancePanel() {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="rounded-xl border border-violet-500/20 bg-violet-500/[0.03] p-4 space-y-4">
-              <p className="text-[12px] font-semibold text-violet-400">Create Proposal</p>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 space-y-4">
+              <p className="text-[12px] font-semibold text-emerald-400">Create Proposal</p>
 
               {/* Action type */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -222,13 +222,13 @@ export default function GovernancePanel() {
                     onClick={() => setNewAction(type.id)}
                     className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all ${
                       newAction === type.id
-                        ? 'border-violet-500/30 bg-violet-500/[0.08]'
-                        : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'
+                        ? 'border-emerald-500/30 bg-emerald-500/[0.08]'
+                        : 'border-emerald-500/[0.08] bg-white/[0.02] hover:border-emerald-500/[0.12]'
                     }`}
                   >
-                    <type.icon className={`w-3.5 h-3.5 ${newAction === type.id ? 'text-violet-400' : 'text-white/30'}`} />
+                    <type.icon className={`w-3.5 h-3.5 ${newAction === type.id ? 'text-emerald-400' : 'text-white/30'}`} />
                     <div>
-                      <p className={`text-[11px] font-medium ${newAction === type.id ? 'text-violet-400' : 'text-white/50'}`}>
+                      <p className={`text-[11px] font-medium ${newAction === type.id ? 'text-emerald-400' : 'text-white/50'}`}>
                         {type.label}
                       </p>
                     </div>
@@ -242,14 +242,14 @@ export default function GovernancePanel() {
                 placeholder="Describe this proposal..."
                 value={newDescription}
                 onChange={e => setNewDescription(e.target.value)}
-                className="w-full h-10 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/30 transition-colors"
+                className="w-full h-10 bg-white/[0.03] border border-emerald-500/[0.08] rounded-lg px-3 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 transition-colors"
               />
 
               <div className="flex gap-2">
                 <button
                   onClick={handleCreate}
                   disabled={!newAction || !newDescription || creating}
-                  className="px-4 py-2 rounded-lg bg-violet-500 text-white text-[12px] font-medium hover:bg-violet-600 transition-colors disabled:opacity-30"
+                  className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-[12px] font-medium hover:bg-emerald-600 transition-colors disabled:opacity-30"
                 >
                   {creating ? (
                     <span className="flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating...</span>
@@ -257,7 +257,7 @@ export default function GovernancePanel() {
                 </button>
                 <button
                   onClick={() => setShowCreate(false)}
-                  className="px-4 py-2 rounded-lg border border-white/[0.06] text-white/40 text-[12px] hover:text-white/60 transition-colors"
+                  className="px-4 py-2 rounded-lg border border-emerald-500/[0.08] text-white/40 text-[12px] hover:text-white/60 transition-colors"
                 >
                   Cancel
                 </button>
@@ -282,7 +282,7 @@ export default function GovernancePanel() {
           return (
             <motion.div
               key={p.id}
-              className="rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden"
+              className="rounded-lg border border-emerald-500/[0.08] bg-white/[0.02] overflow-hidden"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
@@ -291,7 +291,7 @@ export default function GovernancePanel() {
                 onClick={() => setExpandedId(isExpanded ? null : p.id)}
                 className="w-full flex items-center gap-3 p-3.5 hover:bg-white/[0.02] transition-colors text-left"
               >
-                <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/[0.08] flex items-center justify-center shrink-0">
                   <ActionIcon className="w-3.5 h-3.5 text-white/40" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -315,7 +315,7 @@ export default function GovernancePanel() {
                     exit={{ height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-3.5 pb-3.5 pt-0 space-y-3 border-t border-white/[0.04]">
+                    <div className="px-3.5 pb-3.5 pt-0 space-y-3 border-t border-emerald-500/[0.06]">
                       <div className="grid grid-cols-2 gap-3 pt-3">
                         <div>
                           <p className="text-[10px] text-white/25 mb-0.5">Action</p>
@@ -362,7 +362,7 @@ export default function GovernancePanel() {
                             )}
                             Approve
                           </button>
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] text-[11px] text-white/30 hover:text-white/50 transition-colors">
+                          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/[0.08] text-[11px] text-white/30 hover:text-white/50 transition-colors">
                             <XCircle className="w-3 h-3" /> Reject
                           </button>
                         </div>

@@ -184,14 +184,14 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
         <motion.div
-          className="relative w-full max-w-md mx-4 rounded-2xl border border-white/[0.06] bg-[#0a0f1a] overflow-hidden"
+          className="relative w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.3, ease: [0.25, 0.4, 0.25, 1] }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-500/[0.06]">
             <div>
               <h3 className="text-[15px] font-semibold text-white">
                 {completed ? 'Transaction Sealed' : error ? 'Transaction Failed' : `Processing ${action}`}
@@ -249,7 +249,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           <AnimatePresence>
             {completed && txResult && (
               <motion.div
-                className="px-6 py-4 border-t border-white/[0.04] bg-emerald-500/[0.03]"
+                className="px-6 py-4 border-t border-emerald-500/[0.06] bg-emerald-500/[0.03]"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 transition={{ duration: 0.4 }}
@@ -272,17 +272,17 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                   href={txResult.explorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-cyan-500/30 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-emerald-500/[0.08] hover:border-emerald-500/30 transition-colors"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-cyan-400 font-medium">View on Flowscan</p>
+                    <p className="text-[11px] text-emerald-400 font-medium">View on Flowscan</p>
                     <p className="text-[9px] text-white/20 font-mono truncate">{txResult.transactionId}</p>
                   </div>
                 </a>
                 <button
                   onClick={() => onComplete?.()}
-                  className="w-full mt-3 h-9 rounded-lg bg-emerald-500 text-[#060a13] text-sm font-semibold hover:bg-emerald-400 transition-colors"
+                  className="w-full mt-3 h-9 rounded-lg bg-emerald-500 text-[#060e09] text-sm font-semibold hover:bg-emerald-400 transition-colors"
                 >
                   Done
                 </button>
@@ -293,7 +293,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           {/* Progress bar */}
           <div className="h-0.5 bg-white/[0.03]">
             <motion.div
-              className={`h-full ${error ? 'bg-red-500' : 'bg-gradient-to-r from-emerald-500 to-cyan-500'}`}
+              className={`h-full ${error ? 'bg-red-500' : 'bg-emerald-500'}`}
               initial={{ width: '0%' }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}

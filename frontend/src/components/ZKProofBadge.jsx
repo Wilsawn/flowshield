@@ -30,8 +30,8 @@ export default function ZKProofBadge({ compact = false }) {
   if (compact) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <Lock className="w-3 h-3 text-violet-400/60" />
-        <span className="text-violet-400/60">ZK Proof</span>
+        <Lock className="w-3 h-3 text-emerald-400/60" />
+        <span className="text-emerald-400/60">ZK Proof</span>
         <span className="text-white/20 font-mono">
           {zkData.proofHash?.slice(0, 8)}...
         </span>
@@ -43,17 +43,17 @@ export default function ZKProofBadge({ compact = false }) {
   return (
     <motion.div
       layout
-      className="rounded-xl border border-violet-500/15 bg-violet-500/[0.03] overflow-hidden"
+      className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] overflow-hidden"
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-violet-500/[0.03] transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-emerald-500/[0.03] transition-colors"
       >
-        <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-          <Shield className="w-4 h-4 text-violet-400" />
+        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+          <Shield className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex-1 text-left">
-          <p className="text-[12px] font-medium text-violet-300">Zero-Knowledge Proof</p>
+          <p className="text-[12px] font-medium text-emerald-300">Zero-Knowledge Proof</p>
           <p className="text-[10px] text-white/30">
             {zkData.method === 'groth16' ? 'Groth16 (real)' : 'Simulated'} · Identity never on-chain
           </p>
@@ -83,12 +83,12 @@ export default function ZKProofBadge({ compact = false }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 space-y-3 border-t border-violet-500/10 pt-3">
+            <div className="px-4 pb-4 space-y-3 border-t border-emerald-500/10 pt-3">
               {/* Proof Hash */}
               <div>
                 <p className="text-[10px] text-white/25 uppercase tracking-wider font-semibold mb-1">Proof Hash (SHA-256)</p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[11px] text-violet-300/70 font-mono bg-black/20 px-3 py-2 rounded-lg break-all">
+                  <code className="flex-1 text-[11px] text-emerald-300/70 font-mono bg-black/20 px-3 py-2 rounded-lg break-all">
                     {zkData.proofHash || 'N/A'}
                   </code>
                   <button
@@ -115,7 +115,7 @@ export default function ZKProofBadge({ compact = false }) {
                     { label: 'Credential not expired', detail: 'Valid for 90 days' },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-violet-400/50 shrink-0" />
+                      <div className="w-1 h-1 rounded-full bg-emerald-400/50 shrink-0" />
                       <span className="text-[11px] text-white/50">{item.label}</span>
                       <span className="text-[10px] text-white/20">— {item.detail}</span>
                     </div>
@@ -126,8 +126,8 @@ export default function ZKProofBadge({ compact = false }) {
               {/* What's NOT revealed */}
               <div className="rounded-lg bg-black/20 p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Fingerprint className="w-3.5 h-3.5 text-violet-400/60" />
-                  <p className="text-[10px] text-violet-400/60 uppercase tracking-wider font-semibold">Never Revealed</p>
+                  <Fingerprint className="w-3.5 h-3.5 text-emerald-400/60" />
+                  <p className="text-[10px] text-emerald-400/60 uppercase tracking-wider font-semibold">Never Revealed</p>
                 </div>
                 <p className="text-[11px] text-white/30 leading-relaxed">
                   Name, date of birth, document number, address, photo — none of this data exists on-chain or leaves your device. Only the mathematical proof is stored.

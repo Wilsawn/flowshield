@@ -1,11 +1,36 @@
 {
   "name": "flowshield",
   "version": "0.1.0",
+  "private": true,
   "description": "Privacy-preserving compliance infrastructure for DeFi on Flow",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=backend",
     "emulator": "flow emulator start",
     "deploy:emulator": "flow project deploy --network emulator",
     "deploy:testnet": "flow project deploy --network testnet"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wilsawn/flowshield.git"
+  },
+  "keywords": [
+    "flow",
+    "blockchain",
+    "compliance",
+    "defi",
+    "zero-knowledge",
+    "cadence"
+  ],
   "license": "MIT"
 }

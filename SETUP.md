@@ -15,8 +15,8 @@ FlowShield uses Supabase for audit logs, scan history, API keys, webhooks, and r
 3. Once created, go to **Settings → API** and copy:
    - `Project URL` → this is your `SUPABASE_URL`
    - `service_role` key → this is your `SUPABASE_SERVICE_KEY`
-4. Go to **SQL Editor → New Query**, paste the contents of `backend/lib/supabase-schema.sql`, and click **Run**
-5. Then paste `backend/lib/supabase-rls.sql` and run that too (enables Row Level Security)
+4. Go to **SQL Editor → New Query**, paste the contents of `backend/db/schema.sql`, and click **Run**
+5. Then paste `backend/db/rls.sql` and run that too (enables Row Level Security)
 6. Add to your root `.env`:
 
 ```

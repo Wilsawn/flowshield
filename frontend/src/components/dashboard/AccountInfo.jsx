@@ -2,7 +2,7 @@ import { Activity } from 'lucide-react'
 
 export default function AccountInfo({ live }) {
   return (
-    <div className="mt-4 p-6 rounded-xl border border-white/[0.06]">
+    <div className="mt-4 p-6 rounded-xl border border-emerald-500/[0.08]">
       <div className="flex items-center gap-2 mb-5">
         <Activity className="w-4 h-4 text-white/40" />
         <h3 className="text-sm font-semibold text-white/80">Account Info</h3>
@@ -21,11 +21,11 @@ export default function AccountInfo({ live }) {
           </div>
         ))}
         {live.riskFactors?.length > 0 && (
-          <div className="pt-2 border-t border-white/[0.04]">
+          <div className="pt-2 border-t border-emerald-500/[0.06]">
             <span className="text-xs text-white/35">Risk Factors</span>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {live.riskFactors.map((f, fi) => (
-                <span key={fi} className="text-[10px] px-2 py-0.5 rounded bg-white/[0.04] text-white/40">
+                <span key={fi} className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/[0.04] text-white/40">
                   +{f.points} {f.label?.length > 30 ? f.label.slice(0, 27) + '...' : f.label}
                 </span>
               ))}

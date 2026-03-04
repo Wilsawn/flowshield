@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, ChevronDown, ChevronUp } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, ChevronDown, ChevronUp, Radar, Activity } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import GlowOrbs from '@/components/GlowOrbs'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
@@ -72,7 +72,7 @@ export default function Layout() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="p-5 border-b border-white/[0.04]">
+      <div className="p-5 border-b border-emerald-500/[0.06]">
         <NavLink to="/" className="flex items-center gap-2.5 group" onClick={() => setSidebarOpen(false)}>
           <FlowShieldLogo size={26} />
           <div>
@@ -98,7 +98,7 @@ export default function Layout() {
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${
                   isActive
                     ? 'bg-emerald-500/[0.08] text-emerald-400'
-                    : 'text-white/35 hover:text-white/60 hover:bg-white/[0.03]'
+                    : 'text-white/35 hover:text-white/60 hover:bg-emerald-500/[0.03]'
                 }`
               }
             >
@@ -110,7 +110,7 @@ export default function Layout() {
       </nav>
 
       {/* Bottom — collapsible */}
-      <div className="border-t border-white/[0.04]">
+      <div className="border-t border-emerald-500/[0.06]">
         {/* Toggle button */}
         <button
           onClick={() => setBottomOpen(!bottomOpen)}
@@ -134,7 +134,7 @@ export default function Layout() {
             >
               {/* User Profile — shows after onboarding */}
               {user ? (
-                <div className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="px-3 py-2.5 rounded-lg bg-[#0a1410]/60 border border-emerald-500/[0.06]">
                   <div className="flex items-center gap-2.5">
                     <div className="h-7 w-7 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
                       <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
@@ -149,13 +149,13 @@ export default function Layout() {
                       <Key className="w-2.5 h-2.5" /> Passkey
                     </span>
                     {user.jurisdiction && (
-                      <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/70 font-medium">
+                      <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/70 font-medium">
                         <Globe className="w-2.5 h-2.5" /> {user.jurisdiction}
                       </span>
                     )}
                     <button
                       onClick={handleLogout}
-                      className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all ml-auto"
+                      className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/[0.04] text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all ml-auto"
                       title="Sign out"
                     >
                       <LogOut className="w-2.5 h-2.5" /> Sign out
@@ -166,7 +166,7 @@ export default function Layout() {
                 <NavLink
                   to="/"
                   onClick={() => setSidebarOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-[12px] text-emerald-400/60 hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/[0.03]"
+                  className="flex items-center gap-2 px-3 py-2 text-[12px] text-emerald-400/60 hover:text-emerald-400 transition-colors rounded-lg hover:bg-emerald-500/[0.03]"
                 >
                   <Fingerprint className="h-3.5 w-3.5" />
                   Sign up with Passkey
@@ -178,7 +178,7 @@ export default function Layout() {
                 href={backendStatus.address ? `https://testnet.flowscan.io/account/${backendStatus.address}` : '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group"
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-emerald-500/[0.03] transition-colors group"
                 title={backendStatus.address ? `View ${backendStatus.address} on Flowscan` : ''}
               >
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
@@ -190,21 +190,49 @@ export default function Layout() {
               <NavLink
                 to="/"
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-white/20 hover:text-white/40 transition-colors rounded-lg hover:bg-white/[0.03]"
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-white/20 hover:text-white/40 transition-colors rounded-lg hover:bg-emerald-500/[0.03]"
               >
                 <ArrowLeft className="h-3 w-3" />
                 Home
               </NavLink>
+
+              {/* Agent monitoring status */}
+              <div className="px-3 py-2.5 mt-1 rounded-lg bg-gradient-to-r from-emerald-500/[0.04] to-emerald-500/[0.02] border border-emerald-500/[0.08]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Radar className="w-3 h-3 text-emerald-400/50" />
+                  <span className="text-[9px] text-white/30 font-medium tracking-wide uppercase">Compliance Agents</span>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-white/25">Regulatory Radar</span>
+                    <span className="flex items-center gap-1 text-[8px] text-emerald-400/60">
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                      Scanning
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-white/25">Risk Monitor</span>
+                    <span className="flex items-center gap-1 text-[8px] text-emerald-400/60">
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                      Active
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-white/25">Jurisdictions</span>
+                    <span className="text-[8px] text-white/30">5 monitored</span>
+                  </div>
+                </div>
+              </div>
 
               {/* Powered by Flow badge */}
               <a
                 href="https://flow.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-gradient-to-r from-emerald-500/[0.08] to-cyan-500/[0.08] border border-white/[0.06] hover:border-emerald-500/20 transition-all group"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.08] hover:border-emerald-500/20 transition-all group"
               >
                 <span className="text-[9px] text-white/40 group-hover:text-white/60 transition-colors font-medium tracking-wide">POWERED BY</span>
-                <span className="text-[10px] font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">FLOW</span>
+                <span className="text-[10px] font-bold text-emerald-400">FLOW</span>
               </a>
             </motion.div>
           )}
@@ -214,23 +242,23 @@ export default function Layout() {
   )
 
   return (
-    <div className="flex h-screen relative bg-[#060a13] text-white">
+    <div className="flex h-screen relative bg-[#060e09] text-white">
       <GlowOrbs />
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-60 border-r border-white/[0.04] bg-[#060a13]/80 flex-col relative z-10 backdrop-blur-sm">
+      <aside className="hidden md:flex w-60 border-r border-emerald-500/[0.06] bg-[#060e09]/80 flex-col relative z-10 backdrop-blur-sm">
         {sidebarContent}
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/[0.04] bg-[#060a13]/90 backdrop-blur-sm flex items-center justify-between px-4">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 border-b border-emerald-500/[0.06] bg-[#060e09]/90 backdrop-blur-sm flex items-center justify-between px-4">
         <NavLink to="/" className="flex items-center gap-2">
           <FlowShieldLogo size={22} />
           <span className="text-[14px] font-semibold text-white">FlowShield</span>
         </NavLink>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-white/50 hover:text-white/80 hover:bg-emerald-500/[0.04] transition-colors"
         >
           {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -248,7 +276,7 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
             />
             <motion.aside
-              className="md:hidden fixed top-14 left-0 bottom-0 w-60 z-50 border-r border-white/[0.04] bg-[#060a13] flex flex-col"
+              className="md:hidden fixed top-14 left-0 bottom-0 w-60 z-50 border-r border-emerald-500/[0.06] bg-[#060e09] flex flex-col"
               initial={{ x: -240 }}
               animate={{ x: 0 }}
               exit={{ x: -240 }}

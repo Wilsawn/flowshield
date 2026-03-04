@@ -146,7 +146,7 @@ export default function WalletButton() {
         <button
           onClick={handleConnect}
           disabled={connecting && !showDiscovery}
-          className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all"
+          className="flex items-center gap-2 h-9 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-emerald-500/[0.12] transition-all"
         >
           <Wallet className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Connect Wallet</span>
@@ -164,14 +164,14 @@ export default function WalletButton() {
               onClick={() => { setShowDiscovery(false); setConnecting(false) }}
             >
               <motion.div
-                className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+                className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
                 initial={{ scale: 0.95, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-emerald-500/[0.06]">
                   <div className="flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-emerald-400" />
                     <h3 className="text-[14px] font-semibold text-white">Connect Wallet</h3>
@@ -186,7 +186,7 @@ export default function WalletButton() {
                   <button
                     onClick={handleFCLConnect}
                     disabled={connecting}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.08] bg-white text-[#060a13] hover:bg-white/90 transition-all"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-500/[0.08] bg-white text-[#060e09] hover:bg-white/90 transition-all"
                   >
                     {connecting ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -195,7 +195,7 @@ export default function WalletButton() {
                     )}
                     <div className="text-left flex-1">
                       <p className="text-[13px] font-semibold">{connecting ? 'Connecting...' : 'Connect Flow Wallet'}</p>
-                      <p className="text-[10px] text-[#060a13]/50">Lilico, Blocto, or any FCL-compatible wallet</p>
+                      <p className="text-[10px] text-[#060e09]/50">Lilico, Blocto, or any FCL-compatible wallet</p>
                     </div>
                   </button>
                 </div>
@@ -216,7 +216,7 @@ export default function WalletButton() {
                       onChange={(e) => setManualAddr(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleManualConnect()}
                       placeholder="0x... (Flow address)"
-                      className="flex-1 h-9 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[12px] text-white/70 placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 font-mono"
+                      className="flex-1 h-9 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[12px] text-white/70 placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 font-mono"
                     />
                     <button
                       onClick={handleManualConnect}
@@ -246,7 +246,7 @@ export default function WalletButton() {
         className={`flex items-center gap-2 h-9 px-3 rounded-lg border text-[12px] font-medium transition-all ${
           compliance?.hasCredential && compliance?.isValid
             ? 'border-emerald-500/15 bg-emerald-500/[0.04] text-emerald-400/80'
-            : 'border-white/[0.06] bg-white/[0.02] text-white/50'
+            : 'border-emerald-500/[0.08] bg-white/[0.02] text-white/50'
         }`}
       >
         <Wallet className="w-3.5 h-3.5" />
@@ -257,7 +257,7 @@ export default function WalletButton() {
       <AnimatePresence>
         {showDropdown && (
           <motion.div
-            className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-emerald-500/[0.08] bg-[#0a1410] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -328,7 +328,7 @@ export default function WalletButton() {
               </div>
 
               {/* Divider */}
-              <div className="border-t border-white/[0.04]" />
+              <div className="border-t border-emerald-500/[0.06]" />
 
               {/* Actions — stacked rows */}
               <div className="space-y-1">

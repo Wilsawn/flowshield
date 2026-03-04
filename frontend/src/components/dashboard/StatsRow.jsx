@@ -14,7 +14,7 @@ export default function StatsRow({ live, chain, flowBalance, onStatClick, onRisk
         <button
           key={i}
           onClick={stat.onClick}
-          className="p-5 rounded-xl border border-white/[0.06] bg-white/[0.01] text-left hover:border-white/[0.1] transition-colors"
+          className="p-5 rounded-xl border border-emerald-500/[0.08] bg-emerald-500/[0.01] text-left hover:border-emerald-500/[0.12] transition-colors"
         >
           <span className="text-xs text-white/35 block mb-3">{stat.label}</span>
           <p className="text-[1.6rem] font-bold tracking-tight text-white">

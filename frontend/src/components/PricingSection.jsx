@@ -31,7 +31,7 @@ const TIERS = [
     period: '/mo',
     description: 'For protocols going to market across jurisdictions.',
     icon: Rocket,
-    color: 'violet',
+    color: 'emerald',
     popular: true,
     cta: 'Start Growth Plan',
     features: [
@@ -52,7 +52,7 @@ const TIERS = [
     period: '/mo',
     description: 'For production protocols with custom compliance needs.',
     icon: Building2,
-    color: 'cyan',
+    color: 'emerald',
     cta: 'Contact Sales',
     features: [
       { label: 'Unlimited API calls', included: true },
@@ -77,20 +77,20 @@ const colorMap = {
     check: 'text-emerald-400/60',
   },
   violet: {
-    border: 'border-violet-500/20',
-    bg: 'bg-violet-500/[0.04]',
-    text: 'text-violet-400',
-    icon: 'bg-violet-500/10 border-violet-500/20',
-    button: 'bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:shadow-[0_0_30px_rgba(139,92,246,0.2)]',
-    check: 'text-violet-400/60',
+    border: 'border-emerald-500/20',
+    bg: 'bg-emerald-500/[0.04]',
+    text: 'text-emerald-400',
+    icon: 'bg-emerald-500/10 border-emerald-500/20',
+    button: 'bg-emerald-500 text-white hover:bg-emerald-400 hover:shadow-[0_0_30px_rgba(52,211,153,0.2)]',
+    check: 'text-emerald-400/60',
   },
   cyan: {
-    border: 'border-cyan-500/20',
-    bg: 'bg-cyan-500/[0.04]',
-    text: 'text-cyan-400',
-    icon: 'bg-cyan-500/10 border-cyan-500/20',
-    button: 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/[0.08]',
-    check: 'text-cyan-400/60',
+    border: 'border-emerald-500/20',
+    bg: 'bg-emerald-500/[0.04]',
+    text: 'text-emerald-400',
+    icon: 'bg-emerald-500/10 border-emerald-500/20',
+    button: 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/[0.08]',
+    check: 'text-emerald-400/60',
   },
 }
 
@@ -205,7 +205,7 @@ export default function PricingSection() {
             >
               {tier.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 rounded-full bg-violet-500 text-[10px] font-bold text-white uppercase tracking-wider">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-white uppercase tracking-wider">
                     Most Popular
                   </span>
                 </div>
@@ -321,7 +321,7 @@ export default function PricingSection() {
             onClick={() => { setShowContactModal(false); setContactSent(false) }}
           >
             <motion.div
-              className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+              className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
@@ -335,7 +335,7 @@ export default function PricingSection() {
                     <p className="text-[12px] text-white/30">Our team will reach out within 24 hours to discuss your Scale plan.</p>
                     <button
                       onClick={() => { setShowContactModal(false); setContactSent(false) }}
-                      className="mt-4 px-6 py-2 rounded-lg border border-white/[0.08] text-[12px] text-white/50 hover:text-white/70 transition-colors"
+                      className="mt-4 px-6 py-2 rounded-lg border border-emerald-500/[0.08] text-[12px] text-white/50 hover:text-white/70 transition-colors"
                     >
                       Close
                     </button>
@@ -343,7 +343,7 @@ export default function PricingSection() {
                 ) : (
                   <>
                     <div className="flex items-center gap-2 mb-5">
-                      <Building2 className="w-5 h-5 text-cyan-400" />
+                      <Building2 className="w-5 h-5 text-emerald-400" />
                       <h3 className="text-[16px] font-bold text-white">Contact Sales — Scale Plan</h3>
                     </div>
                     <p className="text-[12px] text-white/30 mb-5">
@@ -355,26 +355,26 @@ export default function PricingSection() {
                         placeholder="Work email"
                         value={contactForm.email}
                         onChange={(e) => setContactForm(p => ({ ...p, email: e.target.value }))}
-                        className="w-full h-10 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30"
+                        className="w-full h-10 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30"
                       />
                       <input
                         type="text"
                         placeholder="Protocol / Company name"
                         value={contactForm.protocolName}
                         onChange={(e) => setContactForm(p => ({ ...p, protocolName: e.target.value }))}
-                        className="w-full h-10 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30"
+                        className="w-full h-10 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30"
                       />
                       <textarea
                         placeholder="Tell us about your compliance needs (optional)"
                         value={contactForm.message}
                         onChange={(e) => setContactForm(p => ({ ...p, message: e.target.value }))}
                         rows={3}
-                        className="w-full px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30 resize-none"
+                        className="w-full px-3 py-2 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 resize-none"
                       />
                       <button
                         onClick={handleContactSales}
                         disabled={!contactForm.email || loading === 'contact'}
-                        className="w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-[13px] font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.2)]"
+                        className="w-full py-2.5 rounded-lg bg-emerald-500 text-[13px] font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:shadow-[0_0_30px_rgba(52,211,153,0.2)]"
                       >
                         {loading === 'contact' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         Get in Touch

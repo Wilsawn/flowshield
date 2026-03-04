@@ -21,11 +21,11 @@ export default function GlowOrbs() {
         }}
       />
 
-      {/* Bottom-left cyan orb */}
+      {/* Bottom-left emerald orb */}
       <motion.div
         className="absolute -bottom-48 -left-48 w-[500px] h-[500px] rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(34, 211, 238, 0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(52, 211, 153, 0.04) 0%, transparent 70%)',
         }}
         animate={{
           x: [0, -30, 20, 0],

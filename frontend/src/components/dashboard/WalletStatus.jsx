@@ -22,8 +22,8 @@ export default function WalletStatus({ isCustodial, walletAddr, flowBalance, onN
 
     if (isWalletUser) {
       return (
-        <div className="mb-4 p-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5">
-          <p className="text-xs text-cyan-400">
+        <div className="mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+          <p className="text-xs text-emerald-400">
             <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
             Self-custodial wallet connected — you sign all transactions
             {flowBalance !== null && <span className="ml-2 text-white/50">Balance: {flowBalance.toFixed(4)} FLOW</span>}

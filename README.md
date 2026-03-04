@@ -67,40 +67,63 @@ cp .env.example .env
 cp backend/.env.example backend/.env
 # Fill in: CLAUDE_API_KEY, VERIFF_API_KEY, VERIFF_SHARED_SECRET (optional)
 
-# Frontend (Terminal 1)
-cd frontend && npm install && npm run dev
+# Install all dependencies (npm workspaces)
+npm install
 
-# Backend (Terminal 2)
-cd backend && npm install && npm start
+# Run both frontend + backend
+npm run dev
 ```
 
-Frontend runs on `localhost:3001`, backend on `localhost:3002`.
+Or run separately:
+
+```bash
+npm run dev:frontend   # localhost:3000
+npm run dev:backend    # localhost:3002
+```
 
 ## Project Structure
 
 ```
 flowshield/
+├── backend/
+│   ├── agents/            4 AI + rule-based agents
+│   │   ├── builder-copilot.js      Claude AI chat + code scanning
+│   │   ├── risk-scoring.js         Deterministic risk calculation
+│   │   ├── anomaly-monitor.js      Hybrid AI anomaly detection
+│   │   ├── regulatory-radar.js     Hybrid AI compliance scanning
+│   │   ├── orchestrator.js         A2A agent routing + chaining
+│   │   ├── agent-cards.js          A2A agent metadata
+│   │   └── a2a-task-manager.js     A2A task lifecycle
+│   ├── api/
+│   │   ├── server.js               Express entry point
+│   │   └── routes/                 REST endpoints (10 route files)
+│   ├── config/                     Static configuration (jurisdictions, rules)
+│   ├── db/                         Database schema + RLS policies
+│   └── lib/                        Middleware, crypto, Supabase, Flow signer
+├── frontend/
+│   └── src/
+│       ├── components/             React UI (dashboard, copilot, radar, onboarding)
+│       ├── components/dashboard/   Dashboard sub-components
+│       ├── components/ui/          Reusable primitives (button, card, badge)
+│       ├── hooks/                  Data hooks (chain, dashboard, risk, compliance)
+│       ├── lib/                    API client, auth utils, Supabase client
+│       ├── pages/                  Route pages (landing, dashboard, copilot)
+│       └── utils/                  FCL config, ZK proof helpers
 ├── cadence/
 │   ├── contracts/        7 Cadence smart contracts (deployed to testnet)
-│   ├── scripts/          Read-only queries (check_compliance, get_risk_score)
 │   ├── transactions/     State-changing ops (verify_and_mint, deposit, revoke)
+│   ├── scripts/          Read-only queries (check_compliance, get_risk_score)
 │   └── tests/            Contract test suites
-├── backend/
-│   ├── agents/           AI + rule-based agents (risk, copilot, radar, anomaly)
-│   ├── api/              Express server + REST routes
-│   └── lib/              Supabase, middleware, subscription tiers, demo state
 ├── evm/
-│   ├── contracts/        Solidity Groth16 verifier for FlowEVM (BN256 pairing)
+│   ├── contracts/        Solidity Groth16 verifier for FlowEVM
 │   └── circuits/         circom ZK circuit for compliance proof generation
-├── frontend/
-│   ├── src/components/   React UI (dashboard, copilot, radar, onboarding)
-│   ├── src/hooks/        Data hooks (useChainData, useDashboardData, useRiskScore)
-│   └── src/pages/        Route pages (landing, dashboard, copilot, operator)
-├── docs/                 Architecture and demo guide
+├── docs/                 Architecture deep-dive + demo guide
 └── scripts/              Deployment scripts
 ```
 
 ## API
+
+**Public endpoints:**
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -109,30 +132,55 @@ flowshield/
 | `GET` | `/api/compliance/rules/:jurisdiction` | On-chain jurisdiction rules |
 | `POST` | `/api/risk/score` | Risk score for any Flow address |
 | `POST` | `/api/risk/monitor` | Anomaly detection for an address |
-| `POST` | `/api/copilot/chat` | Builder Copilot AI assistant |
+| `POST` | `/api/accounts/create` | Create custodial wallet (passkey onboarding) |
+| `POST` | `/api/accounts/login` | Session token login |
+
+**Authenticated endpoints** (require Bearer token):
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/copilot/chat` | Builder Copilot AI assistant (rate-limited, injection-protected) |
+| `POST` | `/api/copilot/scan-code` | Compliance code scanner |
+| `GET` | `/api/copilot/conversations` | List saved conversations |
+| `GET` | `/api/copilot/conversations/:id` | Get conversation with messages |
+| `PATCH` | `/api/copilot/conversations/:id` | Rename conversation |
+| `DELETE` | `/api/copilot/conversations/:id` | Delete conversation |
 | `POST` | `/api/copilot/radar/scan` | Regulatory Radar — scan on-chain rules |
-| `POST` | `/api/copilot/radar/fix` | Push approved rule fixes on-chain |
-| `GET` | `/api/subscription/pricing` | Subscription tier pricing |
-| `POST` | `/api/subscription/register` | Register protocol, get API key |
-| `POST` | `/api/subscription/mint` | Mint compliance credential (ZK proof → Cadence) |
-| `GET` | `/api/subscription/fees` | On-chain fee schedule from ComplianceAction |
+| `POST` | `/api/copilot/radar/approve` | Push approved rule fixes on-chain |
+
+**A2A (Agent-to-Agent) protocol:**
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/.well-known/agent.json` | A2A discovery document |
+| `GET` | `/api/a2a/agents` | List all 4 agent cards |
+| `GET` | `/api/a2a/agents/:id` | Get single agent card |
+| `POST` | `/api/a2a/tasks` | Submit task to an agent |
+| `GET` | `/api/a2a/tasks/:id` | Get task status and result |
+| `GET` | `/api/a2a/chains` | List predefined multi-agent chains |
+| `POST` | `/api/a2a/chains` | Execute a chain (e.g. `full-risk-review`) |
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────┐
 │  User Experience                                 │
-│  React · Vite · TailwindCSS · FCL Wallet         │
+│  React 19 · Vite · TailwindCSS · FCL Wallet      │
+├──────────────────────────────────────────────────┤
+│  A2A Protocol (Agent-to-Agent)                   │
+│  Orchestrator · Task Manager · Agent Cards        │
+│  Predefined chains: full-risk-review,            │
+│  compliance-review                               │
+├──────────────────────────────────────────────────┤
+│  AI Agents (4 specialized)                       │
+│  Builder Copilot · Risk Scoring                  │
+│  Anomaly Monitor · Regulatory Radar              │
 ├──────────────────────────────────────────────────┤
 │  Compliance Engine (On-Chain Cadence)            │
-│  7 contracts·Fee treasury·Multi-sig governance   │
+│  7 contracts · Fee treasury · Multi-sig gov      │
 ├──────────────────────────────────────────────────┤
 │  Zero-Knowledge Verification (Cross-VM)          │
 │  circom → snarkjs (browser) → FlowEVM Groth16    │
-├──────────────────────────────────────────────────┤
-│  AI Intelligence (Off-Chain)                     │
-│  Risk Scoring · Anomaly Monitor                  │
-│  Builder Copilot · Regulatory Radar              │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -146,10 +194,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical deep-div
 | **Smart Contracts** | 7 Cadence + 1 Solidity (Groth16 verifier) |
 | **ZK Proofs** | circom circuits, snarkjs, Groth16/BN256 pairing |
 | **Frontend** | React 19, Vite, TailwindCSS, Framer Motion, React Flow |
-| **Backend** | Node.js, Express, subscription tier system |
-| **AI** | Claude AI (Haiku 4.5) for Copilot and Regulatory Radar |
+| **Backend** | Node.js, Express, A2A protocol, prompt injection protection |
+| **AI** | Claude AI (Haiku 4.5) — 4 agents with orchestration + chaining |
 | **Identity** | Veriff KYC, WebAuthn/Passkeys, Zero-Knowledge Proofs |
-| **Infrastructure** | Supabase (audit trail), Vercel (deployment) |
+| **Infrastructure** | Supabase (database + auth), Railway (backend), Netlify (frontend) |
 
 ## Design Principle
 

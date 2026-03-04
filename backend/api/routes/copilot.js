@@ -1,5 +1,6 @@
 // routes/copilot.js
 // Builder Copilot + Regulatory Radar API routes.
+// Includes prompt injection protection, per-user rate limiting, and saved conversations.
 
 import { Router } from 'express'
 import { chat, scanCode } from '../../agents/builder-copilot.js'
@@ -7,60 +8,218 @@ import { scanForGaps, parseRegulation } from '../../agents/regulatory-radar.js'
 import { logAudit, storeScanResult, fireWebhooks, getSupabase } from '../../lib/supabase.js'
 import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps } from '../../lib/demo-state.js'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
-import { safeError } from '../../lib/middleware.js'
+import { safeError, rateLimit } from '../../lib/middleware.js'
+import { sanitizeMessage, sanitizeHistory, detectInjectionAttempt, logInjectionAttempt } from '../../lib/prompt-guard.js'
 
 const PRIVATE_KEY = hasPrivateKey()
 
 const router = Router()
 
-// In-memory session fallback
-const sessionsMemory = new Map()
+// ── Copilot-specific rate limiter: 20 req/min per user on /chat ──
+const copilotRateLimit = rateLimit({ windowMs: 60000, max: 20 })
 
-// ── Supabase-backed copilot session store ──
-async function getSession(sessionId) {
+// ── In-memory conversation fallback (dev mode) ──
+const conversationsMemory = new Map() // key: `${email}:${id}`
+
+// ── Conversation store (Supabase-backed with in-memory fallback) ──
+
+async function ensureConversationsTable() {
+  const sb = getSupabase()
+  if (!sb) return
+  try {
+    // Attempt to create table if it doesn't exist (idempotent via IF NOT EXISTS)
+    await sb.rpc('exec_sql', {
+      sql: `CREATE TABLE IF NOT EXISTS copilot_conversations (
+        id TEXT PRIMARY KEY,
+        user_email TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT 'New conversation',
+        messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_copilot_conversations_user ON copilot_conversations(user_email);`
+    })
+  } catch {
+    // Table creation via RPC may not be available — that's OK, table should be pre-created
+  }
+}
+ensureConversationsTable()
+
+async function listConversations(userEmail) {
   const sb = getSupabase()
   if (sb) {
     try {
-      const { data } = await sb.from('copilot_sessions').select('messages').eq('id', sessionId).single()
-      if (data) return data.messages || []
+      const { data, error } = await sb
+        .from('copilot_conversations')
+        .select('id, title, created_at, updated_at')
+        .eq('user_email', userEmail)
+        .order('updated_at', { ascending: false })
+        .limit(100)
+      if (!error && data) return data
     } catch { /* fall through */ }
   }
-  return sessionsMemory.get(sessionId) || []
+  // In-memory fallback
+  const results = []
+  for (const [key, convo] of conversationsMemory) {
+    if (key.startsWith(`${userEmail}:`)) {
+      results.push({ id: convo.id, title: convo.title, created_at: convo.created_at, updated_at: convo.updated_at })
+    }
+  }
+  return results.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 }
 
-async function saveSession(sessionId, messages) {
-  sessionsMemory.set(sessionId, messages)
+async function getConversation(userEmail, convoId) {
   const sb = getSupabase()
   if (sb) {
     try {
-      await sb.from('copilot_sessions').upsert({
-        id: sessionId,
-        messages,
-        updated_at: new Date().toISOString(),
+      const { data, error } = await sb
+        .from('copilot_conversations')
+        .select('*')
+        .eq('id', convoId)
+        .eq('user_email', userEmail)
+        .single()
+      if (!error && data) return data
+    } catch { /* fall through */ }
+  }
+  return conversationsMemory.get(`${userEmail}:${convoId}`) || null
+}
+
+async function saveConversation(userEmail, { id, title, messages }) {
+  const now = new Date().toISOString()
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      await sb.from('copilot_conversations').upsert({
+        id,
+        user_email: userEmail,
+        title: title || 'New conversation',
+        messages: messages || [],
+        updated_at: now,
       }, { onConflict: 'id' })
     } catch (err) {
-      console.warn('[Copilot] Supabase session save failed:', err.message)
+      console.warn('[Copilot] Supabase conversation save failed:', err.message)
+    }
+  }
+  // Always keep in-memory copy as fallback
+  conversationsMemory.set(`${userEmail}:${id}`, {
+    id,
+    user_email: userEmail,
+    title: title || 'New conversation',
+    messages: messages || [],
+    created_at: conversationsMemory.get(`${userEmail}:${id}`)?.created_at || now,
+    updated_at: now,
+  })
+}
+
+async function deleteConversation(userEmail, convoId) {
+  conversationsMemory.delete(`${userEmail}:${convoId}`)
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      await sb.from('copilot_conversations').delete().eq('id', convoId).eq('user_email', userEmail)
+    } catch (err) {
+      console.warn('[Copilot] Supabase conversation delete failed:', err.message)
     }
   }
 }
 
-// POST /api/copilot/chat — Send message to Builder Copilot
-// Accepts optional `context` for personalized responses based on user's on-chain state.
-router.post('/chat', async (req, res) => {
+// ── Conversation CRUD endpoints ──
+
+// GET /api/copilot/conversations — list user's conversations
+router.get('/conversations', async (req, res) => {
+  try {
+    const conversations = await listConversations(req.userEmail)
+    res.json({ conversations })
+  } catch (err) {
+    res.status(500).json({ error: safeError(err, 'Failed to list conversations') })
+  }
+})
+
+// GET /api/copilot/conversations/:id — get full conversation with messages
+router.get('/conversations/:id', async (req, res) => {
+  try {
+    const convo = await getConversation(req.userEmail, req.params.id)
+    if (!convo) return res.status(404).json({ error: 'Conversation not found' })
+    res.json(convo)
+  } catch (err) {
+    res.status(500).json({ error: safeError(err, 'Failed to get conversation') })
+  }
+})
+
+// PATCH /api/copilot/conversations/:id — rename conversation
+router.patch('/conversations/:id', async (req, res) => {
+  const { title } = req.body
+  if (!title || typeof title !== 'string') {
+    return res.status(400).json({ error: 'title is required' })
+  }
+  try {
+    const convo = await getConversation(req.userEmail, req.params.id)
+    if (!convo) return res.status(404).json({ error: 'Conversation not found' })
+    await saveConversation(req.userEmail, { ...convo, title: title.slice(0, 200) })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: safeError(err, 'Failed to rename conversation') })
+  }
+})
+
+// DELETE /api/copilot/conversations/:id — delete conversation
+router.delete('/conversations/:id', async (req, res) => {
+  try {
+    await deleteConversation(req.userEmail, req.params.id)
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: safeError(err, 'Failed to delete conversation') })
+  }
+})
+
+// ── POST /api/copilot/chat — Send message to Builder Copilot ──
+// Rate limited to 20 req/min, with prompt injection detection.
+router.post('/chat', copilotRateLimit, async (req, res) => {
   const { message, sessionId = 'default', context = null } = req.body
   if (!message) {
     return res.status(400).json({ error: 'message is required' })
   }
 
+  // Sanitize input
+  const { clean: cleanMessage, truncated } = sanitizeMessage(message)
+  if (!cleanMessage) {
+    return res.status(400).json({ error: 'message is empty after sanitization' })
+  }
+
+  // Detect injection attempts (flag, don't block)
+  const injection = detectInjectionAttempt(cleanMessage)
+  if (injection.detected) {
+    logInjectionAttempt(req.userEmail, injection.patterns, cleanMessage)
+  }
+
   try {
-    const history = await getSession(sessionId)
-    const result = await chat(message, history, context)
-    await saveSession(sessionId, result.conversationHistory)
+    // Load conversation history from store
+    const userEmail = req.userEmail || 'anonymous'
+    const convo = await getConversation(userEmail, sessionId)
+    const rawHistory = convo?.messages?.map(m => ({ role: m.role, content: m.content })) || []
+    const history = sanitizeHistory(rawHistory)
+
+    const result = await chat(cleanMessage, history, context)
+
+    // Generate title from first message
+    const isFirst = history.length === 0
+    const title = isFirst ? (cleanMessage.length > 50 ? cleanMessage.slice(0, 50) + '...' : cleanMessage) : (convo?.title || 'New conversation')
+
+    // Build full messages array for storage
+    const storedMessages = [
+      ...(convo?.messages || []),
+      { role: 'user', content: cleanMessage, timestamp: Date.now() },
+      { role: 'assistant', content: result.response, timestamp: Date.now() },
+    ]
+
+    await saveConversation(userEmail, { id: sessionId, title, messages: storedMessages })
 
     res.json({
       response: result.response,
       sessionId,
-      messageCount: result.conversationHistory.length,
+      messageCount: storedMessages.length,
+      ...(truncated ? { warning: 'Message was truncated to 10,000 characters' } : {}),
+      ...(injection.detected ? { injectionWarning: true } : {}),
     })
   } catch (err) {
     res.status(500).json({ error: safeError(err, 'Chat request failed') })
@@ -74,12 +233,15 @@ router.post('/scan-code', async (req, res) => {
     return res.status(400).json({ error: 'code is required' })
   }
 
+  // Sanitize code input (use same limits)
+  const { clean: cleanCode } = sanitizeMessage(code)
+
   try {
-    const result = await scanCode(code, language, context)
+    const result = await scanCode(cleanCode, language, context)
     logAudit({
       action: 'scan-code',
       agent: 'copilot',
-      detail: { language, codeLength: code.length, source: result.source },
+      detail: { language, codeLength: cleanCode.length, source: result.source },
       severity: 'info',
     })
     res.json(result)

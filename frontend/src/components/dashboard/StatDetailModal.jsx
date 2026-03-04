@@ -13,13 +13,13 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+            className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-500/[0.06]">
               <h3 className="text-[15px] font-semibold text-white">
                 {showStatDetail === 'wallet' ? 'Wallet Balance' : showStatDetail === 'deposited' ? 'Deposits' : 'Borrows'}
               </h3>
@@ -57,9 +57,9 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
                   Your balance decreases slightly with each transaction (gas fees ~0.001 FLOW), but gas is sponsored so users pay nothing.
                 </p>
                 <a href={`https://testnet.flowscan.io/account/${live.address}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-cyan-500/30 transition-colors">
-                  <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-[11px] text-cyan-400 font-medium">View on Flowscan</span>
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-emerald-500/[0.08] hover:border-emerald-500/30 transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[11px] text-emerald-400 font-medium">View on Flowscan</span>
                 </a>
               </>)}
 
@@ -96,7 +96,7 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
               {showStatDetail === 'borrowed' && (<>
                 <div className="text-center py-3">
                   <p className="text-[32px] font-bold text-white">{(live.borrowed ?? 0).toLocaleString()} <span className="text-[16px] text-white/30">FLOW</span></p>
-                  <p className="text-[11px] text-cyan-400/70 mt-1">{live.borrowRatePercent ?? '—'}% interest rate</p>
+                  <p className="text-[11px] text-emerald-400/70 mt-1">{live.borrowRatePercent ?? '—'}% interest rate</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">

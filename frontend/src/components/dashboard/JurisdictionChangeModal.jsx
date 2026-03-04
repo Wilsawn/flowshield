@@ -12,7 +12,7 @@ export default function JurisdictionChangeModal({ jurisdictionChanging, reVerify
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] p-8"
+            className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] p-8"
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
@@ -49,7 +49,7 @@ export default function JurisdictionChangeModal({ jurisdictionChanging, reVerify
             </div>
 
             {/* Progress bar */}
-            <div className="mt-6 h-1 bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="mt-6 h-1 bg-emerald-500/[0.04] rounded-full overflow-hidden">
               <motion.div
                 className="h-full bg-emerald-400 rounded-full"
                 initial={{ width: '0%' }}

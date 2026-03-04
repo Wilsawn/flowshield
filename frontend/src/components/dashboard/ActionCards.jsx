@@ -10,7 +10,7 @@ export default function ActionCards({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
       {/* Deposit */}
-      <div className="p-6 rounded-xl border border-white/[0.06]">
+      <div className="p-6 rounded-xl border border-emerald-500/[0.08]">
         <div className="flex items-center gap-2 mb-5">
           <ArrowDownToLine className="w-4 h-4 text-white/40" />
           <h3 className="text-sm font-semibold text-white/80">Deposit</h3>
@@ -22,11 +22,11 @@ export default function ActionCards({
             placeholder="0.00"
             value={depositAmount}
             onChange={(e) => setDepositAmount(e.target.value)}
-            className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/[0.12] transition-colors"
+            className="w-full h-10 bg-white/[0.02] border border-emerald-500/[0.08] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-emerald-500/[0.15] transition-colors"
           />
           <button
             onClick={onDeposit}
-            className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 text-[#060a13] text-sm font-semibold hover:shadow-[0_0_20px_rgba(52,211,153,0.15)] transition-all disabled:opacity-30"
+            className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 text-[#060e09] text-sm font-semibold hover:shadow-[0_0_20px_rgba(52,211,153,0.15)] transition-all disabled:opacity-30"
             disabled={!depositAmount || Number(depositAmount) <= 0}
           >
             Deposit
@@ -38,7 +38,7 @@ export default function ActionCards({
       </div>
 
       {/* Borrow */}
-      <div className="p-6 rounded-xl border border-white/[0.06]">
+      <div className="p-6 rounded-xl border border-emerald-500/[0.08]">
         <div className="flex items-center gap-2 mb-5">
           <ArrowUpFromLine className="w-4 h-4 text-white/40" />
           <h3 className="text-sm font-semibold text-white/80">Borrow</h3>
@@ -50,11 +50,11 @@ export default function ActionCards({
             placeholder="0.00"
             value={borrowAmount}
             onChange={(e) => setBorrowAmount(e.target.value)}
-            className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/[0.12] transition-colors"
+            className="w-full h-10 bg-white/[0.02] border border-emerald-500/[0.08] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-emerald-500/[0.15] transition-colors"
           />
           <button
             onClick={onBorrow}
-            className="w-full h-10 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-[#060a13] text-sm font-semibold hover:shadow-[0_0_20px_rgba(34,211,238,0.15)] transition-all disabled:opacity-30"
+            className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 text-[#060e09] text-sm font-semibold hover:shadow-[0_0_20px_rgba(52,211,153,0.15)] transition-all disabled:opacity-30"
             disabled={!borrowAmount || Number(borrowAmount) <= 0}
           >
             Borrow
@@ -66,7 +66,7 @@ export default function ActionCards({
       </div>
 
       {/* Repay */}
-      <div className="p-6 rounded-xl border border-white/[0.06]">
+      <div className="p-6 rounded-xl border border-emerald-500/[0.08]">
         <div className="flex items-center gap-2 mb-5">
           <RotateCcw className="w-4 h-4 text-white/40" />
           <h3 className="text-sm font-semibold text-white/80">Repay</h3>
@@ -78,11 +78,11 @@ export default function ActionCards({
             placeholder="0.00"
             value={repayAmount}
             onChange={(e) => setRepayAmount(e.target.value)}
-            className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/[0.12] transition-colors"
+            className="w-full h-10 bg-white/[0.02] border border-emerald-500/[0.08] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-emerald-500/[0.15] transition-colors"
           />
           <button
             onClick={onRepay}
-            className="w-full h-10 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-[#060a13] text-sm font-semibold hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all disabled:opacity-30"
+            className="w-full h-10 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-[#060e09] text-sm font-semibold hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all disabled:opacity-30"
             disabled={!repayAmount || Number(repayAmount) <= 0 || (live.borrowed ?? 0) <= 0}
           >
             Repay

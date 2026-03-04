@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.js'
 import subscriptionRoutes from './routes/subscription.js'
 import governanceRoutes from './routes/governance.js'
 import accountsRoutes from './routes/accounts.js'
+import a2aRoutes, { wellKnownHandler } from './routes/a2a.js'
 import { requireApiKey, requireAuth, rateLimit } from '../lib/middleware.js'
 import { getSupabase } from '../lib/supabase.js'
 
@@ -118,6 +119,10 @@ app.use('/api/copilot', requireAuth, copilotRoutes)
 app.use('/api/subscription', subscriptionRoutes)  // Pricing — public access needed
 app.use('/api/governance', requireAuth, governanceRoutes)
 app.use('/api/accounts', accountsRoutes)  // Has its own auth (create/login are public, others protected)
+
+// A2A protocol — agent-to-agent communication
+app.use('/api/a2a', a2aRoutes)
+app.get('/.well-known/agent.json', wellKnownHandler)
 
 // Admin-only — always require API key when Supabase is configured
 app.use('/api/admin', requireApiKey, adminRoutes)

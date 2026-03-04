@@ -6,8 +6,8 @@ export default function TermsOfService() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#060a13] text-white">
-      <nav className="border-b border-white/[0.04]">
+    <div className="min-h-screen bg-[#060e09] text-white">
+      <nav className="border-b border-emerald-500/[0.06]">
         <div className="max-w-[720px] mx-auto px-6 h-16 flex items-center justify-between">
           <button onClick={() => navigate('/')} className="flex items-center gap-2.5 text-white/50 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />

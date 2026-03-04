@@ -14,10 +14,10 @@ import '@xyflow/react/dist/style.css'
 /* ─── Custom Node: Dashboard ─── */
 function DashboardNode() {
   return (
-    <div className="w-[380px] rounded-2xl border border-white/[0.08] bg-[#0c1018]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="w-[380px] rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
       <Handle type="source" position={Position.Right} id="dash-out" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
       <Handle type="source" position={Position.Bottom} id="dash-bottom" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/[0.06]">
         <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
@@ -40,7 +40,7 @@ function DashboardNode() {
             { label: 'Deposited', value: '50,000 USDC', color: 'text-emerald-400/70' },
             { label: 'Borrowed', value: '12,000 USDC', color: 'text-cyan-400/70' },
           ].map(s => (
-            <div key={s.label} className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3">
+            <div key={s.label} className="rounded-xl bg-white/[0.02] border border-emerald-500/[0.06] p-3">
               <p className="text-[9px] text-white/20 uppercase">{s.label}</p>
               <p className={`text-[12px] font-semibold mt-1 ${s.color}`}>{s.value}</p>
             </div>
@@ -59,10 +59,10 @@ function DashboardNode() {
 /* ─── Custom Node: Builder Copilot ─── */
 function CopilotNode() {
   return (
-    <div className="w-[340px] rounded-2xl border border-white/[0.08] bg-[#0c1018]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="w-[340px] rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
       <Handle type="target" position={Position.Left} id="cop-in" className="!w-2.5 !h-2.5 !bg-cyan-400 !border-2 !border-cyan-400/30" />
       <Handle type="source" position={Position.Bottom} id="cop-out" className="!w-2.5 !h-2.5 !bg-cyan-400 !border-2 !border-cyan-400/30" />
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/[0.06]">
         <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
@@ -75,7 +75,7 @@ function CopilotNode() {
           </div>
         </div>
         <div className="flex justify-start">
-          <div className="max-w-[90%] px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-white/[0.03] border border-white/[0.06]">
+          <div className="max-w-[90%] px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-white/[0.03] border border-emerald-500/[0.06]">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="w-4 h-4 rounded-md bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-[8px] font-bold text-[#060a13]">AI</span>
               <span className="text-[10px] text-white/25">FlowShield Copilot</span>
@@ -85,7 +85,7 @@ function CopilotNode() {
         </div>
         <div className="flex gap-2 ml-1">
           <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-medium text-emerald-400">Apply Fix</span>
-          <span className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] font-medium text-white/30">View Code</span>
+          <span className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-emerald-500/[0.06] text-[10px] font-medium text-white/30">View Code</span>
         </div>
       </div>
     </div>
@@ -95,11 +95,11 @@ function CopilotNode() {
 /* ─── Custom Node: Regulatory Radar ─── */
 function RadarNode() {
   return (
-    <div className="w-[400px] rounded-2xl border border-white/[0.08] bg-[#0c1018]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="w-[400px] rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
       <Handle type="target" position={Position.Top} id="radar-in" className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-amber-400/30" />
       <Handle type="target" position={Position.Left} id="radar-left" className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-amber-400/30" />
       <Handle type="source" position={Position.Right} id="radar-right" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/[0.06]">
         <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
@@ -118,7 +118,7 @@ function RadarNode() {
               <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg flex-1 text-[9px] font-medium border ${
                 s.done ? 'bg-emerald-500/[0.06] border-emerald-500/15 text-emerald-400/60' :
                 s.active ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
-                'bg-white/[0.01] border-white/[0.04] text-white/20'
+                'bg-white/[0.01] border-emerald-500/[0.06] text-white/20'
               }`}>
                 {s.done && <span className="text-emerald-400">✓</span>}
                 {s.active && <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />}
@@ -137,7 +137,7 @@ function RadarNode() {
             <p className="text-[10px] text-white/30 mt-0.5">Threshold should be €1,000 but is set to $3,000</p>
             <div className="flex gap-2 mt-2">
               <span className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-medium text-emerald-400">Approve Fix</span>
-              <span className="px-2 py-1 rounded bg-white/[0.03] border border-white/[0.06] text-[9px] font-medium text-white/25">Reject</span>
+              <span className="px-2 py-1 rounded bg-white/[0.03] border border-emerald-500/[0.06] text-[9px] font-medium text-white/25">Reject</span>
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@ function RadarNode() {
 /* ─── Custom Node: Small status badge ─── */
 function StatusNode({ data }) {
   return (
-    <div className="px-4 py-2.5 rounded-xl border border-white/[0.06] bg-[#0c1018]/90 backdrop-blur-xl shadow-lg shadow-black/30">
+    <div className="px-4 py-2.5 rounded-xl border border-emerald-500/[0.06] bg-[#0a1410]/90 backdrop-blur-xl shadow-lg shadow-black/30">
       <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-emerald-400/50 !border-emerald-400/20" />
       <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-emerald-400/50 !border-emerald-400/20" />
       <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export default function ProductShowcase() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   return (
-    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-white/[0.04] bg-[#080c14] overflow-hidden relative">
+    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#060e09] overflow-hidden relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -270,15 +270,15 @@ export default function ProductShowcase() {
         proOptions={{ hideAttribution: true }}
         className="product-showcase-flow"
       >
-        <Background variant="dots" color="rgba(255,255,255,0.08)" gap={20} size={1.5} />
+        <Background variant="dots" color="rgba(52,211,153,0.06)" gap={20} size={1} />
         <Controls
           showInteractive={false}
-          className="!bg-[#0c1018]/80 !border-white/[0.06] !rounded-xl !shadow-lg [&>button]:!bg-transparent [&>button]:!border-white/[0.06] [&>button]:!text-white/60 [&>button:hover]:!text-white/90 [&>button]:!w-7 [&>button]:!h-7"
+          className="!bg-[#0a1410]/80 !border-emerald-500/[0.06] !rounded-xl !shadow-lg [&>button]:!bg-transparent [&>button]:!border-emerald-500/[0.06] [&>button]:!text-white/60 [&>button:hover]:!text-white/90 [&>button]:!w-7 [&>button]:!h-7"
         />
       </ReactFlow>
       {/* Subtle gradient overlay at edges */}
       <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
-        background: 'linear-gradient(to right, #080c14 0%, transparent 5%, transparent 95%, #080c14 100%), linear-gradient(to bottom, #080c14 0%, transparent 5%, transparent 95%, #080c14 100%)',
+        background: 'linear-gradient(to right, #060e09 0%, transparent 5%, transparent 95%, #060e09 100%), linear-gradient(to bottom, #060e09 0%, transparent 5%, transparent 95%, #060e09 100%)',
       }} />
     </div>
   )

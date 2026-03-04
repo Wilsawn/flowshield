@@ -109,8 +109,27 @@ CREATE TABLE IF NOT EXISTS operators (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ── Copilot Conversations ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS copilot_conversations (
+  id TEXT PRIMARY KEY,
+  user_email TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT 'New conversation',
+  messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_copilot_conversations_user ON copilot_conversations(user_email);
+
+-- ── Copilot Sessions (legacy — kept for backward compatibility) ─────────────
+CREATE TABLE IF NOT EXISTS copilot_sessions (
+  id TEXT PRIMARY KEY,
+  messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── Row Level Security ────────────────────────────────────────────────────────
--- Run supabase-rls.sql after this file to enable RLS + policies on all tables.
+-- Run rls.sql after this file to enable RLS + policies on all tables.
 
 -- ── Seed: Default regulatory requirements (mirrors COMPLIANCE_CHECKLIST) ─────
 INSERT INTO regulatory_requirements (jurisdiction, rule_key, required_value, label, regulatory_basis, framework, regulator) VALUES

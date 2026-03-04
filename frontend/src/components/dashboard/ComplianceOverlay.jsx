@@ -19,7 +19,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
 
           {/* On-chain status cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border border-white/[0.06]">
+            <div className="p-4 rounded-xl border border-emerald-500/[0.08]">
               <span className="text-xs text-white/30 block mb-2">Credential</span>
               <p className={`text-sm font-bold mb-1 ${chain.compliance?.hasCredential ? 'text-emerald-400' : 'text-white/50'}`}>
                 {chain.compliance?.hasCredential ? 'Active' : 'Not minted'}
@@ -27,13 +27,13 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
               <p className="text-xs text-white/20 font-mono">{chain.compliance?.tier || '—'} · {chain.compliance?.source || '—'}</p>
             </div>
 
-            <div className="p-4 rounded-xl border border-white/[0.06]">
+            <div className="p-4 rounded-xl border border-emerald-500/[0.08]">
               <span className="text-xs text-white/30 block mb-2">Risk Score</span>
               <p className="text-sm font-bold text-white mb-1">{live.riskScore ?? '—'}/100</p>
               <p className="text-xs text-white/20 font-mono">{live.riskTier || '—'} · {live.riskFactors?.length || 0} factors</p>
             </div>
 
-            <div className="p-4 rounded-xl border border-white/[0.06]">
+            <div className="p-4 rounded-xl border border-emerald-500/[0.08]">
               <span className="text-xs text-white/30 block mb-2">Jurisdiction</span>
               <p className="text-sm font-bold text-white mb-1">{jurisdiction.code} / {jurisdiction.regulator}</p>
               <p className="text-xs text-white/20 font-mono">
@@ -41,7 +41,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
               </p>
             </div>
 
-            <div className="p-4 rounded-xl border border-white/[0.06]">
+            <div className="p-4 rounded-xl border border-emerald-500/[0.08]">
               <span className="text-xs text-white/30 block mb-2">Network</span>
               <p className="text-sm font-bold text-white mb-1">Flow Testnet</p>
               <p className="text-xs text-white/20 font-mono">
@@ -51,12 +51,12 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
           </div>
 
           {/* Deployed Contracts */}
-          <div className="p-5 mt-4 rounded-xl border border-white/[0.06]">
+          <div className="p-5 mt-4 rounded-xl border border-emerald-500/[0.08]">
             <span className="text-xs text-white/30 uppercase tracking-wider block mb-3">Deployed Contracts</span>
             {chain.contracts.length > 0 ? (
               <div className="space-y-2">
                 {chain.contracts.map((c, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.03] last:border-0">
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-emerald-500/[0.04] last:border-0">
                     <span className="text-xs font-medium text-white/60">{c.name}</span>
                     <span className="text-xs text-white/20 font-mono">{(c.codeSize / 1024).toFixed(1)} KB</span>
                   </div>
@@ -77,7 +77,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
           </div>
 
           {/* Jurisdiction Rules */}
-          <div className="p-5 mt-4 rounded-xl border border-white/[0.06]">
+          <div className="p-5 mt-4 rounded-xl border border-emerald-500/[0.08]">
             <span className="text-xs text-white/30 uppercase tracking-wider block mb-3">
               {onChainRules?.source === 'flow-testnet' ? 'On-Chain' : 'Active'} Rules — {jurisdiction.code}
             </span>
@@ -100,7 +100,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
                 ))}
               </div>
             )}
-            <div className="mt-4 pt-3 border-t border-white/[0.04]">
+            <div className="mt-4 pt-3 border-t border-emerald-500/[0.06]">
               <p className="text-xs text-white/15 leading-relaxed">
                 {jurisdiction.rules.join(' · ')}
               </p>

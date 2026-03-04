@@ -26,13 +26,13 @@ export default function RiskDetailModal({ show, onClose, live }) {
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.08] bg-[#0a0f1a] overflow-hidden"
+            className="w-full max-w-lg mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-500/[0.06]">
               <div>
                 <h3 className="text-[15px] font-semibold text-white">Risk Score Breakdown</h3>
                 <p className="text-[12px] text-white/30 mt-0.5">How your score is calculated from on-chain data</p>
@@ -77,7 +77,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
                   { label: 'Non-Compliant', range: '71–100', color: 'red' },
                 ].map(t => (
                   <div key={t.label} className={`px-3 py-2 rounded-lg border ${
-                    live.riskTier === t.label.toLowerCase().replace('-', '-') ? `border-${t.color}-500/30 bg-${t.color}-500/5` : 'border-white/[0.04] bg-white/[0.01]'
+                    live.riskTier === t.label.toLowerCase().replace('-', '-') ? `border-${t.color}-500/30 bg-${t.color}-500/5` : 'border-emerald-500/[0.06] bg-emerald-500/[0.01]'
                   }`}>
                     <span className={`text-[10px] font-medium text-${t.color}-400`}>{t.label}</span>
                     <span className="text-[9px] text-white/20 block">{t.range} pts</span>
@@ -93,7 +93,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
                   const isTriggered = !!liveFactor
                   const explorerBase = `https://testnet.flowscan.io/account/${live.address || '0x93c691a98b975493'}`
                   return (
-                    <div key={factor.id} className={`flex items-start gap-3 p-2.5 rounded-lg ${isTriggered ? 'bg-amber-500/5 border border-amber-500/10' : 'bg-white/[0.01]'}`}>
+                    <div key={factor.id} className={`flex items-start gap-3 p-2.5 rounded-lg ${isTriggered ? 'bg-amber-500/5 border border-amber-500/10' : 'bg-emerald-500/[0.01]'}`}>
                       {isTriggered ? (
                         <XCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                       ) : (
@@ -129,7 +129,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
                 })}
                 {/* Extra demo-injected factors not in the standard list */}
                 {live.riskFactors?.filter(f => !STANDARD_IDS.includes(f.id)).map(factor => (
-                  <div key={factor.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                  <div key={factor.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-emerald-500/[0.06]">
                     <XCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -153,7 +153,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
                 ))}
               </div>
 
-              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-emerald-500/[0.06]">
                 <p className="text-[10px] text-white/30 leading-relaxed">
                   Score is calculated from <strong className="text-white/50">public on-chain data only</strong> — no personal information is used.
                   Lower scores mean lower risk. The score updates automatically as your on-chain behavior changes.

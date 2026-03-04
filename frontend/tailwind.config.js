@@ -43,6 +43,25 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      animation: {
+        'float': 'float 3s ease-in-out infinite',
+        'scan-pulse': 'scanPulse 2s ease-in-out infinite',
+        'slide-in-right': 'slideInRight 0.3s ease-out',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        scanPulse: {
+          '0%, 100%': { opacity: 0, transform: 'scale(1)' },
+          '50%': { opacity: 1, transform: 'scale(1.02)' },
+        },
+        slideInRight: {
+          from: { opacity: 0, transform: 'translateX(-8px)' },
+          to: { opacity: 1, transform: 'translateX(0)' },
+        },
+      },
     },
   },
   plugins: [

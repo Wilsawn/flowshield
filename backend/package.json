@@ -8,6 +8,9 @@
     "start": "node api/server.js",
     "dev": "node --watch api/server.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@onflow/fcl": "^1.13.1",
     "@onflow/types": "^1.4.1",

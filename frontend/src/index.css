@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
+    --background: 142 40% 4%;
     --foreground: 213 31% 91%;
     --card: 224 71% 4%;
     --card-foreground: 213 31% 91%;
@@ -43,6 +43,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -154,6 +157,16 @@
     @apply bg-white/5 backdrop-blur-xl border border-white/10;
   }
 
+  .glass-subtle {
+    @apply bg-white/[0.02] backdrop-blur-md border border-white/[0.06];
+  }
+
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    backdrop-filter: blur(20px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
   .glow-green {
     box-shadow: 0 0 20px hsl(160 84% 39% / 0.15);
   }
@@ -173,8 +186,63 @@
     animation: shimmerText 3s linear infinite;
   }
 
+  .gradient-text-hero {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ffffff 0%, #34d399 40%, #22d3ee 70%, #a78bfa 100%);
+  }
+
   .text-glow {
     text-shadow: 0 0 40px rgba(52, 211, 153, 0.3);
+  }
+
+  .text-glow-strong {
+    text-shadow: 0 0 60px rgba(52, 211, 153, 0.4), 0 0 120px rgba(52, 211, 153, 0.15);
+  }
+
+  /* Typography presets */
+  .text-display {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+  }
+
+  .text-headline {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  .text-title {
+    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .text-body-lg {
+    font-size: 1rem;
+    line-height: 1.7;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .text-caption {
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  .text-mono-sm {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
   }
 
   .mesh-gradient {
@@ -182,6 +250,14 @@
       radial-gradient(ellipse at 20% 50%, rgba(52, 211, 153, 0.08) 0%, transparent 50%),
       radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
       radial-gradient(ellipse at 50% 80%, rgba(52, 211, 153, 0.04) 0%, transparent 50%);
+  }
+
+  .mesh-gradient-rich {
+    background:
+      radial-gradient(ellipse at 15% 50%, rgba(52, 211, 153, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 20%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 90%, rgba(167, 139, 250, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 30%, rgba(52, 211, 153, 0.04) 0%, transparent 60%);
   }
 
   .noise-overlay {
@@ -198,12 +274,36 @@
     z-index: 0;
   }
 
+  /* Scanning pulse for active agents */
+  .scan-pulse {
+    position: relative;
+  }
+  .scan-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    animation: scanPulse 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Dot grid pattern */
+  .dot-grid {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out;
   }
 
   .animate-slide-up {
     animation: slideUp 0.5s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
   }
 
   @keyframes fadeIn {
@@ -216,12 +316,32 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
   @keyframes rotateBorder {
     to { --border-angle: 360deg; }
   }
 
   @keyframes shimmerText {
     to { background-position: 200% center; }
+  }
+
+  @keyframes scanPulse {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); }
+  }
+
+  @keyframes scanLine {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
   }
 
   @keyframes auroraMove1 {
@@ -244,6 +364,16 @@
   @keyframes marqueeScroll {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
+  }
+
+  @keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
 }
 
@@ -288,4 +418,244 @@
   syntax: '<angle>';
   inherits: false;
   initial-value: 0deg;
+}
+
+/* ─── Animated Generate Button ─── */
+.ui-anim-btn {
+  --padding: 4px;
+  --radius: 24px;
+  --transition: 0.4s;
+  --highlight: hsl(var(--highlight-hue), 100%, 70%);
+  --highlight-50: hsla(var(--highlight-hue), 100%, 70%, 0.5);
+  --highlight-30: hsla(var(--highlight-hue), 100%, 70%, 0.3);
+  --highlight-20: hsla(var(--highlight-hue), 100%, 70%, 0.2);
+  --highlight-80: hsla(var(--highlight-hue), 100%, 70%, 0.8);
+  --ui-anim-svg-fill: #e8e8e8;
+}
+
+.ui-anim-btn {
+  z-index: 0;
+  isolation: isolate;
+}
+
+.ui-anim-btn::before {
+  content: "";
+  position: absolute;
+  top: calc(0px - var(--padding));
+  left: calc(0px - var(--padding));
+  width: calc(100% + var(--padding) * 2);
+  height: calc(100% + var(--padding) * 2);
+  border-radius: calc(var(--radius) + var(--padding));
+  pointer-events: none;
+  background-image: linear-gradient(0deg, #0004, #000a);
+  z-index: -1;
+  transition: box-shadow var(--transition), filter var(--transition);
+  box-shadow:
+    0 -8px 8px -6px #0000 inset,
+    0 -16px 16px -8px #00000000 inset,
+    1px 1px 1px #fff2,
+    2px 2px 2px #fff1,
+    -1px -1px 1px #0002,
+    -2px -2px 2px #0001;
+}
+
+.ui-anim-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  background-image: linear-gradient(0deg, #fff, var(--highlight), var(--highlight-50), 8%, transparent);
+  background-position: 0 0;
+  opacity: 0;
+  transition: opacity var(--transition), filter var(--transition);
+}
+
+/* Animated button letter shimmer */
+.ui-anim-letter {
+  color: #ffffff88;
+  animation: ui-letter-anim 2s ease-in-out infinite;
+  transition: color var(--transition), text-shadow var(--transition), opacity var(--transition);
+}
+
+@keyframes ui-letter-anim {
+  50% {
+    text-shadow: 0 0 3px #fff8;
+    color: #fff;
+  }
+}
+
+/* SVG sparkle flicker */
+.ui-anim-btn-svg {
+  filter: drop-shadow(0 0 2px #fff9);
+  animation: ui-flicker 2s linear infinite;
+  animation-delay: 0.5s;
+}
+
+@keyframes ui-flicker {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes ui-appear {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Focus state */
+.ui-anim-btn:focus .ui-anim-txt-1 {
+  animation: ui-opacity-swap 0.3s ease-in-out forwards;
+  animation-delay: 1s;
+}
+.ui-anim-btn:focus .ui-anim-txt-2 {
+  animation: ui-opacity-swap 0.3s ease-in-out reverse forwards;
+  animation-delay: 1s;
+}
+
+@keyframes ui-opacity-swap {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.ui-anim-btn:focus .ui-anim-letter {
+  animation:
+    ui-focused-letter 1s ease-in-out forwards,
+    ui-letter-anim 1.2s ease-in-out infinite;
+  animation-delay: 0s, 1s;
+}
+
+@keyframes ui-focused-letter {
+  0%, 100% {
+    filter: blur(0px);
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(2);
+    filter: blur(10px) brightness(150%) drop-shadow(-36px 12px 12px var(--highlight));
+  }
+}
+
+.ui-anim-btn:focus .ui-anim-btn-svg {
+  animation-duration: 1.2s;
+  animation-delay: 0.2s;
+}
+
+.ui-anim-btn:focus::before {
+  box-shadow:
+    0 -8px 12px -6px #fff3 inset,
+    0 -16px 16px -8px var(--highlight-20) inset,
+    1px 1px 1px #fff3,
+    2px 2px 2px #fff1,
+    -1px -1px 1px #0002,
+    -2px -2px 2px #0001;
+}
+.ui-anim-btn:focus::after {
+  opacity: 0.6;
+  mask-image: linear-gradient(0deg, #fff, transparent);
+  -webkit-mask-image: linear-gradient(0deg, #fff, transparent);
+  filter: brightness(100%);
+}
+
+/* Hover — triggered from outer wrapper so clicks work */
+:hover > .ui-anim-btn {
+  border-color: hsla(var(--highlight-hue), 100%, 80%, 0.4);
+}
+:hover > .ui-anim-btn::before {
+  box-shadow:
+    0 -8px 8px -6px #fffa inset,
+    0 -16px 16px -8px var(--highlight-30) inset,
+    1px 1px 1px #fff2,
+    2px 2px 2px #fff1,
+    -1px -1px 1px #0002,
+    -2px -2px 2px #0001;
+}
+:hover > .ui-anim-btn::after {
+  opacity: 1;
+  mask-image: linear-gradient(0deg, #fff, transparent);
+  -webkit-mask-image: linear-gradient(0deg, #fff, transparent);
+}
+:hover > .ui-anim-btn .ui-anim-btn-svg {
+  fill: #fff;
+  filter: drop-shadow(0 0 3px var(--highlight)) drop-shadow(0 -4px 6px #0009);
+  animation: none;
+}
+:hover > .ui-anim-btn .ui-anim-letter {
+  color: #fff;
+  text-shadow: 0 0 6px var(--highlight-50);
+  animation: none;
+}
+
+/* Active / pressed */
+:active > .ui-anim-btn {
+  border-color: hsla(var(--highlight-hue), 100%, 80%, 0.7);
+  background-color: hsla(var(--highlight-hue), 50%, 20%, 0.5);
+}
+:active > .ui-anim-btn::before {
+  box-shadow:
+    0 -8px 12px -6px #fffa inset,
+    0 -16px 16px -8px var(--highlight-80) inset,
+    1px 1px 1px #fff4,
+    2px 2px 2px #fff2,
+    -1px -1px 1px #0002,
+    -2px -2px 2px #0001;
+}
+:active > .ui-anim-btn::after {
+  opacity: 1;
+  mask-image: linear-gradient(0deg, #fff, transparent);
+  -webkit-mask-image: linear-gradient(0deg, #fff, transparent);
+  filter: brightness(200%);
+}
+:active > .ui-anim-btn .ui-anim-letter {
+  text-shadow: 0 0 1px hsla(var(--highlight-hue), 100%, 90%, 0.9);
+  animation: none;
+}
+
+/* Letter stagger delays */
+.ui-anim-txt-1 .ui-anim-letter:nth-child(1),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(1) { animation-delay: 0s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(2),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(2) { animation-delay: 0.08s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(3),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(3) { animation-delay: 0.16s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(4),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(4) { animation-delay: 0.24s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(5),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(5) { animation-delay: 0.32s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(6),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(6) { animation-delay: 0.4s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(7),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(7) { animation-delay: 0.48s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(8),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(8) { animation-delay: 0.56s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(9),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(9) { animation-delay: 0.64s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(10),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(10) { animation-delay: 0.72s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(11),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(11) { animation-delay: 0.8s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(12),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(12) { animation-delay: 0.88s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(13),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(13) { animation-delay: 0.96s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(14),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(14) { animation-delay: 1.04s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(15),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(15) { animation-delay: 1.12s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(16),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(16) { animation-delay: 1.2s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(17),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(17) { animation-delay: 1.28s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(18),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(18) { animation-delay: 1.36s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(19),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(19) { animation-delay: 1.44s; }
+.ui-anim-txt-1 .ui-anim-letter:nth-child(20),
+.ui-anim-txt-2 .ui-anim-letter:nth-child(20) { animation-delay: 1.52s; }
+
+/* Disabled */
+.ui-anim-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
