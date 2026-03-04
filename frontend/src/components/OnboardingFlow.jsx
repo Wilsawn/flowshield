@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe, Lock, Cpu, Radar } from 'lucide-react'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
@@ -20,6 +20,18 @@ const slideIn = {
   initial: { opacity: 0, x: 20 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.25, 0.4, 0.25, 1] } },
   exit: { opacity: 0, x: -20, transition: { duration: 0.25 } },
+}
+
+/* Primary button with rotating border glow */
+function GlowButton({ children, className = '', ...props }) {
+  return (
+    <button
+      className={`btn-glow-orbit w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] transition-all duration-500 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      {...props}
+    >
+      <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
+    </button>
+  )
 }
 
 export default function OnboardingFlow({ onComplete, onBack }) {
@@ -46,7 +58,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setAuthMethod('email')
     setEmailLoading(true)
 
-    // Check if user already has an account — skip full onboarding if so
     try {
       const res = await fetch(`${API}/api/accounts/login`, {
         method: 'POST',
@@ -55,7 +66,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       })
       if (res.ok) {
         const data = await res.json()
-        // Existing user — restore session and go straight to dashboard
         if (data.token) localStorage.setItem('flowshield_token', data.token)
         localStorage.setItem('flowshield_wallet', JSON.stringify({
           loggedIn: true,
@@ -76,10 +86,9 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         return
       }
     } catch {
-      // Login failed (backend down, etc.) — continue with new account flow
+      // Login failed — continue with new account flow
     }
 
-    // New user — continue onboarding
     setEmailLoading(false)
     setStep('jurisdiction')
   }
@@ -92,12 +101,10 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     let passkeySuccess = false
 
     try {
-      // Real WebAuthn passkey creation
       if (window.PublicKeyCredential) {
         const challenge = new Uint8Array(32)
         crypto.getRandomValues(challenge)
 
-        // Use a unique user ID based on email + timestamp to avoid duplicate credential errors
         const userIdStr = `flowshield-${email}-${Date.now()}`
         const userId = new TextEncoder().encode(userIdStr)
 
@@ -114,8 +121,8 @@ export default function OnboardingFlow({ onComplete, onBack }) {
               displayName: email.split('@')[0],
             },
             pubKeyCredParams: [
-              { alg: -7, type: 'public-key' },   // ES256
-              { alg: -257, type: 'public-key' },  // RS256
+              { alg: -7, type: 'public-key' },
+              { alg: -257, type: 'public-key' },
             ],
             authenticatorSelection: {
               userVerification: 'preferred',
@@ -126,10 +133,8 @@ export default function OnboardingFlow({ onComplete, onBack }) {
           },
         })
 
-        // Credential created successfully — real biometric was used
         passkeySuccess = true
       } else {
-        // WebAuthn not available on this device — allow through
         await new Promise((r) => setTimeout(r, 1200))
         passkeySuccess = true
       }
@@ -137,15 +142,12 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       console.warn('[FlowShield] WebAuthn:', err.name)
 
       if (err.name === 'InvalidStateError') {
-        // Credential already exists for this user — that's fine, passkey is set up
         passkeySuccess = true
       } else if (err.name === 'NotAllowedError') {
-        // User actually cancelled the prompt
         setScanPulse(false)
         setError('Passkey setup was cancelled. Please try again to continue.')
         return
       } else {
-        // Other error (SecurityError, etc.) — log but allow skip for demo
         console.warn('[FlowShield] WebAuthn error, using fallback:', err.name)
         setScanPulse(false)
         setError(`Passkey error: ${err.message}. Tap to retry.`)
@@ -162,7 +164,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
     setScanPulse(false)
     setStep('verifying')
 
-    // Step 1: Create a Flow account for this user (or retrieve existing)
     setCurrentVerifyStep(1)
     let userFlowAddress = null
     try {
@@ -174,18 +175,15 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       const acctData = await acctRes.json()
       if (acctData.address) {
         userFlowAddress = acctData.address
-        // Store session token for authenticated API calls
         if (acctData.token) {
           localStorage.setItem('flowshield_token', acctData.token)
         }
-        // Store as the user's wallet so the dashboard picks it up
         localStorage.setItem('flowshield_wallet', JSON.stringify({
           loggedIn: true,
           addr: acctData.address,
           custodial: true,
           email: email,
         }))
-        // Dispatch storage event so dashboard reacts immediately
         window.dispatchEvent(new Event('storage'))
       } else if (acctData.error) {
         console.error('[FlowShield] Account creation failed:', acctData.error)
@@ -201,7 +199,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       return
     }
 
-    // Step 2: Start KYC + generate ZK proof
     setCurrentVerifyStep(2)
     let kycSession = null
     try {
@@ -219,11 +216,10 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       setVeriffUrl(kycSession.verificationUrl)
     }
 
-    // Generate ZK compliance proof in the browser (no PII leaves the device)
     let zkProof = null
     try {
       const kycSecret = kycSession?.transactionId || `kyc_${email}_${Date.now()}`
-      const expiryTimestamp = Math.floor(Date.now() / 1000) + 7776000 // 90 days
+      const expiryTimestamp = Math.floor(Date.now() / 1000) + 7776000
       zkProof = await generateComplianceProof({
         kycSecret,
         jurisdiction: jurisdiction || 'US',
@@ -235,9 +231,6 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       console.warn('[FlowShield] ZK proof generation:', err.message)
     }
 
-    // Step 3: Mint compliance credential into the user's own Flow account.
-    // Uses a two-authorizer transaction (admin + user) so the credential lands
-    // in the user's storage — not the deployer's.
     setCurrentVerifyStep(3)
 
     if (kycSession?.transactionId) {
@@ -282,15 +275,12 @@ export default function OnboardingFlow({ onComplete, onBack }) {
       return
     }
 
-    // Step 4: Confirm on-chain state
     setCurrentVerifyStep(4)
     await new Promise((r) => setTimeout(r, 1000))
 
-    // Step 5: Finalize
     setCurrentVerifyStep(5)
     await new Promise((r) => setTimeout(r, 600))
 
-    // Store user session in localStorage with ZK proof data + Flow address
     const userSession = {
       email,
       jurisdiction,
@@ -314,10 +304,17 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
   return (
     <div className="min-h-screen bg-[#060a13] flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Ambient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full bg-emerald-500/[0.03] blur-[120px] pointer-events-none" />
+      {/* Mesh gradient background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[20%] left-[15%] w-[500px] h-[500px] rounded-full bg-emerald-500/[0.04] blur-[150px]" />
+        <div className="absolute bottom-[10%] right-[10%] w-[400px] h-[400px] rounded-full bg-cyan-500/[0.03] blur-[120px]" />
+        <div className="absolute top-[60%] left-[50%] w-[300px] h-[300px] rounded-full bg-violet-500/[0.02] blur-[100px]" />
+      </div>
 
-      <div className="w-full max-w-[420px] relative z-10">
+      {/* Dot grid overlay */}
+      <div className="absolute inset-0 dot-grid pointer-events-none" />
+
+      <div className="w-full max-w-[460px] relative z-10">
         {/* Back button */}
         {step === 'email' && (
           <motion.button
@@ -330,10 +327,23 @@ export default function OnboardingFlow({ onComplete, onBack }) {
           </motion.button>
         )}
 
+        {/* Step label */}
+        <motion.div
+          className="flex items-center gap-3 mb-4"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <span className="text-[11px] font-mono text-emerald-400/50 tracking-wider uppercase">
+            Step {stepIndex[step] + 1} of 5
+          </span>
+          <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/20 to-transparent" />
+        </motion.div>
+
         {/* Progress bar */}
-        <div className="h-0.5 bg-white/[0.04] rounded-full mb-8 overflow-hidden">
+        <div className="h-[3px] bg-white/[0.04] rounded-full mb-8 overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
+            className="h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-400 rounded-full"
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           />
@@ -341,15 +351,17 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
         {/* Card */}
         <motion.div
-          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden"
+          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md overflow-hidden shadow-2xl shadow-black/40"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="p-8">
+          <div className="p-8 md:p-10">
             {/* Logo */}
             <div className="flex items-center gap-2.5 mb-8">
-              <FlowShieldLogo size={24} />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/[0.12] flex items-center justify-center">
+                <FlowShieldLogo size={20} />
+              </div>
               <span className="text-[15px] font-semibold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">FlowShield</span>
             </div>
 
@@ -357,37 +369,32 @@ export default function OnboardingFlow({ onComplete, onBack }) {
               {/* Step: Email */}
               {step === 'email' && (
                 <motion.form key="email" onSubmit={handleEmailSubmit} {...slideIn}>
-                  <h2 className="text-xl font-bold text-white mb-2">Create your account</h2>
+                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Create your account</h2>
                   <p className="text-[13px] text-white/35 mb-7 leading-relaxed">
                     No wallet needed. No seed phrases. We create a secure Flow account for you automatically.
                   </p>
                   <div className="space-y-4">
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-3.5 h-4 w-4 text-white/20" />
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-3.5 h-4 w-4 text-white/20 group-focus-within:text-emerald-400/50 transition-colors" />
                       <input
                         type="email"
                         placeholder="you@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-12 bg-white/[0.03] border border-white/[0.06] rounded-xl pl-11 pr-4 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                        className="w-full h-12 bg-white/[0.03] border border-white/[0.08] rounded-xl pl-11 pr-4 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 focus:bg-white/[0.04] transition-all duration-300"
                         autoFocus
                       />
                     </div>
                     {error && <p className="text-[12px] text-red-400">{error}</p>}
-                    <button
-                      type="submit"
-                      disabled={emailLoading}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500 disabled:opacity-60"
-                    >
+                    <GlowButton type="submit" disabled={emailLoading}>
                       {emailLoading ? (
-                        <span className="flex items-center justify-center gap-2">
+                        <>
                           <Loader2 className="w-4 h-4 animate-spin" /> Checking...
-                        </span>
+                        </>
                       ) : 'Continue with Email'}
-                    </button>
-
+                    </GlowButton>
                   </div>
-                  <p className="text-[11px] text-white/20 mt-5 text-center leading-relaxed">
+                  <p className="text-[11px] text-white/15 mt-6 text-center leading-relaxed">
                     Your account is secured with industry-standard encryption.
                     No personal data is ever stored on-chain.
                   </p>
@@ -397,7 +404,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
               {/* Step: Jurisdiction */}
               {step === 'jurisdiction' && (
                 <motion.div key="jurisdiction" {...slideIn}>
-                  <h2 className="text-xl font-bold text-white mb-2">Select your jurisdiction</h2>
+                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Select your jurisdiction</h2>
                   <p className="text-[13px] text-white/35 mb-6 leading-relaxed">
                     This determines which compliance rules apply to your account. You can change it later.
                   </p>
@@ -408,8 +415,8 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                         onClick={() => setJurisdiction(j.code)}
                         className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl border text-left transition-all duration-300 ${
                           jurisdiction === j.code
-                            ? 'border-emerald-500/30 bg-emerald-500/[0.06]'
-                            : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.03]'
+                            ? 'border-emerald-500/30 bg-emerald-500/[0.06] shadow-[0_0_20px_rgba(52,211,153,0.06)]'
+                            : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
                         }`}
                       >
                         <span className="text-2xl leading-none">{j.flag}</span>
@@ -435,20 +442,19 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       </button>
                     ))}
                   </div>
-                  <button
+                  <GlowButton
                     onClick={() => jurisdiction && setStep('passkey')}
                     disabled={!jurisdiction}
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     Continue
-                  </button>
+                  </GlowButton>
                 </motion.div>
               )}
 
               {/* Step: Passkey */}
               {step === 'passkey' && (
                 <motion.div key="passkey" {...slideIn}>
-                  <h2 className="text-xl font-bold text-white mb-2">Set up passkey</h2>
+                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Set up passkey</h2>
                   <p className="text-[13px] text-white/35 mb-8 leading-relaxed">
                     Use your fingerprint, face, or device PIN. Fast, secure, no passwords ever.
                   </p>
@@ -490,25 +496,21 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                     {error && (
                       <p className="text-[12px] text-red-400 text-center mb-3 w-full">{error}</p>
                     )}
-                    <button
-                      onClick={handlePasskeySetup}
-                      disabled={scanPulse}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500 disabled:opacity-60"
-                    >
+                    <GlowButton onClick={handlePasskeySetup} disabled={scanPulse}>
                       {scanPulse ? (
-                        <span className="flex items-center justify-center gap-2">
+                        <>
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Scanning...
-                        </span>
+                        </>
                       ) : (
-                        <span className="flex items-center justify-center gap-2">
+                        <>
                           <Fingerprint className="w-4 h-4" />
                           {error ? 'Try Again' : 'Set Up Passkey'}
-                        </span>
+                        </>
                       )}
-                    </button>
+                    </GlowButton>
                   </div>
-                  <p className="text-[11px] text-white/20 text-center mt-2">
+                  <p className="text-[11px] text-white/15 text-center mt-2">
                     Passkeys use WebAuthn — the same tech behind Apple Face ID and Google Passkeys.
                   </p>
                 </motion.div>
@@ -517,7 +519,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
               {/* Step: Verifying */}
               {step === 'verifying' && (
                 <motion.div key="verifying" {...slideIn}>
-                  <h2 className="text-xl font-bold text-white mb-2">Setting up your account</h2>
+                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Setting up your account</h2>
                   <p className="text-[13px] text-white/35 mb-8">
                     Invisible compliance — just a moment...
                   </p>
@@ -528,7 +530,10 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       return (
                         <motion.div
                           key={i}
-                          className="flex items-start gap-3.5"
+                          className={`flex items-start gap-3.5 p-3 rounded-xl transition-all duration-300 ${
+                            active ? 'bg-emerald-500/[0.04] border border-emerald-500/[0.1]' :
+                            done ? 'border border-transparent' : 'border border-transparent'
+                          }`}
                           initial={{ opacity: 0.3 }}
                           animate={{ opacity: done || active ? 1 : 0.3 }}
                           transition={{ duration: 0.4 }}
@@ -600,12 +605,12 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <h2 className="text-xl font-bold text-white mb-2">You're all set!</h2>
+                    <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">You're all set!</h2>
                     <p className="text-[13px] text-white/35 mb-3">
                       Account created, verified, and compliant.
                     </p>
 
-                    {/* Veriff badge — shows when real KYC was used */}
+                    {/* Veriff badge */}
                     {veriffUrl && (
                       <motion.div
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/20 mb-2"
@@ -617,7 +622,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       </motion.div>
                     )}
 
-                    {/* ZK Proof badge — always shows after proof generation */}
+                    {/* ZK Proof badge */}
                     <motion.div
                       className="flex items-center justify-center gap-3 mb-4"
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -625,7 +630,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       transition={{ delay: 0.5 }}
                     >
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/[0.08] border border-violet-500/20">
-                        <svg className="w-3 h-3 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <Lock className="w-3 h-3 text-violet-400" />
                         <span className="text-[10px] font-semibold text-violet-400 tracking-wide uppercase">ZK Proof Generated</span>
                       </div>
                     </motion.div>
@@ -633,9 +638,9 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                     {/* Success details */}
                     <div className="flex items-center justify-center gap-4 mb-8">
                       {[
-                        { label: 'ZK Verified', icon: '✓' },
-                        { label: 'Zero data on-chain', icon: '✓' },
-                        { label: 'Zero gas fees', icon: '✓' },
+                        { label: 'ZK Verified' },
+                        { label: 'Zero data on-chain' },
+                        { label: 'Zero gas fees' },
                       ].map((item, i) => (
                         <motion.span
                           key={i}
@@ -644,22 +649,41 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                           animate={{ opacity: 1 }}
                           transition={{ delay: 0.5 + i * 0.1 }}
                         >
-                          <span className="text-emerald-400">{item.icon}</span> {item.label}
+                          <CheckCircle2 className="w-3 h-3" /> {item.label}
                         </motion.span>
                       ))}
                     </div>
 
-                    <button
-                      onClick={onComplete}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] hover:shadow-[0_0_30px_rgba(52,211,153,0.2)] transition-all duration-500"
-                    >
+                    <GlowButton onClick={onComplete}>
                       Go to Dashboard
-                    </button>
+                    </GlowButton>
                   </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+        </motion.div>
+
+        {/* Trust badges below card */}
+        <motion.div
+          className="flex items-center justify-center gap-6 mt-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+        >
+          {[
+            { icon: ShieldCheck, label: 'ZK Privacy' },
+            { icon: Lock, label: 'Encrypted' },
+            { icon: Cpu, label: 'On-Chain' },
+          ].map((badge, i) => {
+            const Icon = badge.icon
+            return (
+              <div key={i} className="flex items-center gap-1.5">
+                <Icon className="w-3 h-3 text-white/15" />
+                <span className="text-[10px] text-white/15 font-medium">{badge.label}</span>
+              </div>
+            )
+          })}
         </motion.div>
 
         {/* Step indicators */}

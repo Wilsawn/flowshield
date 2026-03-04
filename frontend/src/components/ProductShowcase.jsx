@@ -80,12 +80,74 @@ function CopilotNode() {
               <span className="w-4 h-4 rounded-md bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-[8px] font-bold text-[#060a13]">AI</span>
               <span className="text-[10px] text-white/25">FlowShield Copilot</span>
             </div>
-            <p className="text-[12px] text-white/50 leading-relaxed">Your contract checks <code className="text-[11px] px-1 py-0.5 rounded bg-white/[0.06] text-emerald-400/80 font-mono">isCompliant()</code> but doesn't enforce the <span className="text-amber-400/80 font-medium">MiCA travel rule threshold</span> of €1,000.</p>
+            <p className="text-[12px] text-white/50 leading-relaxed">Your contract checks <code className="text-[11px] px-1 py-0.5 rounded bg-white/[0.06] text-emerald-400/80 font-mono">isCompliant()</code> but doesn't enforce the <span className="text-amber-400/80 font-medium">MiCA travel rule threshold</span> of 1,000.</p>
           </div>
         </div>
-        <div className="flex gap-2 ml-1">
+        <div className="flex items-center gap-2 ml-1">
           <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-medium text-emerald-400">Apply Fix</span>
           <span className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-emerald-500/[0.06] text-[10px] font-medium text-white/30">View Code</span>
+          <span className="ml-auto text-[9px] text-white/20 italic">Conversations synced</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Custom Node: A2A Orchestrator ─── */
+function OrchestratorNode() {
+  return (
+    <div className="w-[360px] rounded-2xl border border-violet-500/[0.12] bg-[#0a1410]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden">
+      <Handle type="target" position={Position.Left} id="orch-left" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
+      <Handle type="target" position={Position.Top} id="orch-top" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
+      <Handle type="source" position={Position.Right} id="orch-right" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
+      <Handle type="source" position={Position.Bottom} id="orch-bottom" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-500/[0.08]">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        <span className="ml-3 text-[11px] text-white/25 font-medium">A2A Orchestrator</span>
+      </div>
+      <div className="p-4 space-y-3">
+        {/* Chain visualization */}
+        <div className="flex items-center gap-1">
+          {[
+            { label: 'Risk Scoring', status: 'done' },
+            { label: 'Anomaly Monitor', status: 'working' },
+            { label: 'Copilot Summary', status: 'pending' },
+          ].map((step, i) => (
+            <div key={i} className="flex items-center flex-1">
+              <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg flex-1 text-[9px] font-medium border ${
+                step.status === 'done' ? 'bg-violet-500/[0.08] border-violet-500/20 text-violet-400/70' :
+                step.status === 'working' ? 'bg-violet-500/15 border-violet-500/30 text-violet-300' :
+                'bg-white/[0.02] border-white/[0.06] text-white/25'
+              }`}>
+                {step.status === 'done' && <span className="text-violet-400">&#10003;</span>}
+                {step.status === 'working' && <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" />}
+                <span className="truncate">{step.label}</span>
+              </div>
+              {i < 2 && <span className="text-white/10 mx-0.5 shrink-0">&#8250;</span>}
+            </div>
+          ))}
+        </div>
+        {/* Agent task card */}
+        <div className="rounded-xl bg-violet-500/[0.04] border border-violet-500/15 p-3 flex items-start gap-3">
+          <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
+            <span className="text-violet-400 text-[11px] font-bold">A2</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-white/70">full-risk-review chain</p>
+            <p className="text-[10px] text-white/30 mt-0.5">3 agents chained &middot; anomaly monitor active</p>
+            <div className="flex gap-2 mt-2">
+              <span className="px-2 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-[9px] font-medium text-violet-400">View Chain</span>
+              <span className="px-2 py-1 rounded bg-white/[0.03] border border-white/[0.06] text-[9px] font-medium text-white/25">Logs</span>
+            </div>
+          </div>
+        </div>
+        {/* Footer indicator */}
+        <div className="flex items-center gap-3 px-1">
+          <span className="text-[9px] text-violet-400/50 font-medium">4 Agents</span>
+          <span className="text-white/10">&#183;</span>
+          <span className="text-[9px] text-violet-400/50 font-medium">2 Chains</span>
         </div>
       </div>
     </div>
@@ -120,11 +182,11 @@ function RadarNode() {
                 s.active ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
                 'bg-white/[0.01] border-emerald-500/[0.06] text-white/20'
               }`}>
-                {s.done && <span className="text-emerald-400">✓</span>}
+                {s.done && <span className="text-emerald-400">&#10003;</span>}
                 {s.active && <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />}
                 <span className="truncate">{s.label}</span>
               </div>
-              {i < 3 && <span className="text-white/10 mx-0.5 shrink-0">›</span>}
+              {i < 3 && <span className="text-white/10 mx-0.5 shrink-0">&#8250;</span>}
             </div>
           ))}
         </div>
@@ -134,7 +196,7 @@ function RadarNode() {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-semibold text-white/70">EU — MiCA Travel Rule Gap</p>
-            <p className="text-[10px] text-white/30 mt-0.5">Threshold should be €1,000 but is set to $3,000</p>
+            <p className="text-[10px] text-white/30 mt-0.5">Threshold should be 1,000 but is set to $3,000</p>
             <div className="flex gap-2 mt-2">
               <span className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-medium text-emerald-400">Approve Fix</span>
               <span className="px-2 py-1 rounded bg-white/[0.03] border border-emerald-500/[0.06] text-[9px] font-medium text-white/25">Reject</span>
@@ -166,6 +228,7 @@ function StatusNode({ data }) {
 const nodeTypes = {
   dashboard: DashboardNode,
   copilot: CopilotNode,
+  orchestrator: OrchestratorNode,
   radar: RadarNode,
   status: StatusNode,
 }
@@ -179,24 +242,35 @@ const initialNodes = [
   {
     id: 'copilot',
     type: 'copilot',
-    position: { x: 520, y: 0 },
+    position: { x: 530, y: 0 },
+  },
+  {
+    id: 'orchestrator',
+    type: 'orchestrator',
+    position: { x: 530, y: 340 },
   },
   {
     id: 'radar',
     type: 'radar',
-    position: { x: 200, y: 380 },
+    position: { x: 100, y: 400 },
   },
   {
     id: 'status-flow',
     type: 'status',
-    position: { x: 660, y: 480 },
+    position: { x: 700, y: 500 },
     data: { label: 'Flow Testnet', color: 'bg-emerald-400', pulse: true, badge: 'LIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400' },
   },
   {
     id: 'status-compliance',
     type: 'status',
-    position: { x: -60, y: 380 },
+    position: { x: -70, y: 380 },
     data: { label: 'Compliance Check', color: 'bg-cyan-400', pulse: false, badge: 'PASSED', badgeClass: 'bg-cyan-500/10 text-cyan-400' },
+  },
+  {
+    id: 'status-guard',
+    type: 'status',
+    position: { x: 730, y: 130 },
+    data: { label: 'Prompt Guard', color: 'bg-cyan-400', pulse: false, badge: 'ACTIVE', badgeClass: 'bg-cyan-500/10 text-cyan-400' },
   },
 ]
 
@@ -212,14 +286,24 @@ const initialEdges = [
     markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.4)', width: 16, height: 16 },
   },
   {
-    id: 'copilot-to-radar',
+    id: 'copilot-to-orchestrator',
     source: 'copilot',
-    target: 'radar',
+    target: 'orchestrator',
     sourceHandle: 'cop-out',
+    targetHandle: 'orch-top',
+    animated: true,
+    style: { stroke: 'rgba(139,92,246,0.25)', strokeWidth: 1.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.4)', width: 16, height: 16 },
+  },
+  {
+    id: 'orchestrator-to-radar',
+    source: 'orchestrator',
+    target: 'radar',
+    sourceHandle: 'orch-left',
     targetHandle: 'radar-in',
     animated: true,
-    style: { stroke: 'rgba(34,211,238,0.2)', strokeWidth: 1.5 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(34,211,238,0.35)', width: 16, height: 16 },
+    style: { stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.35)', width: 16, height: 16 },
   },
   {
     id: 'dash-to-compliance',
@@ -247,6 +331,24 @@ const initialEdges = [
     style: { stroke: 'rgba(52,211,153,0.18)', strokeWidth: 1 },
     markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.3)', width: 14, height: 14 },
   },
+  {
+    id: 'guard-to-copilot',
+    source: 'status-guard',
+    target: 'copilot',
+    targetHandle: 'cop-in',
+    animated: true,
+    style: { stroke: 'rgba(34,211,238,0.2)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(34,211,238,0.35)', width: 14, height: 14 },
+  },
+  {
+    id: 'orchestrator-to-flow',
+    source: 'orchestrator',
+    target: 'status-flow',
+    sourceHandle: 'orch-bottom',
+    animated: true,
+    style: { stroke: 'rgba(139,92,246,0.15)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.3)', width: 14, height: 14 },
+  },
 ]
 
 const fitViewOptions = { padding: 0.15, maxZoom: 0.9 }
@@ -256,7 +358,7 @@ export default function ProductShowcase() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   return (
-    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#060e09] overflow-hidden relative">
+    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a0f1a] overflow-hidden relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -270,7 +372,7 @@ export default function ProductShowcase() {
         proOptions={{ hideAttribution: true }}
         className="product-showcase-flow"
       >
-        <Background variant="dots" color="rgba(52,211,153,0.06)" gap={20} size={1} />
+        <Background variant="dots" color="rgba(52,211,153,0.12)" gap={24} size={1.2} />
         <Controls
           showInteractive={false}
           className="!bg-[#0a1410]/80 !border-emerald-500/[0.06] !rounded-xl !shadow-lg [&>button]:!bg-transparent [&>button]:!border-emerald-500/[0.06] [&>button]:!text-white/60 [&>button:hover]:!text-white/90 [&>button]:!w-7 [&>button]:!h-7"
@@ -278,7 +380,7 @@ export default function ProductShowcase() {
       </ReactFlow>
       {/* Subtle gradient overlay at edges */}
       <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
-        background: 'linear-gradient(to right, #060e09 0%, transparent 5%, transparent 95%, #060e09 100%), linear-gradient(to bottom, #060e09 0%, transparent 5%, transparent 95%, #060e09 100%)',
+        background: 'linear-gradient(to right, #0a0f1a 0%, transparent 5%, transparent 95%, #0a0f1a 100%), linear-gradient(to bottom, #0a0f1a 0%, transparent 5%, transparent 95%, #0a0f1a 100%)',
       }} />
     </div>
   )

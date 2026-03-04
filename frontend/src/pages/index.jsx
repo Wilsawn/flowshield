@@ -6,6 +6,7 @@ import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
 import AnimatedGenerateButton from '@/components/ui/animated-generate-button'
+import VerticalBarsNoise from '@/components/ui/vertical-bars'
 
 /* ── shared glass card style ── */
 const glass = 'rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/60 backdrop-blur-sm'
@@ -233,6 +234,69 @@ export default function LandingPage() {
         </div>
       ),
     },
+    {
+      icon: Cpu,
+      name: 'A2A Orchestrator',
+      sub: 'Agent-to-agent protocol',
+      desc: 'Agent-to-agent protocol that chains multi-agent workflows. Risk scoring feeds anomaly detection which feeds the copilot — all automated.',
+      preview: (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/[0.08] border border-violet-500/[0.12] flex items-center justify-center">
+              <Cpu className="w-5 h-5 text-violet-400/60" />
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-white/90">Agent Chains</p>
+              <p className="text-[12px] text-white/35">Predefined orchestration workflows</p>
+            </div>
+          </div>
+          <div className={`${glassInner} p-4 space-y-3`}>
+            {[
+              { name: 'full-risk-review', agents: 3, status: 'active' },
+              { name: 'compliance-review', agents: 2, status: 'idle' },
+            ].map((chain) => (
+              <div key={chain.name} className="flex items-center justify-between py-1.5">
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] font-mono font-medium text-white/70">{chain.name}</span>
+                  <span className="text-[11px] text-white/25">{chain.agents} agents</span>
+                </div>
+                <span className={`flex items-center gap-1.5 text-[11px] font-medium ${
+                  chain.status === 'active' ? 'text-violet-400/70' : 'text-white/30'
+                }`}>
+                  {chain.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />}
+                  {chain.status === 'active' ? 'Running' : 'Idle'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className={`${glassInner} p-4 space-y-2`}>
+            <p className="text-[11px] text-white/25 uppercase tracking-wider">Task Lifecycle</p>
+            <div className="flex gap-2">
+              {['submitted', 'working', 'completed', 'failed'].map((state) => (
+                <span key={state} className={`px-2 py-1 rounded text-[10px] font-medium border ${
+                  state === 'completed' ? 'bg-emerald-500/[0.06] border-emerald-500/15 text-emerald-400/60' :
+                  state === 'working' ? 'bg-violet-500/[0.08] border-violet-500/20 text-violet-400/60' :
+                  state === 'failed' ? 'bg-red-500/[0.06] border-red-500/15 text-red-400/50' :
+                  'bg-white/[0.02] border-white/[0.06] text-white/30'
+                }`}>{state}</span>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: '4', l: 'Agents' },
+              { v: '2', l: 'Chains' },
+              { v: '~3s', l: 'Avg Latency' },
+            ].map((s) => (
+              <div key={s.l} className={`${glassInner} p-3 text-center`}>
+                <p className="text-[18px] font-bold text-white/85">{s.v}</p>
+                <p className="text-[10px] text-white/30">{s.l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -271,6 +335,18 @@ export default function LandingPage() {
 
       {/* ─── HERO ─── */}
       <section className="relative pt-28 pb-20 md:pt-40 md:pb-32 overflow-hidden">
+        {/* Vertical bars noise background */}
+        <div className="absolute inset-0 opacity-[0.07] pointer-events-none">
+          <VerticalBarsNoise
+            backgroundColor="#060e09"
+            lineColor="#1a4a35"
+            barColor="#34d399"
+            lineWidth={0.5}
+            animationSpeed={0.0003}
+            removeWaveLine
+          />
+        </div>
+
         {/* Green ambient glow */}
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-emerald-600/[0.06] blur-[180px] pointer-events-none" />
 
@@ -694,7 +770,7 @@ export default function LandingPage() {
           >
             <AnimatedGenerateButton
               onClick={handleLaunch}
-              labelIdle="Start Building"
+              labelIdle="Launch Dashboard"
               labelActive="Launching..."
               highlightHueDeg={160}
               size="lg"
@@ -817,10 +893,10 @@ export default function LandingPage() {
             <div className="flex animate-[marqueeScroll_20s_linear_infinite] whitespace-nowrap">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="flex items-center gap-8 mx-8 shrink-0">
-                  <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.04] select-none">
+                  <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.08] select-none">
                     FlowShield
                   </span>
-                  <svg className="w-[clamp(2rem,5vw,4rem)] h-[clamp(2rem,5vw,4rem)] text-white/[0.04] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-[clamp(2rem,5vw,4rem)] h-[clamp(2rem,5vw,4rem)] text-white/[0.08] shrink-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
                   </svg>
                 </div>
