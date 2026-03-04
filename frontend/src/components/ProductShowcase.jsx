@@ -372,7 +372,7 @@ export default function ProductShowcase() {
         proOptions={{ hideAttribution: true }}
         className="product-showcase-flow"
       >
-        <Background variant="dots" color="rgba(52,211,153,0.12)" gap={24} size={1.2} />
+        <Background variant="dots" color="rgba(52,211,153,0.22)" gap={22} size={1.5} />
         <Controls
           showInteractive={false}
           className="!bg-[#0a1410]/80 !border-emerald-500/[0.06] !rounded-xl !shadow-lg [&>button]:!bg-transparent [&>button]:!border-emerald-500/[0.06] [&>button]:!text-white/60 [&>button:hover]:!text-white/90 [&>button]:!w-7 [&>button]:!h-7"

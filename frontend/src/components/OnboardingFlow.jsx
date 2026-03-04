@@ -303,16 +303,19 @@ export default function OnboardingFlow({ onComplete, onBack }) {
   const progress = step === 'complete' ? 100 : ((stepIndex[step] / 4) * 100)
 
   return (
-    <div className="min-h-screen bg-[#060a13] flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Mesh gradient background */}
+    <div className="min-h-screen bg-[#060e09] text-white flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Mesh gradient background — matching landing page */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[20%] left-[15%] w-[500px] h-[500px] rounded-full bg-emerald-500/[0.04] blur-[150px]" />
-        <div className="absolute bottom-[10%] right-[10%] w-[400px] h-[400px] rounded-full bg-cyan-500/[0.03] blur-[120px]" />
-        <div className="absolute top-[60%] left-[50%] w-[300px] h-[300px] rounded-full bg-violet-500/[0.02] blur-[100px]" />
+        <div className="absolute top-[15%] left-[10%] w-[600px] h-[600px] rounded-full bg-emerald-600/[0.06] blur-[180px]" />
+        <div className="absolute bottom-[5%] right-[5%] w-[500px] h-[500px] rounded-full bg-emerald-500/[0.04] blur-[150px]" />
+        <div className="absolute top-[50%] left-[60%] w-[400px] h-[400px] rounded-full bg-cyan-600/[0.03] blur-[120px]" />
       </div>
 
-      {/* Dot grid overlay */}
-      <div className="absolute inset-0 dot-grid pointer-events-none" />
+      {/* Dot grid overlay — matching landing dot-grid */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(rgba(52, 211, 153, 0.06) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }} />
 
       <div className="w-full max-w-[460px] relative z-10">
         {/* Back button */}
@@ -341,7 +344,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         </motion.div>
 
         {/* Progress bar */}
-        <div className="h-[3px] bg-white/[0.04] rounded-full mb-8 overflow-hidden">
+        <div className="h-[3px] bg-emerald-500/[0.06] rounded-full mb-8 overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-400 rounded-full"
             animate={{ width: `${progress}%` }}
@@ -349,9 +352,9 @@ export default function OnboardingFlow({ onComplete, onBack }) {
           />
         </div>
 
-        {/* Card */}
+        {/* Card — matching landing page glass style */}
         <motion.div
-          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md overflow-hidden shadow-2xl shadow-black/40"
+          className="rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/60 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/40"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -381,7 +384,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                         placeholder="you@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-12 bg-white/[0.03] border border-white/[0.08] rounded-xl pl-11 pr-4 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 focus:bg-white/[0.04] transition-all duration-300"
+                        className="w-full h-12 bg-emerald-500/[0.02] border border-emerald-500/[0.08] rounded-xl pl-11 pr-4 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/25 focus:bg-emerald-500/[0.04] transition-all duration-300"
                         autoFocus
                       />
                     </div>
@@ -416,7 +419,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                         className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl border text-left transition-all duration-300 ${
                           jurisdiction === j.code
                             ? 'border-emerald-500/30 bg-emerald-500/[0.06] shadow-[0_0_20px_rgba(52,211,153,0.06)]'
-                            : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
+                            : 'border-emerald-500/[0.06] bg-emerald-500/[0.02] hover:border-emerald-500/[0.12] hover:bg-emerald-500/[0.04]'
                         }`}
                       >
                         <span className="text-2xl leading-none">{j.flag}</span>
@@ -473,7 +476,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                         className={`relative w-24 h-24 rounded-full flex items-center justify-center border-2 transition-colors duration-500 ${
                           scanPulse
                             ? 'border-emerald-400 bg-emerald-500/10'
-                            : 'border-white/[0.08] bg-white/[0.02]'
+                            : 'border-emerald-500/[0.08] bg-emerald-500/[0.02]'
                         }`}
                         animate={scanPulse ? { scale: [1, 0.95, 1] } : {}}
                         transition={{ duration: 0.8, repeat: Infinity }}
@@ -550,7 +553,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                             ) : active ? (
                               <Loader2 className="h-4.5 w-4.5 text-emerald-400 animate-spin" />
                             ) : (
-                              <div className="h-4.5 w-4.5 rounded-full border border-white/[0.08]" />
+                              <div className="h-4.5 w-4.5 rounded-full border border-emerald-500/[0.12]" />
                             )}
                           </div>
                           <div>
@@ -679,8 +682,8 @@ export default function OnboardingFlow({ onComplete, onBack }) {
             const Icon = badge.icon
             return (
               <div key={i} className="flex items-center gap-1.5">
-                <Icon className="w-3 h-3 text-white/15" />
-                <span className="text-[10px] text-white/15 font-medium">{badge.label}</span>
+                <Icon className="w-3 h-3 text-emerald-400/25" />
+                <span className="text-[10px] text-emerald-400/25 font-medium">{badge.label}</span>
               </div>
             )
           })}
@@ -692,7 +695,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
             <div
               key={s}
               className={`h-1 rounded-full transition-all duration-500 ${
-                s === step ? 'w-6 bg-emerald-400' : stepIndex[s] < stepIndex[step] ? 'w-1.5 bg-emerald-400/40' : 'w-1.5 bg-white/[0.06]'
+                s === step ? 'w-6 bg-emerald-400' : stepIndex[s] < stepIndex[step] ? 'w-1.5 bg-emerald-400/40' : 'w-1.5 bg-emerald-500/[0.1]'
               }`}
             />
           ))}
