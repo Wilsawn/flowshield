@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AlertTriangle, FileSearch, CheckCircle2, ArrowUpCircle, Loader2, X, ExternalLink, ChevronRight, ShieldCheck, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 const STEPS = [
   { id: 'scan', label: 'AI Scans On-Chain', icon: FileSearch, description: 'Reads current RuleEngine rules from Flow blockchain' },
@@ -38,7 +39,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
     onAuditEntry?.('radar', 'Regulatory Radar reading on-chain rules...', 'info')
 
     try {
-      const res = await fetch(`${API}/api/copilot/radar/scan`, { method: 'POST' })
+      const res = await authFetch(`${API}/api/copilot/radar/scan`, { method: 'POST' })
       if (res.ok) {
         const data = await res.json()
         setScanResult(data)
@@ -75,7 +76,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
     onAuditEntry?.('radar', `Operator approved rule update for ${selectedGap.jurisdiction}`, 'success')
 
     try {
-      const res = await fetch(`${API}/api/copilot/radar/approve`, {
+      const res = await authFetch(`${API}/api/copilot/radar/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +125,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
     onAuditEntry?.('radar', 'Operator applying all remaining rule fixes...', 'success')
 
     try {
-      const res = await fetch(`${API}/api/copilot/radar/approve-all`, {
+      const res = await authFetch(`${API}/api/copilot/radar/approve-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

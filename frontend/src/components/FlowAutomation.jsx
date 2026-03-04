@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { Zap, Shield, Activity, Globe, Play, ChevronRight, Timer } from 'lucide-react'
+import { Zap, Shield, Activity, Globe, Play, ChevronRight, Timer, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 const AUTOMATION_PRESETS = [
   {
@@ -119,12 +121,12 @@ export default function FlowAutomation({ onAuditEntry }) {
       const nowEnabled = !a.enabled
       if (nowEnabled) {
         onAuditEntry?.('automation', `Enabled ${a.label} — runs every ${a.interval} ${a.unit}`, 'success')
+        // Trigger initial run when enabling
+        runNow(id)
         return {
           ...a,
           enabled: true,
-          lastRun: new Date().toLocaleTimeString(),
           nextRun: getNextRun(a.interval, a.unit),
-          runCount: a.runCount + 1,
         }
       } else {
         onAuditEntry?.('automation', `Disabled ${a.label}`, 'info')
@@ -139,17 +141,63 @@ export default function FlowAutomation({ onAuditEntry }) {
     ))
   }
 
-  const runNow = (id) => {
-    setAutomations(prev => prev.map(a => {
-      if (a.id !== id) return a
-      onAuditEntry?.('automation', `Manual run: ${a.label}`, 'info')
-      return {
-        ...a,
-        lastRun: new Date().toLocaleTimeString(),
-        nextRun: a.enabled ? getNextRun(a.interval, a.unit) : null,
-        runCount: a.runCount + 1,
+  const [running, setRunning] = useState(null)
+
+  const runNow = async (id) => {
+    setRunning(id)
+    onAuditEntry?.('automation', `Running: ${AUTOMATION_PRESETS.find(a => a.id === id)?.label}...`, 'info')
+
+    try {
+      // Map automation IDs to real backend API calls
+      const apiCalls = {
+        'kyc-reverify': async () => {
+          const res = await authFetch(`${API}/api/compliance/status/0x93c691a98b975493`)
+          return res.ok ? await res.json() : null
+        },
+        'anomaly-scan': async () => {
+          const res = await authFetch(`${API}/api/risk/monitor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: '0x93c691a98b975493' }),
+          })
+          return res.ok ? await res.json() : null
+        },
+        'rule-sync': async () => {
+          const res = await authFetch(`${API}/api/copilot/radar/scan`, { method: 'POST' })
+          return res.ok ? await res.json() : null
+        },
+        'compliance-batch': async () => {
+          const res = await authFetch(`${API}/api/risk/score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: '0x93c691a98b975493' }),
+          })
+          return res.ok ? await res.json() : null
+        },
       }
-    }))
+
+      const result = await apiCalls[id]?.()
+
+      setAutomations(prev => prev.map(a => {
+        if (a.id !== id) return a
+        return {
+          ...a,
+          lastRun: new Date().toLocaleTimeString(),
+          nextRun: a.enabled ? getNextRun(a.interval, a.unit) : null,
+          runCount: a.runCount + 1,
+        }
+      }))
+
+      if (result) {
+        const label = AUTOMATION_PRESETS.find(a => a.id === id)?.label
+        onAuditEntry?.('automation', `${label} completed successfully`, 'success')
+      } else {
+        onAuditEntry?.('automation', `${AUTOMATION_PRESETS.find(a => a.id === id)?.label} — no response from backend`, 'warning')
+      }
+    } catch (err) {
+      onAuditEntry?.('automation', `Run failed: ${err.message}`, 'danger')
+    }
+    setRunning(null)
   }
 
   const getNextRun = (interval, unit) => {
@@ -260,10 +308,14 @@ export default function FlowAutomation({ onAuditEntry }) {
                         </div>
                         <button
                           onClick={() => runNow(auto.id)}
-                          className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+                          disabled={running === auto.id}
+                          className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.06] transition-all disabled:opacity-50"
                         >
-                          <Play className="w-3 h-3" />
-                          Run Now
+                          {running === auto.id ? (
+                            <><Loader2 className="w-3 h-3 animate-spin" /> Running...</>
+                          ) : (
+                            <><Play className="w-3 h-3" /> Run Now</>
+                          )}
                         </button>
                       </div>
 

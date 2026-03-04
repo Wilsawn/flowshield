@@ -237,39 +237,39 @@ const initialNodes = [
   {
     id: 'dashboard',
     type: 'dashboard',
-    position: { x: 0, y: 40 },
+    position: { x: 0, y: 0 },
   },
   {
     id: 'copilot',
     type: 'copilot',
-    position: { x: 530, y: 0 },
+    position: { x: 580, y: -30 },
   },
   {
     id: 'orchestrator',
     type: 'orchestrator',
-    position: { x: 530, y: 340 },
+    position: { x: 580, y: 420 },
   },
   {
     id: 'radar',
     type: 'radar',
-    position: { x: 100, y: 400 },
+    position: { x: 60, y: 500 },
   },
   {
     id: 'status-flow',
     type: 'status',
-    position: { x: 700, y: 500 },
+    position: { x: 820, y: 640 },
     data: { label: 'Flow Testnet', color: 'bg-emerald-400', pulse: true, badge: 'LIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400' },
   },
   {
     id: 'status-compliance',
     type: 'status',
-    position: { x: -70, y: 380 },
+    position: { x: -100, y: 440 },
     data: { label: 'Compliance Check', color: 'bg-cyan-400', pulse: false, badge: 'PASSED', badgeClass: 'bg-cyan-500/10 text-cyan-400' },
   },
   {
     id: 'status-guard',
     type: 'status',
-    position: { x: 730, y: 130 },
+    position: { x: 820, y: 160 },
     data: { label: 'Prompt Guard', color: 'bg-cyan-400', pulse: false, badge: 'ACTIVE', badgeClass: 'bg-cyan-500/10 text-cyan-400' },
   },
 ]
@@ -358,7 +358,7 @@ export default function ProductShowcase() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   return (
-    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a0f1a] overflow-hidden relative">
+    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a1410] overflow-hidden relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}

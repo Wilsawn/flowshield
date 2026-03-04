@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Vote, Plus, Clock, CheckCircle2, XCircle, Users, Shield, Coins, FileText, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 const PROPOSAL_TYPES = [
   { id: 'setFee', label: 'Update Fee', icon: Coins, description: 'Change verification or issuance fee' },
@@ -39,8 +40,8 @@ export default function GovernancePanel() {
     async function fetchGovernance() {
       try {
         const [statsRes, proposalsRes] = await Promise.allSettled([
-          fetch(`${API}/api/governance/stats`).then(r => r.json()),
-          fetch(`${API}/api/governance/proposals`).then(r => r.json()),
+          authFetch(`${API}/api/governance/stats`).then(r => r.json()),
+          authFetch(`${API}/api/governance/proposals`).then(r => r.json()),
         ])
         if (statsRes.status === 'fulfilled' && statsRes.value.source === 'flow-testnet') {
           setStats({
@@ -70,8 +71,8 @@ export default function GovernancePanel() {
   const refetchProposals = async () => {
     try {
       const [statsRes, proposalsRes] = await Promise.allSettled([
-        fetch(`${API}/api/governance/stats`).then(r => r.json()),
-        fetch(`${API}/api/governance/proposals`).then(r => r.json()),
+        authFetch(`${API}/api/governance/stats`).then(r => r.json()),
+        authFetch(`${API}/api/governance/proposals`).then(r => r.json()),
       ])
       if (statsRes.status === 'fulfilled' && statsRes.value.source === 'flow-testnet') {
         setStats({ totalSigners: statsRes.value.totalSigners || 0, requiredApprovals: statsRes.value.requiredApprovals || 1 })
@@ -94,9 +95,9 @@ export default function GovernancePanel() {
     setCreating(true)
     try {
       // Ensure deployer is set up as a signer first
-      await fetch(`${API}/api/governance/setup`, { method: 'POST' })
+      await authFetch(`${API}/api/governance/setup`, { method: 'POST' })
 
-      const res = await fetch(`${API}/api/governance/create`, {
+      const res = await authFetch(`${API}/api/governance/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: newAction, description: newDescription, data: {} }),
@@ -122,7 +123,7 @@ export default function GovernancePanel() {
   const handleApprove = async (id) => {
     setApproving(id)
     try {
-      const res = await fetch(`${API}/api/governance/approve`, {
+      const res = await authFetch(`${API}/api/governance/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proposalId: id }),

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShieldCheck, Fingerprint, Zap, FileCheck, Loader2, CheckCircle2, X, ExternalLink, AlertTriangle } from 'lucide-react'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 function friendlyError(raw) {
   if (!raw) return 'Transaction failed'
@@ -120,7 +121,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         // Step 3: Send REAL transaction
         addStep(`Sending ${action} transaction to Flow testnet...`, `DemoLendingPool.${action}(${amount} FLOW)`, 'active')
 
-        const txRes = await fetch(`${API}/api/pool/${action}`, {
+        const txRes = await authFetch(`${API}/api/pool/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

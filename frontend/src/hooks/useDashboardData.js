@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 // No fake fallbacks — always show real chain data or 0
 
@@ -48,17 +49,17 @@ export default function useDashboardData(address) {
     let userPosition = null
     try {
       const [riskRes, complianceRes, poolRes, positionRes] = await Promise.allSettled([
-        fetch(`${API}/api/risk/score`, {
+        authFetch(`${API}/api/risk/score`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address: targetAddress }),
         }).then(r => r.json()),
 
-        fetch(`${API}/api/compliance/status/${targetAddress}`).then(r => r.json()),
+        authFetch(`${API}/api/compliance/status/${targetAddress}`).then(r => r.json()),
 
-        fetch(`${API}/api/pool/status`).then(r => r.json()),
+        authFetch(`${API}/api/pool/status`).then(r => r.json()),
 
-        fetch(`${API}/api/pool/position/${targetAddress}`).then(r => r.json()),
+        authFetch(`${API}/api/pool/position/${targetAddress}`).then(r => r.json()),
       ])
 
       if (riskRes.status === 'fulfilled') {
