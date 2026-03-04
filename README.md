@@ -168,7 +168,7 @@ flowshield/
 │  React 19 · Vite · TailwindCSS · FCL Wallet      │
 ├──────────────────────────────────────────────────┤
 │  A2A Protocol (Agent-to-Agent)                   │
-│  Orchestrator · Task Manager · Agent Cards        │
+│  Orchestrator · Task Manager · Agent Cards       │
 │  Predefined chains: full-risk-review,            │
 │  compliance-review                               │
 ├──────────────────────────────────────────────────┤
