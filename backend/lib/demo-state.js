@@ -1,10 +1,6 @@
 // lib/demo-state.js
 // Shared demo simulation state — used by both risk.js (anomalies) and copilot.js (radar gaps).
 // Anomalies and radar gaps are LINKED: fixing a gap removes its corresponding anomaly.
-//
-// PRODUCTION: All demo functions return null/false/no-op to prevent fake data injection.
-
-const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 const state = {
   threats: null,
@@ -12,17 +8,14 @@ const state = {
 }
 
 export function getDemoThreats() {
-  if (IS_PRODUCTION) return null
   return state.threats
 }
 
 export function getDemoRadarGaps() {
-  if (IS_PRODUCTION) return null
   return state.radarGaps
 }
 
 export function isDemoActive() {
-  if (IS_PRODUCTION) return false
   return !!(state.threats?.length || state.radarGaps?.length)
 }
 
@@ -32,7 +25,6 @@ export function isDemoActive() {
  * Returns { remainingGaps, remainingThreats } for the response.
  */
 export function resolveDemoGap(jurisdiction, ruleKey) {
-  if (IS_PRODUCTION) return null
   if (!state.radarGaps) return null
 
   // Find and remove the matching gap
@@ -67,7 +59,6 @@ export function resolveDemoGap(jurisdiction, ruleKey) {
  * Clears everything — both gaps and anomalies.
  */
 export function resolveAllDemoGaps() {
-  if (IS_PRODUCTION) return { resolvedGaps: 0, resolvedThreats: 0 }
   const gapCount = state.radarGaps?.length || 0
   const threatCount = state.threats?.length || 0
   state.radarGaps = null
@@ -77,7 +68,6 @@ export function resolveAllDemoGaps() {
 }
 
 export function activateDemo(scenario) {
-  if (IS_PRODUCTION) return { threats: [], radarGaps: [] }
   const now = new Date().toISOString()
 
   // ── Anomaly scenarios (each has an id that radar gaps reference) ─────────────
@@ -168,7 +158,6 @@ export function activateDemo(scenario) {
 }
 
 export function clearDemo() {
-  if (IS_PRODUCTION) return
   state.threats = null
   state.radarGaps = null
   console.log('[Demo] Cleared — all threats and radar gaps removed')
