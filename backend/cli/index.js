@@ -242,7 +242,7 @@ async function cmdScan(filePath) {
   const stop = spinner('Analyzing code for compliance issues...')
 
   try {
-    const result = await apiFetch('/api/copilot/code-scan', {
+    const result = await apiFetch('/api/cli/scan', {
       method: 'POST',
       body: JSON.stringify({ code, language }),
     })
@@ -407,7 +407,7 @@ async function cmdCompliance() {
   const stop = spinner('Running regulatory compliance scan across all jurisdictions...')
 
   try {
-    const result = await apiFetch('/api/copilot/radar/scan', {
+    const result = await apiFetch('/api/cli/compliance', {
       method: 'POST',
       body: JSON.stringify({}),
     })

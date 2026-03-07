@@ -120,6 +120,40 @@ app.use('/api/subscription', subscriptionRoutes)  // Pricing — public access n
 app.use('/api/governance', requireAuth, governanceRoutes)
 app.use('/api/accounts', accountsRoutes)  // Has its own auth (create/login are public, others protected)
 
+// ── Public CLI endpoints — rate-limited, no session required ──
+// These let `flowshield scan` and `flowshield compliance` work without login.
+import { scanCode } from '../agents/builder-copilot.js'
+import { scanForGaps } from '../agents/regulatory-radar.js'
+
+const cliRateLimit = rateLimit({ windowMs: 60000, max: 10 })
+
+// POST /api/cli/scan — public code scan for CLI users
+app.post('/api/cli/scan', cliRateLimit, async (req, res) => {
+  const { code, language = 'cadence', context = '' } = req.body
+  if (!code || typeof code !== 'string') {
+    return res.status(400).json({ error: 'code is required' })
+  }
+  if (code.length > 100000) {
+    return res.status(400).json({ error: 'Code exceeds 100KB limit' })
+  }
+  try {
+    const result = await scanCode(code, language, context)
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: 'Code scan failed' })
+  }
+})
+
+// POST /api/cli/compliance — public compliance scan for CLI users
+app.post('/api/cli/compliance', cliRateLimit, async (req, res) => {
+  try {
+    const result = await scanForGaps(fcl, CONTRACT_ADDRESS)
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: 'Compliance scan failed' })
+  }
+})
+
 // A2A protocol — agent-to-agent communication
 app.use('/api/a2a', a2aRoutes)
 app.get('/.well-known/agent.json', wellKnownHandler)
