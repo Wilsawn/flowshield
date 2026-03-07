@@ -4,7 +4,7 @@
 // Falls back to pattern-matched responses if no API key or agent fails.
 
 import { filterResponseLeaks } from '../lib/prompt-guard.js'
-import { runAgentChat, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
+import { runAgentLoop, runAgentChat, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 
 // ── Input Limits ─────────────────────────────────────────────────────────────
 const MAX_MESSAGE_LENGTH = 10_000

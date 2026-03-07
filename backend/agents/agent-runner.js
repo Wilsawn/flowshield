@@ -24,9 +24,9 @@ const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 529])
 let client = null
 
 function getClient() {
-  const apiKey = process.env.CLAUDE_API_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY
   if (!apiKey) {
-    agentLog('warn', 'AgentRunner', 'No CLAUDE_API_KEY set — agents will use deterministic fallback')
+    agentLog('warn', 'AgentRunner', 'No ANTHROPIC_API_KEY set — agents will use deterministic fallback')
     return null
   }
   if (!client) {
