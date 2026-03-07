@@ -39,7 +39,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
     onAuditEntry?.('radar', 'Regulatory Radar reading on-chain rules...', 'info')
 
     try {
-      const res = await authFetch(`${API}/api/copilot/radar/scan`, { method: 'POST' })
+      const res = await authFetch(`${API}/api/copilot/radar/scan`, { method: 'POST', timeout: 60000 })
       if (res.ok) {
         const data = await res.json()
         setScanResult(data)
@@ -78,6 +78,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
     try {
       const res = await authFetch(`${API}/api/copilot/radar/approve`, {
         method: 'POST',
+        timeout: 60000,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jurisdiction: selectedGap.jurisdiction,

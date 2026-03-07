@@ -300,7 +300,6 @@ export async function scanForGaps(fcl, contractAddress) {
     if (agentResult) {
       const parsed = parseJsonFromText(agentResult.text)
       if (validateRadarResult(parsed)) {
-        const onChainRules = await readOnChainRules(fcl, contractAddress)
         agentLog('info', 'Radar', 'Agent completed', {
           gaps: parsed.gaps.length, compliant: parsed.compliantJurisdictions.length,
           iterations: agentResult.iterations, toolCalls: agentResult.toolCalls.length,
@@ -308,7 +307,6 @@ export async function scanForGaps(fcl, contractAddress) {
         return {
           ...parsed,
           source: 'agent',
-          onChainRules,
           scannedAt: new Date().toISOString(),
           agentIterations: agentResult.iterations,
           agentToolCalls: agentResult.toolCalls.length,
