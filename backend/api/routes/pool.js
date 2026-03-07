@@ -72,15 +72,19 @@ router.get('/position/:userAddress', async (req, res) => {
 router.post('/deposit', async (req, res) => {
   const fcl = req.app.locals.fcl
   const contractAddress = req.app.locals.contractAddress
-  const amount = parseFloat(req.body.amount) || 0
+  const rawAmount = parseFloat(req.body.amount)
   const userAddress = req.body.userAddress || contractAddress
 
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available', source: 'error' })
   }
-  if (amount <= 0) {
-    return res.status(400).json({ error: 'Amount must be greater than 0', source: 'error' })
+  if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+    return res.status(400).json({ error: 'Amount must be a positive number', source: 'error' })
   }
+  if (rawAmount > 1000000) {
+    return res.status(400).json({ error: 'Amount exceeds maximum (1,000,000)', source: 'error' })
+  }
+  const amount = rawAmount
 
   try {
     const deployerAuthz = serverAuthorization(fcl, contractAddress)
@@ -103,13 +107,14 @@ router.post('/deposit', async (req, res) => {
     }
 
     const jurisdiction = req.body.jurisdiction
-    const riskScore = req.body.riskScore != null ? String(req.body.riskScore) : null
-    if (!jurisdiction) {
+    const riskScoreRaw = parseInt(req.body.riskScore, 10)
+    if (!jurisdiction || typeof jurisdiction !== 'string') {
       return res.status(400).json({ error: 'jurisdiction is required', source: 'error' })
     }
-    if (riskScore === null) {
-      return res.status(400).json({ error: 'riskScore is required', source: 'error' })
+    if (!Number.isInteger(riskScoreRaw) || riskScoreRaw < 0 || riskScoreRaw > 100) {
+      return res.status(400).json({ error: 'riskScore must be an integer 0-100', source: 'error' })
     }
+    const riskScore = String(riskScoreRaw)
     const proofId = createHash('sha256').update(`proof:deposit:${userAddress}:${Date.now()}`).digest('hex')
     const claimsId = createHash('sha256').update(`claims:deposit:${userAddress}:${Date.now()}`).digest('hex')
 
@@ -267,15 +272,19 @@ router.post('/deposit', async (req, res) => {
 router.post('/borrow', async (req, res) => {
   const fcl = req.app.locals.fcl
   const contractAddress = req.app.locals.contractAddress
-  const amount = parseFloat(req.body.amount) || 0
+  const rawAmount = parseFloat(req.body.amount)
   const userAddress = req.body.userAddress || contractAddress
 
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available', source: 'error' })
   }
-  if (amount <= 0) {
-    return res.status(400).json({ error: 'Amount must be greater than 0', source: 'error' })
+  if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+    return res.status(400).json({ error: 'Amount must be a positive number', source: 'error' })
   }
+  if (rawAmount > 1000000) {
+    return res.status(400).json({ error: 'Amount exceeds maximum (1,000,000)', source: 'error' })
+  }
+  const amount = rawAmount
 
   try {
     const deployerAuthz = serverAuthorization(fcl, contractAddress)
@@ -298,13 +307,14 @@ router.post('/borrow', async (req, res) => {
     }
 
     const jurisdiction = req.body.jurisdiction
-    const riskScore = req.body.riskScore != null ? String(req.body.riskScore) : null
-    if (!jurisdiction) {
+    const riskScoreRaw = parseInt(req.body.riskScore, 10)
+    if (!jurisdiction || typeof jurisdiction !== 'string') {
       return res.status(400).json({ error: 'jurisdiction is required', source: 'error' })
     }
-    if (riskScore === null) {
-      return res.status(400).json({ error: 'riskScore is required', source: 'error' })
+    if (!Number.isInteger(riskScoreRaw) || riskScoreRaw < 0 || riskScoreRaw > 100) {
+      return res.status(400).json({ error: 'riskScore must be an integer 0-100', source: 'error' })
     }
+    const riskScore = String(riskScoreRaw)
     const proofId = createHash('sha256').update(`proof:borrow:${userAddress}:${Date.now()}`).digest('hex')
     const claimsId = createHash('sha256').update(`claims:borrow:${userAddress}:${Date.now()}`).digest('hex')
 
@@ -457,15 +467,19 @@ router.post('/borrow', async (req, res) => {
 router.post('/repay', async (req, res) => {
   const fcl = req.app.locals.fcl
   const contractAddress = req.app.locals.contractAddress
-  const amount = parseFloat(req.body.amount) || 0
+  const rawAmount = parseFloat(req.body.amount)
   const userAddress = req.body.userAddress || contractAddress
 
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available', source: 'error' })
   }
-  if (amount <= 0) {
-    return res.status(400).json({ error: 'Amount must be greater than 0', source: 'error' })
+  if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+    return res.status(400).json({ error: 'Amount must be a positive number', source: 'error' })
   }
+  if (rawAmount > 1000000) {
+    return res.status(400).json({ error: 'Amount exceeds maximum (1,000,000)', source: 'error' })
+  }
+  const amount = rawAmount
 
   try {
     const deployerAuthz = serverAuthorization(fcl, contractAddress)

@@ -195,10 +195,18 @@ router.post('/webhook', async (req, res) => {
 
   console.log(`[KYC Webhook] Veriff session ${veriffSessionId}: ${decision} (code: ${code})`)
 
-  // Optionally verify HMAC signature
+  // Verify HMAC signature — mandatory in production
   const sharedSecret = process.env.VERIFF_SHARED_SECRET
   const signature = req.headers['x-hmac-signature']
-  if (sharedSecret && signature) {
+  if (process.env.NODE_ENV === 'production' && !sharedSecret) {
+    console.error('[KYC Webhook] VERIFF_SHARED_SECRET not set — rejecting webhook in production')
+    return res.status(500).json({ error: 'Webhook verification not configured' })
+  }
+  if (sharedSecret) {
+    if (!signature) {
+      console.log('[KYC Webhook] Missing HMAC signature — rejecting')
+      return res.status(401).json({ error: 'Missing signature' })
+    }
     const expectedSig = crypto
       .createHmac('sha256', sharedSecret)
       .update(JSON.stringify(payload))

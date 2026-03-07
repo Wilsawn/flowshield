@@ -1,18 +1,11 @@
 // regulatory-radar.js
-// Hybrid AI compliance agent (production pattern):
-//   1. Deterministic checklist detects gaps (stable — same input = same output)
-//   2. Claude AI enriches gap descriptions with real regulatory context
-//   3. Human-in-the-loop reviews before on-chain push
-//   4. Fix a rule → gap disappears on next scan
-//
-// Architecture based on:
-// - Microsoft AI Agent Orchestration Patterns (deterministic routing)
-// - Stack AI Financial Services Compliance Agent patterns
-// - "Combine deterministic controls with contextual reasoning, preserve traceability"
+// AI-powered compliance agent with tool use.
+// Claude autonomously reads on-chain rules, runs gap detection, then enriches with regulatory analysis.
+// Falls back to deterministic checklist if no API key or agent fails.
+
+import { runAgentLoop, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 
 // ── Fixed compliance requirements per jurisdiction ──────────────────────────
-// These are the exact values each jurisdiction requires.
-// When on-chain rules match → compliant. When they don't → gap.
 const COMPLIANCE_CHECKLIST = {
   US: {
     framework: 'Bank Secrecy Act / FinCEN Guidance',
@@ -79,6 +72,12 @@ const COMPLIANCE_CHECKLIST = {
  * Read current on-chain rules for all jurisdictions
  */
 async function readOnChainRules(fcl, contractAddress) {
+  // Sanitize contractAddress to prevent Cadence injection
+  if (!isValidFlowAddress(contractAddress)) {
+    agentLog('error', 'Radar', 'Invalid contract address — aborting on-chain read', { contractAddress })
+    return Object.fromEntries(Object.keys(COMPLIANCE_CHECKLIST).map(k => [k, null]))
+  }
+
   const jurisdictions = Object.keys(COMPLIANCE_CHECKLIST)
   const onChainRules = {}
 
@@ -95,7 +94,7 @@ async function readOnChainRules(fcl, contractAddress) {
       })
       onChainRules[code] = result || null
     } catch (err) {
-      console.warn(`[Radar] Could not read on-chain rules for ${code}:`, err.message)
+      agentLog('warn', 'Radar', `Could not read on-chain rules for ${code}`, { error: err.message })
       onChainRules[code] = null
     }
   }
@@ -105,7 +104,6 @@ async function readOnChainRules(fcl, contractAddress) {
 
 /**
  * Deterministic gap detection — compares on-chain rules against fixed checklist.
- * Same input ALWAYS produces same output. Fix a rule → gap disappears.
  */
 function detectGaps(onChainRules) {
   const gaps = []
@@ -176,142 +174,203 @@ function detectGaps(onChainRules) {
   }
 }
 
-/**
- * Claude AI enrichment — takes deterministic gaps and adds real regulatory context.
- * Claude CANNOT add or remove gaps. It can only improve the descriptions.
- * This is the production pattern: deterministic controls + AI reasoning.
- */
-async function enrichWithClaude(gaps) {
-  const apiKey = process.env.CLAUDE_API_KEY
-  if (!apiKey || gaps.length === 0) return gaps
+// ── Agent Tools ──────────────────────────────────────────────────────────────
 
-  try {
-    const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+const RADAR_TOOLS = [
+  {
+    name: 'read_onchain_rules',
+    description: 'Read the current RuleEngine state from Flow testnet for all monitored jurisdictions (US, EU, UK, SG, CA). Returns a map of jurisdiction -> rules object.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'detect_compliance_gaps',
+    description: 'Compare on-chain rules against the regulatory compliance checklist. Returns gaps (non-compliant rules) and compliant jurisdictions.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        onchain_rules: {
+          type: 'object',
+          description: 'Map of jurisdiction code -> rules object from read_onchain_rules',
+        },
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1500,
-        system: `You are a regulatory compliance analyst. You will receive a list of compliance gaps found by comparing on-chain DeFi rules against regulatory requirements.
+      required: ['onchain_rules'],
+    },
+  },
+  {
+    name: 'get_jurisdiction_checklist',
+    description: 'Get the full compliance requirements checklist for a specific jurisdiction, including required values and regulatory basis for each rule.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        jurisdiction: { type: 'string', description: 'Jurisdiction code: US, EU, UK, SG, or CA' },
+      },
+      required: ['jurisdiction'],
+    },
+  },
+]
 
-Your job: For each gap, write a better 1-2 sentence "summary" that explains the real-world regulatory impact. Be specific about the actual law or regulation involved.
+const RADAR_SYSTEM_PROMPT = `You are a regulatory compliance agent for DeFi protocols on the Flow blockchain.
 
-RULES:
-- Do NOT add new gaps. Do NOT remove any gaps. Do NOT change jurisdiction, title, severity, or requiredRules.
-- ONLY improve the "summary" field with real regulatory knowledge.
-- Return ONLY a JSON array of objects: [{"index": 0, "summary": "improved summary"}, ...]
-- Keep summaries concise and professional.`,
-        messages: [{
-          role: 'user',
-          content: `Enrich these ${gaps.length} compliance gaps with regulatory context:\n\n${JSON.stringify(gaps.map((g, i) => ({ index: i, jurisdiction: g.jurisdiction, title: g.title, currentOnChain: g.currentOnChain, requiredRules: g.requiredRules })), null, 2)}`,
-        }],
-      }),
-    })
+Your task: Autonomously scan on-chain compliance rules and identify regulatory gaps by:
+1. Call read_onchain_rules to fetch current RuleEngine state from Flow testnet
+2. Call detect_compliance_gaps to compare against regulatory requirements
+3. For each gap found, analyze the real regulatory impact:
+   - What specific law or regulation is violated?
+   - What are the enforcement risks?
+   - What is the remediation priority?
+4. You can call get_jurisdiction_checklist to deep-dive into a specific jurisdiction's requirements
 
-    if (!res.ok) return gaps
-
-    const data = await res.json()
-    const text = data.content[0].text
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (!jsonMatch) return gaps
-
-    const enrichments = JSON.parse(jsonMatch[0])
-    const enriched = [...gaps]
-    for (const e of enrichments) {
-      if (typeof e.index === 'number' && e.summary && enriched[e.index]) {
-        enriched[e.index].summary = e.summary
-      }
+Return your final answer as a JSON object with this EXACT shape:
+{
+  "gaps": [
+    {
+      "jurisdiction": "<code>",
+      "title": "<gap title>",
+      "severity": "low" | "medium" | "high",
+      "summary": "<your detailed regulatory analysis — specific laws, enforcement risk, remediation priority>",
+      "regulatoryBasis": "<framework and regulator>",
+      "currentOnChain": { "<key>": "<current_value_or_null>" },
+      "requiredRules": { "<key>": "<required_value>" },
+      "effectiveDate": "now"
     }
-    console.log(`[Radar] Claude enriched ${enrichments.length} gap descriptions`)
-    return enriched
-  } catch (err) {
-    console.warn('[Radar] Claude enrichment failed (using base descriptions):', err.message)
-    return gaps
+  ],
+  "compliantJurisdictions": ["<code>", ...],
+  "overallAssessment": "<comprehensive assessment>"
+}
+
+IMPORTANT: You MUST keep the same gaps that the detection tool found. Do NOT add or remove gaps. You CAN and SHOULD improve their summaries with real regulatory analysis.
+Return ONLY the JSON object, no other text.`
+
+function buildRadarToolHandlers(fcl, contractAddress) {
+  return {
+    read_onchain_rules: async () => {
+      return await readOnChainRules(fcl, contractAddress)
+    },
+    detect_compliance_gaps: async (input) => {
+      return detectGaps(input.onchain_rules)
+    },
+    get_jurisdiction_checklist: async (input) => {
+      const j = input.jurisdiction?.toUpperCase()
+      const checklist = COMPLIANCE_CHECKLIST[j]
+      if (!checklist) return { error: `Unknown jurisdiction: ${input.jurisdiction}` }
+      return {
+        jurisdiction: j,
+        framework: checklist.framework,
+        regulator: checklist.regulator,
+        rules: Object.fromEntries(
+          Object.entries(checklist.rules).map(([k, v]) => [k, { required: v.value, label: v.label, basis: v.basis }])
+        ),
+      }
+    },
   }
 }
 
+function validateRadarResult(result) {
+  return (
+    result &&
+    Array.isArray(result.gaps) &&
+    Array.isArray(result.compliantJurisdictions) &&
+    typeof result.overallAssessment === 'string'
+  )
+}
+
 /**
- * Main scan function — reads on-chain rules, runs deterministic gap check,
- * then enriches with Claude AI for real regulatory context.
+ * Main scan function — agent-first with deterministic fallback.
  *
- * Architecture (production compliance agent pattern):
- *   1. READ on-chain state (deterministic data source)
- *   2. DETECT gaps via fixed checklist (deterministic — same input = same output)
- *   3. ENRICH with Claude AI (adds regulatory context, cannot change gap list)
- *   4. HUMAN reviews and approves (human-in-the-loop)
- *   5. PUSH on-chain (deterministic state update)
- *   6. RE-SCAN shows gap resolved (deterministic verification)
+ * 1. Try agentic loop (Claude reads rules, detects gaps, analyzes)
+ * 2. If agent fails or no API key -> deterministic checklist pipeline
  */
 export async function scanForGaps(fcl, contractAddress) {
-  console.log('[Radar] Starting regulatory scan...')
+  agentLog('info', 'Radar', 'Starting regulatory scan', { contractAddress })
 
-  // 1. Read real on-chain rules
+  // Try agent-first
+  try {
+    const agentResult = await runAgentLoop({
+      systemPrompt: RADAR_SYSTEM_PROMPT,
+      userMessage: `Scan on-chain compliance rules for all jurisdictions and identify regulatory gaps. Contract address: ${contractAddress}`,
+      tools: RADAR_TOOLS,
+      toolHandlers: buildRadarToolHandlers(fcl, contractAddress),
+      maxIterations: 6,
+      maxTokens: 3072,
+    })
+
+    if (agentResult) {
+      const parsed = parseJsonFromText(agentResult.text)
+      if (validateRadarResult(parsed)) {
+        const onChainRules = await readOnChainRules(fcl, contractAddress)
+        agentLog('info', 'Radar', 'Agent completed', {
+          gaps: parsed.gaps.length, compliant: parsed.compliantJurisdictions.length,
+          iterations: agentResult.iterations, toolCalls: agentResult.toolCalls.length,
+        })
+        return {
+          ...parsed,
+          source: 'agent',
+          onChainRules,
+          scannedAt: new Date().toISOString(),
+          agentIterations: agentResult.iterations,
+          agentToolCalls: agentResult.toolCalls.length,
+          ...(agentResult.usage ? { usage: agentResult.usage } : {}),
+        }
+      } else {
+        agentLog('warn', 'Radar', 'Agent returned invalid shape, falling back')
+      }
+    }
+  } catch (err) {
+    agentLog('warn', 'Radar', 'Agent failed, falling back to deterministic', { error: err.message })
+  }
+
+  // Deterministic fallback
   const onChainRules = await readOnChainRules(fcl, contractAddress)
   const active = Object.keys(onChainRules).filter(k => onChainRules[k])
-  console.log('[Radar] On-chain rules read for:', active.join(', ') || 'none')
+  agentLog('info', 'Radar', 'Deterministic scan', { activeJurisdictions: active })
 
-  // 2. Deterministic gap detection against fixed checklist
   const analysis = detectGaps(onChainRules)
-  console.log(`[Radar] Checklist: ${analysis.gaps.length} gaps, ${analysis.compliantJurisdictions.length} compliant`)
-
-  // 3. Claude AI enriches gap descriptions with real regulatory context
-  // Claude cannot add/remove gaps — only improve summaries
-  const enrichedGaps = await enrichWithClaude(analysis.gaps, onChainRules)
 
   return {
-    gaps: enrichedGaps,
+    gaps: analysis.gaps,
     compliantJurisdictions: analysis.compliantJurisdictions,
     overallAssessment: analysis.overallAssessment,
-    source: 'compliance-checklist+ai',
+    source: 'compliance-checklist',
     onChainRules,
     scannedAt: new Date().toISOString(),
   }
 }
 
 /**
- * Parse custom regulatory text into structured rules (still uses Claude)
+ * Parse custom regulatory text into structured rules (still uses Claude directly)
  */
+const VALID_JURISDICTIONS = new Set(Object.keys(COMPLIANCE_CHECKLIST))
+const MAX_REGULATORY_TEXT_LENGTH = 50_000
+
 export async function parseRegulation(regulatoryText, jurisdiction) {
-  const apiKey = process.env.CLAUDE_API_KEY
+  if (!regulatoryText || typeof regulatoryText !== 'string') {
+    return { jurisdiction, rules: {}, summary: 'No regulatory text provided.', severity: 'low', effectiveDate: new Date().toISOString().split('T')[0] }
+  }
+  if (regulatoryText.length > MAX_REGULATORY_TEXT_LENGTH) {
+    regulatoryText = regulatoryText.slice(0, MAX_REGULATORY_TEXT_LENGTH)
+    agentLog('warn', 'Radar', 'Regulatory text truncated', { originalLength: regulatoryText.length })
+  }
 
-  if (apiKey) {
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
-          system: `You are a regulatory analysis AI. Given regulatory text, extract structured compliance rules as JSON.\n\nOutput format:\n{\n  "jurisdiction": "XX",\n  "rules": {\n    "kyc_required": "true/false",\n    "travel_rule_threshold": "number",\n    "travel_rule_currency": "XXX",\n    "reverification_days": "number",\n    "sanctions_screening": "LIST_NAME",\n    "max_anonymous_tx": "number"\n  },\n  "summary": "One paragraph summary",\n  "severity": "low/medium/high",\n  "effectiveDate": "YYYY-MM-DD"\n}\n\nBe precise. Only include rules explicitly stated or clearly implied.`,
-          messages: [
-            {
-              role: 'user',
-              content: `Jurisdiction: ${jurisdiction}\n\nRegulatory text:\n${regulatoryText}`,
-            },
-          ],
-        }),
-      })
+  // Try using agent runner for consistency
+  try {
+    const result = await runAgentLoop({
+      systemPrompt: `You are a regulatory analysis AI. Given regulatory text, extract structured compliance rules as JSON.\n\nOutput format:\n{\n  "jurisdiction": "XX",\n  "rules": {\n    "kyc_required": "true/false",\n    "travel_rule_threshold": "number",\n    "travel_rule_currency": "XXX",\n    "reverification_days": "number",\n    "sanctions_screening": "LIST_NAME",\n    "max_anonymous_tx": "number"\n  },\n  "summary": "One paragraph summary",\n  "severity": "low/medium/high",\n  "effectiveDate": "YYYY-MM-DD"\n}\n\nBe precise. Only include rules explicitly stated or clearly implied.`,
+      userMessage: `Jurisdiction: ${jurisdiction}\n\nRegulatory text:\n${regulatoryText}`,
+      tools: [],
+      toolHandlers: {},
+      maxIterations: 1,
+      maxTokens: 1024,
+    })
 
-      if (res.ok) {
-        const data = await res.json()
-        const text = data.content[0].text
-        const jsonMatch = text.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0])
-        }
-      }
-    } catch (err) {
-      console.log('[Radar] Claude API error, using fallback:', err.message)
+    if (result) {
+      const parsed = parseJsonFromText(result.text)
+      if (parsed && parsed.jurisdiction) return parsed
     }
+  } catch (err) {
+    agentLog('warn', 'Radar', 'Agent parse failed, using fallback', { error: err.message })
   }
 
   return {

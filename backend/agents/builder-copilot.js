@@ -1,8 +1,15 @@
 // builder-copilot.js
-// AI assistant for developers integrating FlowShield.
-// Uses Claude API (Haiku 4.5 for speed + cost efficiency).
+// AI super-agent that orchestrates other agents via tool use.
+// Can autonomously call risk scoring, anomaly detection, and compliance scanning.
+// Falls back to pattern-matched responses if no API key or agent fails.
 
 import { filterResponseLeaks } from '../lib/prompt-guard.js'
+import { runAgentChat, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
+
+// ── Input Limits ─────────────────────────────────────────────────────────────
+const MAX_MESSAGE_LENGTH = 10_000
+const MAX_CODE_LENGTH = 100_000 // 100KB
+const MAX_HISTORY_MESSAGES = 50 // Keep last 50 messages to bound context
 
 const SYSTEM_PROMPT = `<instructions>
 You are the FlowShield Copilot — an expert AI assistant that helps BOTH developers AND end-users with privacy-preserving compliance on the Flow blockchain.
@@ -33,6 +40,15 @@ You have two modes:
 - Explain that gas fees are SPONSORED — users pay nothing, FlowShield covers transaction costs
 - Explain WebAuthn/passkeys: biometric auth (fingerprint OR face) for passwordless login
 - Explain ZK proofs: identity is verified but NEVER stored on-chain
+
+**You have tools to call other agents:**
+- Use assess_risk when users ask about wallet risk, risk scores, or want to check an address
+- Use monitor_anomalies when users ask about suspicious activity, anomalies, or behavioral monitoring
+- Use scan_compliance when users ask about regulatory compliance, gaps, jurisdiction rules, or want a compliance scan
+- Use scan_code when users provide code and want it analyzed for compliance issues
+- Use get_jurisdiction_rules when users ask about specific jurisdiction requirements
+
+When using tools, explain what you're doing, call the tool, then explain the results conversationally. For "full review" requests, chain multiple tools together.
 
 FlowShield contracts are deployed at: 0x93c691a98b975493 on Flow testnet.
 Key design principle: identity data NEVER exists on-chain. Only ZK proofs and boolean results.
@@ -76,7 +92,7 @@ access(all) fun deposit(depositor: Address, amount: UFix64) {
     // One-line compliance check
     let isCompliant = ComplianceAction.verify(depositor)
     assert(isCompliant, message: "User not compliant")
-    
+
     // ... your deposit logic
 }
 
@@ -84,7 +100,7 @@ access(all) fun deposit(depositor: Address, amount: UFix64) {
 access(all) fun borrow(borrower: Address, amount: UFix64) {
     let isFullyCompliant = ComplianceAction.verifyFull(borrower)
     assert(isFullyCompliant, message: "Full compliance required")
-    
+
     // ... your borrow logic
 }
 \`\`\`
@@ -102,7 +118,7 @@ transaction(amountIn: UFix64, minAmountOut: UFix64) {
         // Compliance check before swap
         let isCompliant = ComplianceAction.verify(acct.address)
         assert(isCompliant, message: "Compliance required for swaps")
-        
+
         // Your swap logic here
     }
 }
@@ -193,70 +209,182 @@ function buildSystemPrompt(context) {
   return parts.join('\n')
 }
 
+// ── Copilot Agent Tools ──────────────────────────────────────────────────────
+
+const COPILOT_TOOLS = [
+  {
+    name: 'assess_risk',
+    description: 'Run a full risk assessment on a Flow wallet address. Returns risk score (0-100), tier (compliant/semi-compliant/non-compliant), triggered risk factors, and wallet data.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        address: { type: 'string', description: 'Flow address (0x prefixed) to assess' },
+      },
+      required: ['address'],
+    },
+  },
+  {
+    name: 'monitor_anomalies',
+    description: 'Run anomaly detection on a Flow wallet address. Checks for suspicious patterns like high-frequency transactions, extreme balances, excessive signing keys, and dormant account reactivation.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        address: { type: 'string', description: 'Flow address (0x prefixed) to monitor' },
+      },
+      required: ['address'],
+    },
+  },
+  {
+    name: 'scan_compliance',
+    description: 'Scan on-chain compliance rules across all jurisdictions (US, EU, UK, SG, CA). Compares RuleEngine state against regulatory requirements and identifies gaps.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'scan_code',
+    description: 'Analyze source code (Cadence, Solidity, etc.) for compliance issues. Checks for KYC/AML integration, travel rule compliance, sanctions screening, access controls, and more.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Source code to analyze' },
+        language: { type: 'string', description: 'Programming language (cadence, solidity, javascript)', default: 'cadence' },
+      },
+      required: ['code'],
+    },
+  },
+  {
+    name: 'get_jurisdiction_rules',
+    description: 'Look up the compliance requirements for a specific jurisdiction. Returns required rules, regulatory framework, and governing body.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        jurisdiction: { type: 'string', description: 'Jurisdiction code: US, EU, UK, SG, or CA' },
+      },
+      required: ['jurisdiction'],
+    },
+  },
+]
+
+// Jurisdiction checklist for the get_jurisdiction_rules tool
+const JURISDICTION_DATA = {
+  US: { framework: 'Bank Secrecy Act / FinCEN Guidance', regulator: 'FinCEN / SEC', rules: { kyc_required: 'true', travel_rule_threshold: '$3,000', sanctions_screening: 'OFAC SDN List', max_anonymous_tx: '0' } },
+  EU: { framework: 'MiCA (Markets in Crypto-Assets)', regulator: 'EBA / ESMA', rules: { kyc_required: 'true', travel_rule_threshold: '€1,000', sanctions_screening: 'EU Sanctions List', reverification_days: '365', max_anonymous_tx: '0' } },
+  UK: { framework: 'FCA Crypto Registration', regulator: 'FCA', rules: { kyc_required: 'true', travel_rule_threshold: '£1,000', sanctions_screening: 'OFSI List', reverification_days: '365', max_anonymous_tx: '0' } },
+  SG: { framework: 'Payment Services Act', regulator: 'MAS', rules: { kyc_required: 'true', travel_rule_threshold: 'SGD 1,500', sanctions_screening: 'MAS Sanctions', reverification_days: '365', max_anonymous_tx: '0' } },
+  CA: { framework: 'PCMLTFA', regulator: 'FINTRAC', rules: { kyc_required: 'true', travel_rule_threshold: 'CAD 10,000', sanctions_screening: 'OSFI List', reverification_days: '365', max_anonymous_tx: '0' } },
+}
+
 /**
- * Chat with the Builder Copilot
- * Uses Claude API if available, falls back to pattern-matched responses
+ * Build tool handlers that delegate to the real agents
+ */
+function buildCopilotToolHandlers(appContext) {
+  const { fcl, contractAddress } = appContext || {}
+
+  return {
+    assess_risk: async (input) => {
+      const { assessRisk } = await import('./risk-scoring.js')
+      if (!fcl) return { error: 'Flow client not available' }
+      if (!isValidFlowAddress(input.address)) return { error: 'Invalid Flow address format (expected 0x + 16 hex chars)' }
+      return await assessRisk(input.address, fcl)
+    },
+    monitor_anomalies: async (input) => {
+      const { monitorAddress } = await import('./anomaly-monitor.js')
+      if (!fcl) return { error: 'Flow client not available' }
+      if (!isValidFlowAddress(input.address)) return { error: 'Invalid Flow address format (expected 0x + 16 hex chars)' }
+      return await monitorAddress(input.address, fcl)
+    },
+    scan_compliance: async () => {
+      const { scanForGaps } = await import('./regulatory-radar.js')
+      if (!fcl) return { error: 'Flow client not available' }
+      return await scanForGaps(fcl, contractAddress)
+    },
+    scan_code: async (input) => {
+      return await scanCode(input.code, input.language || 'cadence', '')
+    },
+    get_jurisdiction_rules: async (input) => {
+      const j = input.jurisdiction?.toUpperCase()
+      const data = JURISDICTION_DATA[j]
+      if (!data) return { error: `Unknown jurisdiction: ${input.jurisdiction}. Valid: US, EU, UK, SG, CA` }
+      return { jurisdiction: j, ...data }
+    },
+  }
+}
+
+/**
+ * Chat with the Builder Copilot — now an autonomous agent with tools.
+ * Uses Claude tool-use loop if available, falls back to pattern-matched responses.
+ *
  * @param {string} userMessage - The user's message
  * @param {Array} conversationHistory - Previous messages
  * @param {Object} context - Optional live context (risk score, anomalies, etc.)
+ * @param {Object} appContext - App context with { fcl, contractAddress } for agent tools
  */
-export async function chat(userMessage, conversationHistory = [], context = null) {
-  const apiKey = process.env.CLAUDE_API_KEY
+export async function chat(userMessage, conversationHistory = [], context = null, appContext = null) {
+  // Input validation and bounds
+  if (!userMessage || typeof userMessage !== 'string') {
+    return {
+      response: 'Please provide a message.',
+      conversationHistory: [...conversationHistory],
+    }
+  }
+  if (userMessage.length > MAX_MESSAGE_LENGTH) {
+    userMessage = userMessage.slice(0, MAX_MESSAGE_LENGTH)
+  }
+
+  // Bound conversation history to prevent unbounded context growth
+  const boundedHistory = Array.isArray(conversationHistory)
+    ? conversationHistory.slice(-MAX_HISTORY_MESSAGES)
+    : []
+
   const systemPrompt = buildSystemPrompt(context)
 
-  // Try Claude API first
-  if (apiKey) {
-    try {
-      const messages = [
-        ...conversationHistory.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        { role: 'user', content: userMessage },
-      ]
+  // Try agentic chat with tool use
+  const hasTools = appContext?.fcl != null
+  try {
+    const messages = [
+      ...boundedHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: userMessage },
+    ]
 
-      const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2048,
-          system: systemPrompt,
-          messages,
-        }),
-      })
+    const agentResult = await runAgentChat({
+      systemPrompt,
+      conversationHistory: messages,
+      tools: hasTools ? COPILOT_TOOLS : [],
+      toolHandlers: hasTools ? buildCopilotToolHandlers(appContext) : {},
+      maxIterations: 8,
+      maxTokens: 4096,
+    })
 
-      if (res.ok) {
-        const data = await res.json()
-        let response = data.content[0].text
+    if (agentResult) {
+      let response = agentResult.text
 
-        // Check for system prompt leaks in the response
-        const leakCheck = filterResponseLeaks(response, SYSTEM_PROMPT_SNIPPETS)
-        if (leakCheck.leaked) {
-          console.warn('[Copilot] System prompt leak detected in response, sanitizing')
-          response = 'I can help you with FlowShield compliance and integration questions. What would you like to know?'
-        }
-
-        return {
-          response,
-          conversationHistory: [
-            ...conversationHistory,
-            { role: 'user', content: userMessage },
-            { role: 'assistant', content: response },
-          ],
-        }
-      } else {
-        const errBody = await res.text()
-        console.warn(`[Copilot] Claude API ${res.status}: ${errBody.slice(0, 200)}`)
+      // Check for system prompt leaks in the response
+      const leakCheck = filterResponseLeaks(response, SYSTEM_PROMPT_SNIPPETS)
+      if (leakCheck.leaked) {
+        agentLog('warn', 'Copilot', 'System prompt leak detected, sanitizing')
+        response = 'I can help you with FlowShield compliance and integration questions. What would you like to know?'
       }
-    } catch (err) {
-      console.warn('[Copilot] Claude API error, using fallback:', err.message)
+
+      if (agentResult.toolCalls.length > 0) {
+        agentLog('info', 'Copilot', 'Agent used tools', {
+          count: agentResult.toolCalls.length,
+          tools: agentResult.toolCalls.map(t => t.name),
+        })
+      }
+
+      return {
+        response,
+        conversationHistory: [
+          ...boundedHistory,
+          { role: 'user', content: userMessage },
+          { role: 'assistant', content: response },
+        ],
+      }
     }
+  } catch (err) {
+    agentLog('warn', 'Copilot', 'Agent chat failed, using fallback', { error: err.message })
   }
 
   // Fallback: pattern-matched responses
@@ -275,7 +403,7 @@ export async function chat(userMessage, conversationHistory = [], context = null
   return {
     response,
     conversationHistory: [
-      ...conversationHistory,
+      ...boundedHistory,
       { role: 'user', content: userMessage },
       { role: 'assistant', content: response },
     ],
@@ -314,35 +442,33 @@ Be specific, actionable, and reference exact line numbers or function names from
  * @param {string} context - Optional additional context about the project
  */
 export async function scanCode(code, language = 'cadence', context = '') {
-  const apiKey = process.env.CLAUDE_API_KEY
+  // Input validation
+  if (!code || typeof code !== 'string') {
+    return { analysis: 'No code provided for scanning.', source: 'validation', score: 0, issues: [] }
+  }
+  if (code.length > MAX_CODE_LENGTH) {
+    agentLog('warn', 'Copilot', 'Code truncated for scan', { originalLength: code.length, maxLength: MAX_CODE_LENGTH })
+    code = code.slice(0, MAX_CODE_LENGTH)
+  }
 
   const userMessage = `Analyze this ${language} code for compliance issues:\n\n\`\`\`${language}\n${code}\n\`\`\`${context ? `\n\nAdditional context: ${context}` : ''}`
 
-  if (apiKey) {
-    try {
-      const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 3000,
-          system: CODE_SCAN_PROMPT,
-          messages: [{ role: 'user', content: userMessage }],
-        }),
-      })
+  // Try agent runner (no tools needed for code scan — just direct analysis)
+  try {
+    const result = await runAgentLoop({
+      systemPrompt: CODE_SCAN_PROMPT,
+      userMessage,
+      tools: [],
+      toolHandlers: {},
+      maxIterations: 1,
+      maxTokens: 3000,
+    })
 
-      if (res.ok) {
-        const data = await res.json()
-        return { analysis: data.content[0].text, source: 'claude-ai' }
-      }
-    } catch (err) {
-      console.warn('[Copilot] Code scan Claude error:', err.message)
+    if (result) {
+      return { analysis: result.text, source: 'claude-ai' }
     }
+  } catch (err) {
+    console.warn('[Copilot] Code scan agent error:', err.message)
   }
 
   // Fallback: deterministic pattern-based analysis

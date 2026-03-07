@@ -1,6 +1,9 @@
 // risk-scoring.js
-// Rule-based risk scoring agent. No LLM API needed.
-// Analyzes public on-chain Flow data to assign risk tiers.
+// AI-powered risk scoring agent with tool use.
+// Claude autonomously fetches wallet data, runs deterministic scoring, then reasons about results.
+// Falls back to pure deterministic pipeline if no API key or agent fails.
+
+import { runAgentLoop, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 
 const RISK_FACTORS = [
   { id: 'account_age_7d', label: 'Account age < 7 days', points: 15, check: (d) => d.accountAgeDays < 7 },
@@ -67,8 +70,6 @@ export async function fetchWalletData(address, fcl) {
     const contractCount = Object.keys(account.contracts || {}).length
 
     // Account age: check Supabase for real creation timestamp, else estimate from activity.
-    // sequenceNumber is cumulative tx count — NOT a reliable age proxy.
-    // Without an indexer, we estimate conservatively: low seq = new, high seq = established.
     let accountAgeDays = null
     try {
       const { getSupabase } = await import('../lib/supabase.js')
@@ -120,10 +121,159 @@ export async function fetchWalletData(address, fcl) {
   }
 }
 
+// ── Agent Tools ──────────────────────────────────────────────────────────────
+
+const RISK_TOOLS = [
+  {
+    name: 'fetch_wallet_data',
+    description: 'Fetch on-chain wallet data from Flow testnet for a given address. Returns balance, account age, transaction count, key count, contract count, and other metrics.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        address: { type: 'string', description: 'Flow address (0x prefixed)' },
+      },
+      required: ['address'],
+    },
+  },
+  {
+    name: 'calculate_risk_score',
+    description: 'Run the deterministic rule-based risk scoring algorithm on wallet data. Returns score (0-100), tier, and triggered factors.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        wallet_data: {
+          type: 'object',
+          description: 'Wallet data object from fetch_wallet_data',
+        },
+      },
+      required: ['wallet_data'],
+    },
+  },
+  {
+    name: 'get_risk_factors',
+    description: 'Get the complete list of risk factors and their point values used in scoring.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+]
+
+const RISK_SYSTEM_PROMPT = `You are a blockchain compliance risk analyst agent. You have tools to fetch on-chain wallet data and run risk scoring algorithms.
+
+Your task: Given a wallet address, autonomously assess its risk by:
+1. First, call fetch_wallet_data to get the on-chain data
+2. Then, call calculate_risk_score to run the deterministic scoring
+3. Analyze the results — look for correlated signals the rules might miss (e.g., new account + high balance = suspicious, many keys + high activity = shared account)
+4. You may adjust the score by up to +/- 10 points with a clear explanation if you identify patterns the rules don't capture
+
+Return your final answer as a JSON object with this EXACT shape:
+{
+  "score": <number 0-100>,
+  "tier": "compliant" | "semi-compliant" | "non-compliant",
+  "factors": [{"id": "<factor_id>", "label": "<description>", "points": <number>}],
+  "factorCount": <number>,
+  "totalFactors": 8,
+  "walletData": <the wallet data object>,
+  "agentReasoning": "<your analysis of correlated signals and any score adjustments>"
+}
+
+Tier thresholds: 0-30 = compliant, 31-70 = semi-compliant, 71-100 = non-compliant.
+Return ONLY the JSON object, no other text.`
+
 /**
- * Full risk assessment pipeline: fetch data + calculate score
+ * Build tool handlers that capture the fcl instance
+ */
+function buildRiskToolHandlers(address, fcl) {
+  return {
+    fetch_wallet_data: async (input) => {
+      const addr = input.address || address
+      return await fetchWalletData(addr, fcl)
+    },
+    calculate_risk_score: async (input) => {
+      return calculateRiskScore(input.wallet_data)
+    },
+    get_risk_factors: async () => {
+      return RISK_FACTORS.map(f => ({ id: f.id, label: f.label, points: f.points }))
+    },
+  }
+}
+
+/**
+ * Validate that an agent result has the required shape
+ */
+function validateRiskResult(result) {
+  return (
+    result &&
+    typeof result.score === 'number' &&
+    result.score >= 0 && result.score <= 100 &&
+    typeof result.tier === 'string' &&
+    Array.isArray(result.factors) &&
+    result.walletData
+  )
+}
+
+/**
+ * Full risk assessment pipeline: agent-first with deterministic fallback.
+ *
+ * 1. Try agentic loop (Claude fetches data, scores, reasons)
+ * 2. If agent fails or no API key -> deterministic pipeline (unchanged)
  */
 export async function assessRisk(address, fcl) {
+  // Input validation
+  if (!isValidFlowAddress(address)) {
+    agentLog('warn', 'RiskScoring', 'Invalid Flow address', { address })
+    return {
+      score: 0, tier: 'compliant', factors: [], factorCount: 0, totalFactors: RISK_FACTORS.length,
+      walletData: { address, source: 'invalid', error: 'Invalid Flow address format (expected 0x + 16 hex chars)' },
+    }
+  }
+
+  // Try agent-first
+  try {
+    const agentResult = await runAgentLoop({
+      systemPrompt: RISK_SYSTEM_PROMPT,
+      userMessage: `Assess the risk for Flow wallet address: ${address}`,
+      tools: RISK_TOOLS,
+      toolHandlers: buildRiskToolHandlers(address, fcl),
+      maxIterations: 5,
+      maxTokens: 2048,
+    })
+
+    if (agentResult) {
+      const parsed = parseJsonFromText(agentResult.text)
+      if (validateRiskResult(parsed)) {
+        // Enforce score adjustment bounds: agent cannot deviate more than ±10 from deterministic
+        const deterministicScore = calculateRiskScore(parsed.walletData || {}).score
+        const delta = parsed.score - deterministicScore
+        if (Math.abs(delta) > 10) {
+          agentLog('warn', 'RiskScoring', 'Agent score adjustment exceeded ±10, clamping', {
+            agentScore: parsed.score,
+            deterministicScore,
+            delta,
+          })
+          parsed.score = Math.max(0, Math.min(100, deterministicScore + Math.sign(delta) * 10))
+        }
+
+        parsed.tier = getTier(parsed.score)
+        parsed.analysisSource = 'agent'
+        parsed.agentIterations = agentResult.iterations
+        parsed.agentToolCalls = agentResult.toolCalls.length
+        if (agentResult.usage) parsed.usage = agentResult.usage
+        agentLog('info', 'RiskScoring', 'Agent completed', {
+          score: parsed.score, tier: parsed.tier,
+          iterations: agentResult.iterations, toolCalls: agentResult.toolCalls.length,
+        })
+        return parsed
+      } else {
+        agentLog('warn', 'RiskScoring', 'Agent returned invalid shape, falling back to deterministic')
+      }
+    }
+  } catch (err) {
+    agentLog('warn', 'RiskScoring', 'Agent failed, falling back to deterministic', { error: err.message })
+  }
+
+  // Deterministic fallback
   const walletData = await fetchWalletData(address, fcl)
   const riskResult = calculateRiskScore(walletData)
   return { ...riskResult, walletData }

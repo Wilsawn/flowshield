@@ -1,9 +1,12 @@
 {
-  "name": "flowshield-backend",
-  "version": "0.1.0",
+  "name": "flowshield",
+  "version": "1.0.0",
   "type": "module",
-  "description": "FlowShield API server — connects AI agents to Flow blockchain",
+  "description": "FlowShield — Privacy-preserving compliance infrastructure for DeFi on Flow blockchain",
   "main": "api/server.js",
+  "bin": {
+    "flowshield": "./cli/index.js"
+  },
   "scripts": {
     "start": "node api/server.js",
     "dev": "node --watch api/server.js"
@@ -12,6 +15,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@onflow/fcl": "^1.13.1",
     "@onflow/types": "^1.4.1",
     "@supabase/supabase-js": "^2.97.0",

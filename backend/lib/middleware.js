@@ -2,7 +2,7 @@
 // Middleware for FlowShield API — authentication, rate limiting, etc.
 
 import { validateApiKey } from './supabase.js'
-import { createHmac, timingSafeEqual } from 'crypto'
+import { createHmac, timingSafeEqual, randomBytes } from 'crypto'
 
 /**
  * API key authentication middleware.
@@ -98,8 +98,19 @@ export function rateLimit({ windowMs = 60000, max = 100 } = {}) {
  * Generate a session token for a user (HMAC-based, no external deps).
  * Format: base64(email):expiry:hmac
  */
+// Generate a random fallback secret for dev mode (per-process, not hardcoded)
+const DEV_SECRET = process.env.NODE_ENV !== 'production'
+  ? randomBytes(32).toString('hex')
+  : undefined
+
+function getTokenSecret() {
+  const secret = process.env.JWT_SECRET || DEV_SECRET
+  if (!secret) throw new Error('JWT_SECRET is required in production')
+  return secret
+}
+
 export function generateSessionToken(email, expiresInMs = 3600000) {
-  const secret = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'flowshield-dev-secret' : undefined)
+  const secret = getTokenSecret()
   const expiry = Date.now() + expiresInMs
   const payload = `${Buffer.from(email.toLowerCase()).toString('base64')}:${expiry}`
   const hmac = createHmac('sha256', secret).update(payload).digest('hex')
@@ -111,7 +122,8 @@ export function generateSessionToken(email, expiresInMs = 3600000) {
  */
 export function verifySessionToken(token) {
   if (!token) return null
-  const secret = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'flowshield-dev-secret' : undefined)
+  let secret
+  try { secret = getTokenSecret() } catch { return null }
 
   const parts = token.split(':')
   if (parts.length !== 3) return null

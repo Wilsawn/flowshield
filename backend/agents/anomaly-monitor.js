@@ -1,10 +1,9 @@
 // anomaly-monitor.js
-// Hybrid AI behavioral monitoring agent (same pattern as regulatory radar):
-//   1. Deterministic thresholds detect anomalies (same data = same result)
-//   2. Claude AI enriches descriptions (cannot add/remove anomalies)
-//   3. Thresholds set for REAL usage — normal testnet activity won't flag
-//
-// Your wallet: 200K FLOW, 6 contracts, 39 txs, 1 key = ALL NORMAL. Zero anomalies.
+// AI-powered behavioral monitoring agent with tool use.
+// Claude autonomously gathers on-chain data, runs anomaly detection, then reasons about context.
+// Falls back to deterministic thresholds if no API key or agent fails.
+
+import { runAgentLoop, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 
 const SEVERITY_ORDER = { low: 1, medium: 2, high: 3 }
 
@@ -42,10 +41,6 @@ async function gatherOnChainData(address, fcl) {
 /**
  * Deterministic anomaly detection — fixed thresholds.
  * Same wallet data = same anomalies. No randomness.
- *
- * Thresholds are set for REAL usage — testnet operator accounts with
- * high balances and multiple contracts are NORMAL and won't flag.
- * Only genuinely suspicious patterns trigger anomalies.
  */
 // Thresholds configurable via env vars (override for mainnet vs testnet)
 const THRESHOLDS = {
@@ -129,108 +124,212 @@ function detectAnomalies(walletData) {
   }
 }
 
-/**
- * Claude AI enrichment for anomaly descriptions (same pattern as regulatory radar).
- * Claude CANNOT add or remove anomalies — only improve descriptions.
- */
-async function enrichAnomaliesWithClaude(anomalies, walletData) {
-  const apiKey = process.env.CLAUDE_API_KEY
-  if (!apiKey || anomalies.length === 0) return anomalies
+// ── Agent Tools ──────────────────────────────────────────────────────────────
 
-  try {
-    const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+const ANOMALY_TOOLS = [
+  {
+    name: 'gather_onchain_data',
+    description: 'Fetch real-time on-chain wallet data from Flow testnet. Returns balance, key count, sequence number (lifetime tx count), contract count, and deployed contract names.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        address: { type: 'string', description: 'Flow address (0x prefixed)' },
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1024,
-        system: `You are a blockchain compliance analyst. You will receive anomalies detected on a Flow wallet. For each anomaly, write a better 1-2 sentence "detail" explaining the risk.
+      required: ['address'],
+    },
+  },
+  {
+    name: 'run_anomaly_detection',
+    description: 'Run deterministic threshold-based anomaly detection on wallet data. Returns list of triggered anomalies with severity levels.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        wallet_data: {
+          type: 'object',
+          description: 'Wallet data object from gather_onchain_data',
+        },
+      },
+      required: ['wallet_data'],
+    },
+  },
+  {
+    name: 'get_anomaly_thresholds',
+    description: 'Get the current threshold configuration for anomaly detection rules.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+]
 
-RULES:
-- Do NOT add new anomalies. Do NOT remove any.
-- ONLY improve the "detail" field.
-- Return ONLY a JSON array: [{"index": 0, "detail": "improved detail"}, ...]`,
-        messages: [{
-          role: 'user',
-          content: `Wallet: ${JSON.stringify({ address: walletData.address, balance: walletData.balance, keyCount: walletData.keyCount, sequenceNumber: walletData.sequenceNumber, contractCount: walletData.contractCount })}\n\nAnomalies:\n${JSON.stringify(anomalies.map((a, i) => ({ index: i, id: a.id, label: a.label, detail: a.detail })), null, 2)}`,
-        }],
-      }),
-    })
+const ANOMALY_SYSTEM_PROMPT = `You are a blockchain behavioral analysis agent monitoring Flow testnet wallets for suspicious activity.
 
-    if (!res.ok) return anomalies
+Your task: Given a wallet address, autonomously analyze it by:
+1. Call gather_onchain_data to fetch live on-chain data
+2. Call run_anomaly_detection to run threshold-based checks
+3. Analyze the context — is this a testnet developer/operator (normal) or genuinely suspicious?
+   - High balance + many contracts = likely a deployer/developer (NORMAL on testnet)
+   - High keys + high activity = shared or institutional account
+   - Zero txs + high balance = potential sleeper, but could be newly funded
+4. Write detailed, contextual descriptions for each anomaly
 
-    const data = await res.json()
-    const text = data.content[0].text
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (!jsonMatch) return anomalies
-
-    const enrichments = JSON.parse(jsonMatch[0])
-    const enriched = [...anomalies]
-    for (const e of enrichments) {
-      if (typeof e.index === 'number' && e.detail && enriched[e.index]) {
-        enriched[e.index].detail = e.detail
-      }
+Return your final answer as a JSON object with this EXACT shape:
+{
+  "anomalyCount": <number>,
+  "highestSeverity": "none" | "low" | "medium" | "high",
+  "recommendedAction": "none" | "monitor" | "re-verify" | "flag-and-review",
+  "summary": "<contextual summary of findings>",
+  "anomalies": [
+    {
+      "id": "<anomaly_id>",
+      "label": "<anomaly label>",
+      "detail": "<your detailed contextual description>",
+      "severity": "low" | "medium" | "high",
+      "timestamp": "<ISO timestamp>"
     }
-    console.log(`[AnomalyMonitor] Claude enriched ${enrichments.length} anomaly descriptions`)
-    return enriched
-  } catch (err) {
-    console.warn('[AnomalyMonitor] Claude enrichment failed (using base descriptions):', err.message)
-    return anomalies
+  ],
+  "activity": <the wallet data object>,
+  "agentReasoning": "<your contextual analysis explaining why these patterns are or aren't concerning>"
+}
+
+IMPORTANT: You MUST keep the same anomalies that the detection tool found. Do NOT add or remove anomalies. You CAN improve their descriptions with contextual analysis.
+Return ONLY the JSON object, no other text.`
+
+function buildAnomalyToolHandlers(address, fcl) {
+  return {
+    gather_onchain_data: async (input) => {
+      const addr = input.address || address
+      return await gatherOnChainData(addr, fcl)
+    },
+    run_anomaly_detection: async (input) => {
+      return detectAnomalies(input.wallet_data)
+    },
+    get_anomaly_thresholds: async () => {
+      return THRESHOLDS
+    },
   }
 }
 
+function validateAnomalyResult(result) {
+  return (
+    result &&
+    typeof result.anomalyCount === 'number' &&
+    typeof result.highestSeverity === 'string' &&
+    typeof result.recommendedAction === 'string' &&
+    typeof result.summary === 'string' &&
+    Array.isArray(result.anomalies) &&
+    result.activity
+  )
+}
+
 /**
- * Monitor a single address — hybrid pattern:
- *   1. Gather real on-chain data
- *   2. Deterministic anomaly detection (fixed thresholds)
- *   3. Claude AI enriches descriptions (cannot add/remove anomalies)
+ * Monitor a single address — agent-first with deterministic fallback.
  *
- * Same wallet data always produces the same anomaly list.
+ * 1. Try agentic loop (Claude gathers data, detects, reasons)
+ * 2. If agent fails or no API key -> deterministic pipeline
  */
 export async function monitorAddress(address, fcl) {
-  // 1. Gather real on-chain data
+  // Input validation
+  if (!isValidFlowAddress(address)) {
+    agentLog('warn', 'AnomalyMonitor', 'Invalid Flow address', { address })
+    return {
+      anomalyCount: 0, highestSeverity: 'none', recommendedAction: 'none',
+      summary: 'Invalid address format. Expected 0x + 16 hex characters.',
+      anomalies: [],
+      activity: { address, source: 'invalid', error: 'Invalid Flow address format' },
+      analysisSource: 'validation',
+    }
+  }
+
+  // Try agent-first
+  try {
+    const agentResult = await runAgentLoop({
+      systemPrompt: ANOMALY_SYSTEM_PROMPT,
+      userMessage: `Monitor Flow wallet address for anomalies: ${address}`,
+      tools: ANOMALY_TOOLS,
+      toolHandlers: buildAnomalyToolHandlers(address, fcl),
+      maxIterations: 5,
+      maxTokens: 2048,
+    })
+
+    if (agentResult) {
+      const parsed = parseJsonFromText(agentResult.text)
+      if (validateAnomalyResult(parsed)) {
+        parsed.analysisSource = 'agent'
+        parsed.agentIterations = agentResult.iterations
+        parsed.agentToolCalls = agentResult.toolCalls.length
+        if (agentResult.usage) parsed.usage = agentResult.usage
+        agentLog('info', 'AnomalyMonitor', 'Agent completed', {
+          anomalyCount: parsed.anomalyCount, severity: parsed.highestSeverity,
+          iterations: agentResult.iterations, toolCalls: agentResult.toolCalls.length,
+        })
+        return parsed
+      } else {
+        agentLog('warn', 'AnomalyMonitor', 'Agent returned invalid shape, falling back')
+      }
+    }
+  } catch (err) {
+    agentLog('warn', 'AnomalyMonitor', 'Agent failed, falling back to deterministic', { error: err.message })
+  }
+
+  // Deterministic fallback
   const walletData = await gatherOnChainData(address, fcl)
-  console.log(`[AnomalyMonitor] On-chain: balance=${walletData.balance}, seq=${walletData.sequenceNumber}, keys=${walletData.keyCount}, contracts=${walletData.contractCount}`)
+  agentLog('info', 'AnomalyMonitor', 'Deterministic analysis', {
+    balance: walletData.balance, seq: walletData.sequenceNumber,
+    keys: walletData.keyCount, contracts: walletData.contractCount,
+  })
 
-  // 2. Deterministic anomaly detection
   const detection = detectAnomalies(walletData)
-  console.log(`[AnomalyMonitor] Deterministic: ${detection.anomalies.length} anomalies`)
-
-  // 3. Claude AI enriches descriptions (cannot add/remove)
-  const enrichedAnomalies = await enrichAnomaliesWithClaude(detection.anomalies, walletData)
 
   return {
-    anomalyCount: enrichedAnomalies.length,
+    anomalyCount: detection.anomalies.length,
     highestSeverity: detection.highestSeverity,
     recommendedAction: detection.recommendation,
     summary: detection.summary,
-    anomalies: enrichedAnomalies,
+    anomalies: detection.anomalies,
     activity: walletData,
-    analysisSource: enrichedAnomalies.length > 0 ? 'checklist+ai' : 'checklist',
+    analysisSource: 'checklist',
   }
 }
 
 /**
  * Run monitoring cycle across multiple addresses
  */
+const MAX_BATCH_SIZE = 50
+const BATCH_TIMEOUT_MS = 300_000 // 5 min max for entire batch
+
 export async function runMonitoringCycle(addresses, fcl) {
+  if (!Array.isArray(addresses) || addresses.length === 0) {
+    return { totalChecked: 0, totalFlagged: 0, results: [], timestamp: new Date().toISOString() }
+  }
+
+  // Cap batch size to prevent resource exhaustion
+  const capped = addresses.slice(0, MAX_BATCH_SIZE)
+  if (addresses.length > MAX_BATCH_SIZE) {
+    agentLog('warn', 'AnomalyMonitor', `Batch capped from ${addresses.length} to ${MAX_BATCH_SIZE}`)
+  }
+
+  const deadline = Date.now() + BATCH_TIMEOUT_MS
   const results = []
-  for (const address of addresses) {
+
+  for (const address of capped) {
+    if (Date.now() > deadline) {
+      agentLog('warn', 'AnomalyMonitor', 'Batch deadline exceeded', {
+        completed: results.length, total: capped.length,
+      })
+      break
+    }
     const result = await monitorAddress(address, fcl)
     results.push(result)
   }
 
   const flagged = results.filter((r) => r.anomalyCount > 0)
   return {
-    totalChecked: addresses.length,
+    totalChecked: results.length,
     totalFlagged: flagged.length,
     results,
     timestamp: new Date().toISOString(),
+    ...(results.length < capped.length ? { truncated: true, reason: 'deadline_exceeded' } : {}),
   }
 }
 

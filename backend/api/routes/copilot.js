@@ -199,7 +199,10 @@ router.post('/chat', copilotRateLimit, async (req, res) => {
     const rawHistory = convo?.messages?.map(m => ({ role: m.role, content: m.content })) || []
     const history = sanitizeHistory(rawHistory)
 
-    const result = await chat(cleanMessage, history, context)
+    const result = await chat(cleanMessage, history, context, {
+      fcl: req.app.locals.fcl,
+      contractAddress: req.app.locals.contractAddress,
+    })
 
     // Generate title from first message
     const isFirst = history.length === 0

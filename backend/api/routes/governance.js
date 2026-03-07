@@ -199,16 +199,26 @@ router.post('/create', async (req, res) => {
   const address = req.app.locals.contractAddress
   const { action, description, data } = req.body
 
-  if (!action || !description) {
-    return res.status(400).json({ error: 'action and description are required' })
+  if (!action || typeof action !== 'string' || action.length > 100) {
+    return res.status(400).json({ error: 'action is required (max 100 chars)' })
+  }
+  if (!description || typeof description !== 'string' || description.length > 2000) {
+    return res.status(400).json({ error: 'description is required (max 2000 chars)' })
   }
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available — cannot sign transactions' })
   }
 
   try {
-    // Build data dict entries for Cadence
-    const dataEntries = Object.entries(data || {})
+    // Build data dict entries for Cadence — sanitize to prevent injection
+    const SAFE_CADENCE_STRING = /^[a-zA-Z0-9 _\-.,/:]+$/
+    const sanitizedData = Object.entries(data || {})
+    for (const [k, v] of sanitizedData) {
+      if (!SAFE_CADENCE_STRING.test(k) || !SAFE_CADENCE_STRING.test(String(v))) {
+        return res.status(400).json({ error: `Invalid characters in data key/value: "${k}"` })
+      }
+    }
+    const dataEntries = sanitizedData
       .map(([k, v]) => `"${k}": "${v}"`)
       .join(', ')
 

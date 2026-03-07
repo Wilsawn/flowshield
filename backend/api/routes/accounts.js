@@ -6,10 +6,13 @@ import { Router } from 'express'
 import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization } from '../../lib/flow-signer.js'
 import { logAudit, getSupabase } from '../../lib/supabase.js'
 import { encryptKey, decryptKey } from '../../lib/crypto.js'
-import { generateSessionToken, safeError } from '../../lib/middleware.js'
+import { generateSessionToken, safeError, rateLimit } from '../../lib/middleware.js'
 import { getAddress } from '../../lib/flow-addresses.js'
 
 const router = Router()
+
+// Tighter rate limits on auth endpoints to prevent brute force / account spam
+const authRateLimit = rateLimit({ windowMs: 60000, max: 5 })
 
 // ── Funding configuration ──
 // Testnet: generous for demos. Mainnet: minimal for tx fees only.
@@ -127,7 +130,7 @@ async function saveUser(record) {
  * If user already has an account, returns the existing one.
  * The user's private key is stored server-side (custodial model).
  */
-router.post('/create', async (req, res) => {
+router.post('/create', authRateLimit, async (req, res) => {
   const { email, authMethod = 'passkey' } = req.body
 
   if (!email) {
@@ -288,7 +291,7 @@ async function _handleCreate(req, res, emailKey, authMethod) {
  * Returns existing account + session token for returning users.
  * Does NOT create a new account or generate keys.
  */
-router.post('/login', async (req, res) => {
+router.post('/login', authRateLimit, async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email is required' })
 
@@ -321,7 +324,7 @@ router.post('/login', async (req, res) => {
  * Registers a self-custodial wallet user. No private key is stored.
  * If the address is already registered, returns the existing record.
  */
-router.post('/register-wallet', async (req, res) => {
+router.post('/register-wallet', authRateLimit, async (req, res) => {
   const { address } = req.body
   if (!address) return res.status(400).json({ error: 'address is required' })
 
