@@ -14,16 +14,20 @@ export default function ComplianceReportExport() {
         throw new Error('No audit data available')
       }
 
-      // Generate CSV
+      // Generate CSV — handle Supabase shape (action/detail object) and local shape (type/detail string)
       const csvRows = [
-        ['Timestamp', 'Type', 'Severity', 'Detail', 'Address'],
-        ...data.auditLog.map(e => [
-          e.created_at || e.time || '',
-          e.type || '',
-          e.severity || '',
-          `"${(e.detail || '').replace(/"/g, '""')}"`,
-          e.address || '',
-        ]),
+        ['Timestamp', 'Action', 'Agent', 'Severity', 'Detail', 'Address'],
+        ...data.auditLog.map(e => {
+          const detail = typeof e.detail === 'object' ? JSON.stringify(e.detail) : (e.detail || '')
+          return [
+            e.created_at || e.time || '',
+            e.action || e.type || '',
+            e.agent || '',
+            e.severity || '',
+            `"${detail.replace(/"/g, '""')}"`,
+            e.operator_address || e.address || '',
+          ]
+        }),
       ]
       const csv = csvRows.map(r => r.join(',')).join('\n')
       const blob = new Blob([csv], { type: 'text/csv' })
