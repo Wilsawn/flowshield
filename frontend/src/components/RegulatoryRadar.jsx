@@ -27,6 +27,8 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
   const [isLoading, setIsLoading] = useState(false)
   const [pushResult, setPushResult] = useState(null)
   const [editedRules, setEditedRules] = useState({})
+  const [scanProgress, setScanProgress] = useState(0)
+  const [scanStage, setScanStage] = useState('')
 
   // Step 1: AI scans on-chain rules and compares against real regulations
   const handleScan = async () => {
@@ -35,11 +37,36 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
     setSelectedGap(null)
     setPushResult(null)
     setEditedRules({})
+    setScanProgress(0)
+    setScanStage('Connecting to Flow testnet...')
     setIsLoading(true)
     onAuditEntry?.('radar', 'Regulatory Radar reading on-chain rules...', 'info')
 
+    // Simulated progress through stages
+    const stages = [
+      { at: 10, label: 'Reading RuleEngine state...' },
+      { at: 35, label: 'Fetching rules for US, EU, UK, SG, CA...' },
+      { at: 60, label: 'Analyzing with Claude AI...' },
+      { at: 85, label: 'Comparing against regulatory frameworks...' },
+    ]
+    let stageIdx = 0
+    const progressTimer = setInterval(() => {
+      setScanProgress(prev => {
+        const next = Math.min(prev + 2, 90)
+        if (stageIdx < stages.length && next >= stages[stageIdx].at) {
+          setScanStage(stages[stageIdx].label)
+          stageIdx++
+        }
+        return next
+      })
+    }, 300)
+
     try {
       const res = await authFetch(`${API}/api/copilot/radar/scan`, { method: 'POST', timeout: 60000 })
+      clearInterval(progressTimer)
+      setScanProgress(100)
+      setScanStage('Complete')
+
       if (res.ok) {
         const data = await res.json()
         setScanResult(data)
@@ -56,7 +83,14 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
         setCurrentStep(null)
       }
     } catch (err) {
-      onAuditEntry?.('error', `Radar scan failed: ${err.message}`, 'danger')
+      clearInterval(progressTimer)
+      setScanProgress(0)
+      const msg = err.name === 'AbortError'
+        ? 'Radar scan timed out — the AI agent took too long. Try again.'
+        : !navigator.onLine
+          ? 'You appear to be offline. Check your connection and try again.'
+          : `Radar scan failed: ${err.message}`
+      onAuditEntry?.('error', msg, 'danger')
       setCurrentStep(null)
     }
     setIsLoading(false)
@@ -237,7 +271,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
         </motion.div>
       )}
 
-      {/* Scanning State */}
+      {/* Scanning State — Multi-stage progress */}
       <AnimatePresence>
         {currentStep === 'scan' && (
           <motion.div
@@ -246,15 +280,24 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-3">
               <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
-              <div>
-                <p className="text-[13px] text-amber-400 font-medium">Scanning on-chain rules...</p>
-                <p className="text-[11px] text-white/25 mt-0.5">
-                  Reading RuleEngine state for US, EU, UK, SG, CA — then analyzing with Claude AI
-                </p>
+              <div className="flex-1">
+                <p className="text-[13px] text-amber-400 font-medium">{scanStage || 'Starting scan...'}</p>
               </div>
+              <span className="text-[11px] text-white/25 tabular-nums">{scanProgress}%</span>
             </div>
+            <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400"
+                initial={{ width: 0 }}
+                animate={{ width: `${scanProgress}%` }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              />
+            </div>
+            <p className="text-[10px] text-white/20 mt-2">
+              {scanProgress < 35 ? 'ETA ~15s' : scanProgress < 70 ? 'ETA ~10s' : 'Almost done...'}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

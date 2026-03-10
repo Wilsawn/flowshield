@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, ChevronDown, ChevronUp, Radar, Activity } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, ChevronDown, ChevronUp, Radar, Activity, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import GlowOrbs from '@/components/GlowOrbs'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
@@ -20,6 +20,7 @@ export default function Layout() {
   const [bottomOpen, setBottomOpen] = useState(false)
   const [backendStatus, setBackendStatus] = useState({ connected: false, network: '', address: '' })
   const [user, setUser] = useState(null)
+  const [showColdStartToast, setShowColdStartToast] = useState(false)
 
   const handleLogout = () => {
     localStorage.removeItem('flowshield_user')
@@ -53,6 +54,22 @@ export default function Layout() {
       if (stored) setUser(JSON.parse(stored))
     } catch { /* ignore */ }
   }, [location.pathname])
+
+  // Show cold-start toast after 3s if backend still not connected
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowColdStartToast(prev => !backendStatus.connected ? true : prev)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Auto-dismiss toast when backend connects
+  useEffect(() => {
+    if (backendStatus.connected && showColdStartToast) {
+      const timer = setTimeout(() => setShowColdStartToast(false), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [backendStatus.connected, showColdStartToast])
 
   useEffect(() => {
     const checkBackend = async () => {
@@ -294,6 +311,21 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Cold-start warning toast */}
+      <AnimatePresence>
+        {showColdStartToast && !backendStatus.connected && (
+          <motion.div
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-xl border border-amber-500/20 bg-[#0a1410]/95 backdrop-blur-md shadow-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+          >
+            <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+            <p className="text-[12px] text-white/60">Waking up backend... ~10s on first visit</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

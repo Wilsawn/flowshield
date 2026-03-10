@@ -7,6 +7,7 @@ import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import useOperatorData from '@/hooks/useOperatorData'
 import RegulatoryRadar from '@/components/RegulatoryRadar'
 import FlowAutomation from '@/components/FlowAutomation'
+import ComplianceReportExport from '@/components/ComplianceReportExport'
 import { API } from '@/lib/api'
 
 const severityColors = {
@@ -43,6 +44,24 @@ export default function OperatorDashboard() {
   }
 
   const [demoActive, setDemoActive] = useState(false)
+
+  // Pre-populate audit log when demo is active and log is empty
+  useEffect(() => {
+    if (auditLog.length > 0) return
+    fetch(`${API}/api/risk/monitor/demo-status`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.active && auditLog.length === 0) {
+          const now = new Date().toLocaleTimeString()
+          setAuditLog([
+            { type: 'system', detail: 'Demo mode active — simulated threats loaded on startup', severity: 'info', address: live.address || '0x93c6...5493', time: now },
+            { type: 'monitor', detail: 'Compliance monitoring initialized — watching Flow testnet', severity: 'success', address: live.address || '0x93c6...5493', time: now },
+          ])
+          setDemoActive(true)
+        }
+      })
+      .catch(() => { /* backend offline — ignore */ })
+  }, [])
 
   const handleSimulateThreat = async () => {
     try {
@@ -145,25 +164,40 @@ export default function OperatorDashboard() {
       )}
 
       {/* Stats Overview — Real from Flow testnet */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
-          { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
-          { label: 'Contracts', value: live.walletData?.contractCount ?? 0, icon: <ShieldAlert className="w-4 h-4" />, color: 'text-emerald-400', sub: `${live.walletData?.keyCount ?? 0} signing keys` },
-          { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
-        ].map((stat, i) => (
-          <SpotlightCard key={i} className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[13px] text-white/35">{stat.label}</span>
-              <div className="text-white/20">{stat.icon}</div>
-            </div>
-            <p className={`text-[1.75rem] font-bold tracking-tight ${stat.color}`}>
-              <AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />{stat.suffix || ''}
-            </p>
-            <p className="text-[11px] text-white/25 mt-1.5">{stat.sub}</p>
-          </SpotlightCard>
-        ))}
-      </div>
+      {live.loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <SpotlightCard key={i} className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-3 w-24 rounded bg-white/[0.04] animate-pulse" />
+                <div className="h-4 w-4 rounded bg-white/[0.04] animate-pulse" />
+              </div>
+              <div className="h-8 w-20 rounded bg-white/[0.06] animate-pulse mb-2" />
+              <div className="h-2.5 w-32 rounded bg-white/[0.03] animate-pulse" />
+            </SpotlightCard>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
+            { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
+            { label: 'Contracts', value: live.walletData?.contractCount ?? 0, icon: <ShieldAlert className="w-4 h-4" />, color: 'text-emerald-400', sub: `${live.walletData?.keyCount ?? 0} signing keys` },
+            { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
+          ].map((stat, i) => (
+            <SpotlightCard key={i} className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[13px] text-white/35">{stat.label}</span>
+                <div className="text-white/20">{stat.icon}</div>
+              </div>
+              <p className={`text-[1.75rem] font-bold tracking-tight ${stat.color}`}>
+                <AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />{stat.suffix || ''}
+              </p>
+              <p className="text-[11px] text-white/25 mt-1.5">{stat.sub}</p>
+            </SpotlightCard>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Wallet Activity — Real from Flow testnet */}
@@ -491,6 +525,9 @@ export default function OperatorDashboard() {
           <Clock className="w-4 h-4 text-white/30" />
           <h3 className="text-[15px] font-semibold text-white/90">Audit Log</h3>
           {auditLog.length > 0 && <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/[0.04] text-white/30 font-medium">{auditLog.length} entries</span>}
+          <div className="ml-auto">
+            <ComplianceReportExport />
+          </div>
         </div>
         {auditLog.length > 0 ? (
           <div className="space-y-2">

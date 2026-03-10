@@ -10,6 +10,7 @@ import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
 
 import { API } from '@/lib/api'
+import DemoWelcomeBanner from '@/components/DemoWelcomeBanner'
 import StatsRow from '@/components/dashboard/StatsRow'
 import NetworkBar from '@/components/dashboard/NetworkBar'
 import WalletStatus from '@/components/dashboard/WalletStatus'
@@ -366,6 +367,8 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <DemoWelcomeBanner />
+
         {/* Connect Wallet Prompt */}
         {!walletAddr && (
           <div className="mb-6 p-6 rounded-2xl border border-emerald-500/[0.08] bg-white/[0.02] text-center">
@@ -428,6 +431,7 @@ export default function Dashboard() {
           live={live}
           chain={chain}
           flowBalance={flowBalance}
+          loading={live.loading}
           onStatClick={setShowStatDetail}
           onRiskClick={() => setShowRiskDetail(true)}
         />
