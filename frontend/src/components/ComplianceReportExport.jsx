@@ -10,6 +10,9 @@ export default function ComplianceReportExport() {
     try {
       const res = await fetch(`${API}/api/compliance/report`)
       const data = await res.json()
+      if (!data.auditLog || !Array.isArray(data.auditLog)) {
+        throw new Error('No audit data available')
+      }
 
       // Generate CSV
       const csvRows = [
@@ -30,8 +33,8 @@ export default function ComplianceReportExport() {
       a.download = `flowshield-compliance-report-${new Date().toISOString().slice(0, 10)}.csv`
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      // silent fail — button will re-enable
+    } catch (err) {
+      console.error('Export failed:', err)
     }
     setExporting(false)
   }

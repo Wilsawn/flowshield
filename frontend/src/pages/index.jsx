@@ -828,15 +828,15 @@ export default function LandingPage() {
             <div>
               <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/20 mb-4">Company</p>
               <div className="flex flex-col gap-2.5">
-                <span className="text-[13px] text-white/40">About</span>
-                <span className="text-[13px] text-white/40">Documentation</span>
+                <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">About</button>
+                <a href="https://github.com/Wilsawn/flowshield" target="_blank" rel="noopener noreferrer" className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Documentation</a>
               </div>
             </div>
             <div>
               <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/20 mb-4">Products</p>
               <div className="flex flex-col gap-2.5">
-                <span className="text-[13px] text-white/40">Regulatory Radar</span>
-                <span className="text-[13px] text-white/40">Compliance Scanner</span>
+                <button onClick={() => handleNavigate('/operator')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Regulatory Radar</button>
+                <button onClick={() => handleNavigate('/operator')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Compliance Scanner</button>
                 <button onClick={() => handleNavigate('/copilot')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Builder Copilot</button>
               </div>
             </div>
