@@ -43,7 +43,7 @@ function MarqueeStrip() {
         className="flex"
         style={{ willChange: 'transform' }}
         animate={groupWidth ? { x: [0, -groupWidth] } : {}}
-        transition={groupWidth ? { x: { duration: 90, ease: 'linear', repeat: Infinity, repeatType: 'loop' } } : {}}
+        transition={groupWidth ? { x: { duration: 120, ease: 'linear', repeat: Infinity, repeatType: 'loop' } } : {}}
       >
         <div ref={groupRef} className="flex shrink-0">{items}</div>
         <div className="flex shrink-0">{items}</div>
