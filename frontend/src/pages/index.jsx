@@ -889,22 +889,27 @@ export default function LandingPage() {
 
           {/* Giant scrolling brand marquee */}
           <div className="relative overflow-hidden py-12 border-t border-emerald-500/[0.06]">
-            <div className="flex animate-[marqueeScroll_30s_linear_infinite] will-change-transform" style={{ backfaceVisibility: 'hidden' }}>
-              {[0, 1].map((group) => (
-                <div key={group} className="flex shrink-0">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-8 px-8 shrink-0">
-                      <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.08] select-none whitespace-nowrap">
-                        FlowShield
-                      </span>
-                      <svg className="w-[clamp(2rem,5vw,4rem)] h-[clamp(2rem,5vw,4rem)] text-white/[0.08] shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                      </svg>
-                    </div>
-                  ))}
+            {(() => {
+              const marqueeItem = (key) => (
+                <div key={key} className="flex items-center shrink-0">
+                  <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.08] select-none whitespace-nowrap px-6">
+                    FlowShield
+                  </span>
+                  <svg className="w-[clamp(2rem,5vw,4rem)] h-[clamp(2rem,5vw,4rem)] text-white/[0.08] shrink-0 mx-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                  </svg>
                 </div>
-              ))}
-            </div>
+              )
+              return (
+                <div
+                  className="flex animate-[marqueeScroll_30s_linear_infinite]"
+                  style={{ width: 'max-content', willChange: 'transform', backfaceVisibility: 'hidden' }}
+                >
+                  {[...Array(6)].map((_, i) => marqueeItem(`a${i}`))}
+                  {[...Array(6)].map((_, i) => marqueeItem(`b${i}`))}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Copyright */}
