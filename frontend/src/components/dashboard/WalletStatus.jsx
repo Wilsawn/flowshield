@@ -39,7 +39,7 @@ export default function WalletStatus({ isCustodial, walletAddr, flowBalance, onN
           Wallet not recognized — create a new account to get started
         </p>
         <button
-          onClick={() => { localStorage.removeItem('flowshield_wallet'); onNavigate('/') }}
+          onClick={() => { localStorage.removeItem('flowshield_token'); localStorage.removeItem('flowshield_wallet'); localStorage.removeItem('flowshield_user'); onNavigate('/') }}
           className="ml-3 px-3 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors whitespace-nowrap"
         >
           Create Account

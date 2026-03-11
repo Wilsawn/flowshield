@@ -23,6 +23,8 @@ export default function Layout() {
   const [showColdStartToast, setShowColdStartToast] = useState(false)
 
   const handleLogout = () => {
+    localStorage.removeItem('flowshield_token')
+    localStorage.removeItem('flowshield_wallet')
     localStorage.removeItem('flowshield_user')
     setUser(null)
     setSidebarOpen(false)

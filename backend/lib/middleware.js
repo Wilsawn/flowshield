@@ -109,7 +109,7 @@ function getTokenSecret() {
   return secret
 }
 
-export function generateSessionToken(email, expiresInMs = 3600000) {
+export function generateSessionToken(email, expiresInMs = 604800000) {
   const secret = getTokenSecret()
   const expiry = Date.now() + expiresInMs
   const payload = `${Buffer.from(email.toLowerCase()).toString('base64')}:${expiry}`

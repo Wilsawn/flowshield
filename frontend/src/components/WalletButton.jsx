@@ -107,7 +107,9 @@ export default function WalletButton() {
     // Keep email in localStorage so re-onboarding reconnects to the same
     // Supabase-persisted custodial account instead of creating a new one
     const prev = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()
+    localStorage.removeItem('flowshield_token')
     localStorage.removeItem('flowshield_wallet')
+    localStorage.removeItem('flowshield_user')
     if (prev.custodial && prev.email) {
       localStorage.setItem('flowshield_email', prev.email)
     }
