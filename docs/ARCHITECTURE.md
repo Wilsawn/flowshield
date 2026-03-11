@@ -101,7 +101,7 @@ The Solidity verifier (`evm/contracts/Groth16Verifier.sol`) implements the full 
 
 ## Layer 4 — AI Intelligence
 
-**Stack:** Express.js, Claude AI (Haiku 4.5), FCL
+**Stack:** Express.js, Claude AI (Haiku 4.5), Anthropic SDK, FCL
 
 | Agent | Type | Purpose |
 |---|---|---|
