@@ -282,7 +282,7 @@ const initialNodes = [
   {
     id: 'status-flow',
     type: 'status',
-    position: { x: 760, y: 650 },
+    position: { x: 680, y: 680 },
     data: { label: 'Flow Testnet', color: 'bg-emerald-400', pulse: true, badge: 'LIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400', delay: 0.4 },
   },
   {
