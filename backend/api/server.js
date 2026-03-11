@@ -118,7 +118,7 @@ app.use('/api/kyc', kycRoutes)
 app.use('/api/pool', requireAuth, poolRoutes)
 app.use('/api/copilot', copilotRoutes)  // Public — radar scan + copilot need to work without login
 app.use('/api/subscription', subscriptionRoutes)  // Pricing — public access needed
-app.use('/api/governance', requireAuth, governanceRoutes)
+app.use('/api/governance', governanceRoutes)  // Auth applied per-route inside governance.js
 app.use('/api/accounts', accountsRoutes)  // Has its own auth (create/login are public, others protected)
 
 // ── Public CLI endpoints — rate-limited, no session required ──

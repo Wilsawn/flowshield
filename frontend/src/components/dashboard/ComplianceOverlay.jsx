@@ -22,7 +22,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
             <div className="p-4 rounded-xl border border-emerald-500/[0.08]">
               <span className="text-xs text-white/30 block mb-2">Credential</span>
               <p className={`text-sm font-bold mb-1 ${chain.compliance?.hasCredential ? 'text-emerald-400' : 'text-white/50'}`}>
-                {chain.compliance?.hasCredential ? 'Active' : 'Not minted'}
+                {chain.compliance?.hasCredential ? 'Active' : 'Not issued'}
               </p>
               <p className="text-xs text-white/20 font-mono">{chain.compliance?.tier || '—'} · {chain.compliance?.source || '—'}</p>
             </div>
@@ -63,7 +63,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-white/20">Loading...</p>
+              <p className="text-xs text-white/20">Loading contracts...</p>
             )}
             <a
               href={`https://testnet.flowscan.io/account/${chain.account?.address || '0x93c691a98b975493'}`}
@@ -115,7 +115,7 @@ export default function ComplianceOverlay({ showCompliance, chain, live, jurisdi
                 className="flex items-center gap-1.5 mt-2 text-xs text-white/30 hover:text-white/50 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
-                {jurisdiction.regulator} source
+                View {jurisdiction.regulator} guidelines
               </a>
             </div>
           </div>

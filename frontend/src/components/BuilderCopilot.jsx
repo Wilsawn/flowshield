@@ -391,6 +391,11 @@ export default function BuilderCopilot() {
   const [codeInput, setCodeInput] = useState('')
   const [codeLanguage, setCodeLanguage] = useState('cadence')
   const [isScanning, setIsScanning] = useState(false)
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
+  const codeTextareaRef = useRef(null)
+  const codeScrollRef = useRef(null)
+  const gutterRef = useRef(null)
 
   // Live context from user's on-chain state
   const [liveContext, setLiveContext] = useState(null)
@@ -1028,59 +1033,225 @@ export default function BuilderCopilot() {
           <AnimatePresence>
             {showCodeInput && (
               <motion.div
-                className="mb-3 rounded-xl border border-emerald-500/[0.08] bg-white/[0.02] overflow-hidden"
+                className={`mb-3 rounded-xl overflow-hidden transition-all duration-200 group/codepanel ${
+                  isDraggingOver
+                    ? 'ring-1 ring-emerald-400/30 shadow-[0_0_24px_rgba(52,211,153,0.06)]'
+                    : 'ring-1 ring-white/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.3)]'
+                }`}
+                style={{ background: '#0d1117' }}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true) }}
+                onDragLeave={() => setIsDraggingOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setIsDraggingOver(false)
+                  const file = e.dataTransfer.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = (ev) => {
+                    setCodeInput(ev.target.result)
+                    const ext = file.name.split('.').pop()?.toLowerCase()
+                    if (ext === 'cdc') setCodeLanguage('cadence')
+                    else if (ext === 'sol') setCodeLanguage('solidity')
+                    else if (ext === 'rs') setCodeLanguage('rust')
+                    else if (ext === 'js' || ext === 'ts') setCodeLanguage('javascript')
+                    else if (ext === 'py') setCodeLanguage('python')
+                  }
+                  reader.readAsText(file)
+                }}
               >
-                <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-500/[0.06]">
-                  <div className="flex items-center gap-2">
-                    <FileCode className="w-3.5 h-3.5 text-emerald-400/60" />
-                    <span className="text-[11px] text-white/40 font-medium">Import Code</span>
-                    <select
-                      value={codeLanguage}
-                      onChange={(e) => setCodeLanguage(e.target.value)}
-                      className="text-[10px] bg-[#0a1410] border border-emerald-500/[0.08] rounded-md px-2 py-0.5 text-white/50 outline-none [&>option]:bg-[#0a1410] [&>option]:text-white/70"
-                    >
-                      <option value="cadence">Cadence</option>
-                      <option value="solidity">Solidity</option>
-                      <option value="javascript">JavaScript</option>
-                      <option value="rust">Rust</option>
-                      <option value="python">Python</option>
-                    </select>
+                {/* Title bar — macOS window chrome style */}
+                <div className="flex items-center justify-between px-3 h-9" style={{ background: '#161b22' }}>
+                  <div className="flex items-center gap-3">
+                    {/* Traffic light dots */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => { setShowCodeInput(false); setCodeInput('') }}
+                        className="w-[11px] h-[11px] rounded-full bg-[#f85149]/80 hover:bg-[#f85149] transition-colors group/close flex items-center justify-center"
+                        title="Close"
+                      >
+                        <X className="w-[7px] h-[7px] text-[#300] opacity-0 group-hover/close:opacity-100 transition-opacity" strokeWidth={3} />
+                      </button>
+                      <div className="w-[11px] h-[11px] rounded-full bg-[#d29922]/60" />
+                      <div className="w-[11px] h-[11px] rounded-full bg-[#3fb950]/60" />
+                    </div>
+
+                    {/* Language pills */}
+                    <div className="flex items-center gap-0.5">
+                      {[
+                        { id: 'cadence', label: 'Cadence', ext: '.cdc' },
+                        { id: 'solidity', label: 'Solidity', ext: '.sol' },
+                        { id: 'javascript', label: 'JS', ext: '.js' },
+                        { id: 'rust', label: 'Rust', ext: '.rs' },
+                        { id: 'python', label: 'Python', ext: '.py' },
+                      ].map(lang => (
+                        <button
+                          key={lang.id}
+                          onClick={() => setCodeLanguage(lang.id)}
+                          className={`text-[10px] px-2.5 py-1 rounded-md transition-all ${
+                            codeLanguage === lang.id
+                              ? 'bg-white/[0.08] text-white/70 font-medium'
+                              : 'text-white/25 hover:text-white/45 hover:bg-white/[0.03]'
+                          }`}
+                        >
+                          {lang.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={handleScanCode}
-                      disabled={!codeInput.trim() || isScanning}
-                      className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-30"
-                    >
-                      <Scan className="w-3 h-3" />
-                      {isScanning ? 'Scanning...' : 'Scan for Compliance'}
-                    </button>
-                    <button
-                      onClick={() => { setShowCodeInput(false); setCodeInput('') }}
-                      className="text-white/20 hover:text-white/50 transition-colors p-1"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+
+                  {/* Right actions */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover/codepanel:opacity-100 transition-opacity">
+                    {codeInput.trim() && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(codeInput)
+                          setCodeCopied(true)
+                          setTimeout(() => setCodeCopied(false), 2000)
+                        }}
+                        className="flex items-center justify-center w-7 h-7 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+                        title="Copy code"
+                      >
+                        {codeCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    )}
                   </div>
                 </div>
-                <textarea
-                  value={codeInput}
-                  onChange={(e) => setCodeInput(e.target.value)}
-                  placeholder={`Paste your ${codeLanguage} code here...`}
-                  rows={6}
-                  className="w-full bg-transparent resize-none border-0 outline-none text-[12px] text-emerald-300/70 font-mono px-3 py-2.5 placeholder:text-white/10 leading-relaxed"
-                />
-                {codeInput.trim() && (
-                  <div className="px-3 pb-2 flex items-center gap-2">
-                    <span className="text-[9px] text-white/15">{codeInput.split('\n').length} lines · {codeInput.length} chars</span>
-                    <span className="text-[9px] text-white/10">·</span>
-                    <span className="text-[9px] text-white/15">Ask a question or click "Scan for Compliance"</span>
+
+                {/* Code editor area */}
+                <div
+                  className="relative"
+                  style={{
+                    minHeight: codeInput.trim() ? undefined : '160px',
+                    maxHeight: '400px',
+                  }}
+                >
+                  {/* Empty state overlay */}
+                  {!codeInput.trim() && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                      {isDraggingOver ? (
+                        <motion.div
+                          className="flex flex-col items-center gap-2"
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-dashed border-emerald-400/30 flex items-center justify-center">
+                            <Upload className="w-4.5 h-4.5 text-emerald-400/80" />
+                          </div>
+                          <p className="text-[12px] text-emerald-400/60 font-medium">Drop to import</p>
+                        </motion.div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex items-center gap-1.5 text-white/10 font-mono text-[13px]">
+                            <span>{'// '}</span>
+                            <span className="text-white/20">paste your code here</span>
+                            <span className="w-[2px] h-[15px] bg-emerald-400/50 animate-pulse" />
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] text-white/15">
+                            <span className="flex items-center gap-1"><Upload className="w-3 h-3" /> drag file</span>
+                            <span className="text-white/8">|</span>
+                            <span className="font-mono">Cmd+V</span>
+                            <span className="text-white/8">|</span>
+                            <span>.cdc .sol .js .rs .py</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Scrollable code area */}
+                  <div
+                    ref={codeScrollRef}
+                    className="flex overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:#383838_transparent] [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-[#383838] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                    style={{ maxHeight: '400px' }}
+                    onScroll={() => {
+                      // Sync gutter scroll with code scroll
+                      if (gutterRef.current && codeScrollRef.current) {
+                        gutterRef.current.scrollTop = codeScrollRef.current.scrollTop
+                      }
+                    }}
+                  >
+                    {/* Line numbers gutter — seamless, no border */}
+                    {codeInput.trim() && (
+                      <div
+                        ref={gutterRef}
+                        className="select-none text-right shrink-0 py-4 pr-3 pl-4 font-mono leading-[1.55] text-[13px] overflow-hidden"
+                        style={{ color: '#484f58', minWidth: '44px' }}
+                        aria-hidden="true"
+                      >
+                        {codeInput.split('\n').map((_, i) => (
+                          <div key={i}>{i + 1}</div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Textarea */}
+                    <textarea
+                      ref={codeTextareaRef}
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      placeholder=""
+                      rows={codeInput.trim() ? Math.min(Math.max(codeInput.split('\n').length, 6), 20) : 6}
+                      className="w-full bg-transparent resize-none border-0 outline-none font-mono leading-[1.55] text-[13px] py-4 pr-4 placeholder:text-transparent [tab-size:2]"
+                      style={{
+                        color: '#c9d1d9',
+                        caretColor: '#58a6ff',
+                        paddingLeft: codeInput.trim() ? '0' : '44px',
+                      }}
+                      spellCheck={false}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                    />
                   </div>
-                )}
+                </div>
+
+                {/* Status bar */}
+                <div className="flex items-center justify-between px-3 h-8" style={{ background: '#161b22', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex items-center gap-3">
+                    {codeInput.trim() ? (
+                      <>
+                        <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>
+                          Ln {codeInput.substring(0, codeTextareaRef.current?.selectionStart || 0).split('\n').length}
+                        </span>
+                        <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>
+                          {codeInput.split('\n').length} lines
+                        </span>
+                        <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>
+                          {codeInput.length.toLocaleString()} chars
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px]" style={{ color: '#484f58' }}>Ready</span>
+                    )}
+                    <span className="text-[10px] font-medium" style={{ color: '#58a6ff' }}>{codeLanguage}</span>
+                  </div>
+
+                  <button
+                    onClick={handleScanCode}
+                    disabled={!codeInput.trim() || isScanning}
+                    className="flex items-center gap-1.5 text-[11px] font-medium h-6 px-3 rounded-md transition-all disabled:opacity-20"
+                    style={{
+                      background: codeInput.trim() && !isScanning ? 'rgba(52,211,153,0.12)' : 'transparent',
+                      color: codeInput.trim() ? '#34d399' : '#484f58',
+                      border: codeInput.trim() ? '1px solid rgba(52,211,153,0.2)' : '1px solid transparent',
+                    }}
+                  >
+                    {isScanning ? (
+                      <>
+                        <div className="w-3 h-3 border-[1.5px] border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+                        Scanning...
+                      </>
+                    ) : (
+                      <>
+                        <Scan className="w-3 h-3" />
+                        Scan
+                      </>
+                    )}
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

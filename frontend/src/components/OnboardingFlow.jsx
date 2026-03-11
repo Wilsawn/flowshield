@@ -8,10 +8,10 @@ import { API } from '@/lib/api'
 
 const VERIFY_STEPS = [
   { label: 'Creating your Flow account', detail: 'Unique on-chain account — funded by FlowShield', delay: 800 },
-  { label: 'Running identity verification', detail: 'KYC + ZK proof — no PII stored on-chain', delay: 1500 },
+  { label: 'Running identity verification', detail: 'Zero-knowledge proof — no personal data stored on-chain', delay: 1500 },
   { label: 'Issuing compliance credential', detail: 'Minting to your account', delay: 1000 },
   { label: 'Verifying on-chain state', detail: 'Confirming credential on Flow testnet', delay: 800 },
-  { label: 'Finalizing account', detail: 'Sponsored by FlowShield — zero gas fees', delay: 600 },
+  { label: 'Finalizing account', detail: 'Account ready — gas fees covered by FlowShield', delay: 600 },
 ]
 
 const stepIndex = { email: 0, jurisdiction: 1, passkey: 2, verifying: 3, complete: 4 }
@@ -643,7 +643,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
                       {[
                         { label: 'ZK Verified' },
                         { label: 'Zero data on-chain' },
-                        { label: 'Zero gas fees' },
+                        { label: 'Gas fees covered' },
                       ].map((item, i) => (
                         <motion.span
                           key={i}

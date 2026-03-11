@@ -15,14 +15,14 @@ const actions = [
   },
   {
     label: 'Builder Copilot',
-    description: 'AI-powered code review for Cadence smart contracts',
+    description: 'AI compliance assistant for smart contracts',
     icon: MessageSquare,
     path: '/copilot',
     color: 'cyan',
   },
   {
     label: 'Simulate a Threat',
-    description: 'Inject anomalies to see the full detect-and-fix workflow',
+    description: 'Test threat detection and response workflows',
     icon: AlertTriangle,
     path: '/operator',
     color: 'amber',
@@ -72,7 +72,7 @@ export default function DemoWelcomeBanner() {
           <div>
             <h2 className="text-[15px] font-semibold text-white/90">Welcome to FlowShield</h2>
             <p className="text-[12px] text-white/35 mt-0.5">
-              AI-powered compliance infrastructure for Flow DeFi. Pick a starting point:
+              Autonomous compliance for DeFi protocols on Flow. Pick a starting point:
             </p>
           </div>
           <button

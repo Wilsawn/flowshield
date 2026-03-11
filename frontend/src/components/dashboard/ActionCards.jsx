@@ -32,7 +32,7 @@ export default function ActionCards({
             Deposit
           </button>
           <p className="text-xs text-white/25 text-center">
-            {flowBalance !== null ? `Balance: ${flowBalance.toFixed(4)} FLOW` : 'Into DemoLendingPool'} · Gas sponsored
+            {flowBalance !== null ? `Balance: ${flowBalance.toFixed(4)} FLOW` : 'Into Lending Pool'} · Gas sponsored
           </p>
         </div>
       </div>

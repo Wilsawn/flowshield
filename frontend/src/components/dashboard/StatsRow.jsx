@@ -5,7 +5,7 @@ export default function StatsRow({ live, chain, flowBalance, loading, onStatClic
     { label: 'Wallet Balance', value: chain.account?.balance ?? live.walletBalance ?? 0, sub: 'FLOW', prefix: '', decimals: 2, onClick: () => onStatClick('wallet') },
     { label: 'Total Deposited', value: live.deposited ?? 0, sub: live.baseAPYPercent != null ? `${live.baseAPYPercent}% APY` : '—', onClick: () => onStatClick('deposited') },
     { label: 'Total Borrowed', value: live.borrowed ?? 0, sub: live.borrowRatePercent != null ? `${live.borrowRatePercent}% interest` : '—', onClick: () => onStatClick('borrowed') },
-    { label: 'Risk Score', value: live.riskScore != null ? live.riskScore : '—', sub: live.riskTier || (live.riskScore == null ? 'Unavailable' : '—'), noPrefix: true, onClick: onRiskClick },
+    { label: 'Risk Score', value: live.riskScore != null ? live.riskScore : '—', sub: live.riskTier || (live.riskScore == null ? 'Not calculated yet' : '—'), noPrefix: true, onClick: onRiskClick },
   ]
 
   if (loading) {

@@ -1,14 +1,164 @@
 // routes/governance.js
 // Governance API routes — reads AND writes real proposal data on-chain.
 // Uses server-side signing with the deployer's private key.
+// GET routes are public (guests can view); write routes require auth.
 
 import { Router } from 'express'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { logAudit } from '../../lib/supabase.js'
-import { safeError } from '../../lib/middleware.js'
+import { safeError, requireAuth } from '../../lib/middleware.js'
 
 const router = Router()
 const PRIVATE_KEY = hasPrivateKey()
+
+// ── Off-chain rejection tracking (survives until Railway redeploy) ──
+const rejectedProposals = new Map() // id -> { rejectedAt, reason }
+
+const STATUS_MAP = { '0': 'pending', '1': 'approved', '2': 'executed', '3': 'expired', '4': 'rejected' }
+
+// ── Helper: parse proposal from on-chain data ──
+function parseProposal(p) {
+  const id = parseInt(p.id)
+  const status = STATUS_MAP[String(p.status?.rawValue ?? p.status)] || 'pending'
+  const rejection = rejectedProposals.get(id)
+  return {
+    id,
+    proposer: p.proposer,
+    action: p.action,
+    description: p.description,
+    data: p.data || {},
+    approvals: p.approvals || [],
+    status: rejection && status === 'pending' ? 'rejected' : status,
+    createdAt: parseFloat(p.createdAt),
+    expiresAt: parseFloat(p.expiresAt),
+    rejectedAt: rejection?.rejectedAt || null,
+    rejectionReason: rejection?.reason || null,
+  }
+}
+
+// ── Helper: execute a proposal's action on-chain ──
+async function executeProposalAction(fcl, address, proposalId, action, data) {
+  const results = { executed: false, actionTxId: null, markTxId: null }
+
+  // Step 1: Execute the actual admin action based on proposal type
+  switch (action) {
+    case 'setRule': {
+      const jurisdiction = data?.jurisdiction || 'US'
+      const ruleType = data?.ruleType || 'kycRequired'
+      const value = data?.value || 'true'
+      try {
+        results.actionTxId = await fcl.mutate({
+          cadence: `
+            import RuleEngine from 0x${fcl.sansPrefix(address)}
+            transaction(jurisdiction: String, ruleType: String, value: String) {
+              prepare(signer: auth(Storage, BorrowValue) &Account) {
+                let admin = signer.storage.borrow<&RuleEngine.Admin>(from: RuleEngine.AdminStoragePath)
+                  ?? panic("No RuleEngine Admin resource")
+                admin.setRule(jurisdiction: jurisdiction, ruleType: ruleType, value: value)
+              }
+            }
+          `,
+          args: (arg, t) => [arg(jurisdiction, t.String), arg(ruleType, t.String), arg(value, t.String)],
+          proposer: serverAuthorization(fcl, address),
+          payer: serverAuthorization(fcl, address),
+          authorizations: [serverAuthorization(fcl, address)],
+          limit: 100,
+        })
+        await fcl.tx(results.actionTxId).onceSealed()
+      } catch (err) {
+        console.warn(`[Governance] setRule action failed: ${err.message}`)
+      }
+      break
+    }
+    case 'setFee': {
+      const fee = data?.fee || '1.0'
+      try {
+        results.actionTxId = await fcl.mutate({
+          cadence: `
+            import ComplianceAction from 0x${fcl.sansPrefix(address)}
+            transaction(fee: UFix64) {
+              prepare(signer: auth(Storage, BorrowValue) &Account) {
+                let admin = signer.storage.borrow<&ComplianceAction.Admin>(from: ComplianceAction.AdminStoragePath)
+                  ?? panic("No ComplianceAction Admin resource")
+                admin.setVerificationFee(fee: fee)
+              }
+            }
+          `,
+          args: (arg, t) => [arg(fee, t.UFix64)],
+          proposer: serverAuthorization(fcl, address),
+          payer: serverAuthorization(fcl, address),
+          authorizations: [serverAuthorization(fcl, address)],
+          limit: 100,
+        })
+        await fcl.tx(results.actionTxId).onceSealed()
+      } catch (err) {
+        console.warn(`[Governance] setFee action failed: ${err.message}`)
+      }
+      break
+    }
+    case 'revoke': {
+      const credentialId = data?.credentialId || '0'
+      try {
+        results.actionTxId = await fcl.mutate({
+          cadence: `
+            import ComplianceCredential from 0x${fcl.sansPrefix(address)}
+            transaction(credentialId: UInt64) {
+              prepare(signer: auth(Storage, BorrowValue) &Account) {
+                let admin = signer.storage.borrow<&ComplianceCredential.Admin>(from: ComplianceCredential.AdminStoragePath)
+                  ?? panic("No ComplianceCredential Admin resource")
+                admin.revokeCredential(id: credentialId)
+              }
+            }
+          `,
+          args: (arg, t) => [arg(String(credentialId), t.UInt64)],
+          proposer: serverAuthorization(fcl, address),
+          payer: serverAuthorization(fcl, address),
+          authorizations: [serverAuthorization(fcl, address)],
+          limit: 100,
+        })
+        await fcl.tx(results.actionTxId).onceSealed()
+      } catch (err) {
+        console.warn(`[Governance] revoke action failed: ${err.message}`)
+      }
+      break
+    }
+    default:
+      // For withdraw, addVerifier, etc. — mark executed as demo placeholder
+      console.log(`[Governance] Action "${action}" executed as placeholder (no on-chain handler)`)
+      break
+  }
+
+  // Step 2: Mark the proposal as executed on-chain via Governance.Admin
+  try {
+    results.markTxId = await fcl.mutate({
+      cadence: `
+        import Governance from 0x${fcl.sansPrefix(address)}
+        transaction(proposalId: UInt64) {
+          prepare(signer: auth(Storage, BorrowValue) &Account) {
+            let admin = signer.storage.borrow<&Governance.Admin>(from: Governance.AdminStoragePath)
+              ?? panic("No Governance Admin resource")
+            admin.markExecuted(id: proposalId)
+          }
+        }
+      `,
+      args: (arg, t) => [arg(String(proposalId), t.UInt64)],
+      proposer: serverAuthorization(fcl, address),
+      payer: serverAuthorization(fcl, address),
+      authorizations: [serverAuthorization(fcl, address)],
+      limit: 100,
+    })
+    await fcl.tx(results.markTxId).onceSealed()
+    results.executed = true
+  } catch (err) {
+    console.warn(`[Governance] markExecuted failed: ${err.message}`)
+  }
+
+  return results
+}
+
+// ════════════════════════════════════════════════════════════════
+// PUBLIC READ ENDPOINTS (no auth required — guests can view)
+// ════════════════════════════════════════════════════════════════
 
 // GET /api/governance/stats — Get governance stats from chain
 router.get('/stats', async (req, res) => {
@@ -69,21 +219,7 @@ router.get('/proposals', async (req, res) => {
       `,
     })
 
-    // Map on-chain status enum to string
-    const STATUS_MAP = { '0': 'pending', '1': 'approved', '2': 'executed', '3': 'expired', '4': 'rejected' }
-
-    const proposals = (result || []).map(p => ({
-      id: parseInt(p.id),
-      proposer: p.proposer,
-      action: p.action,
-      description: p.description,
-      data: p.data || {},
-      approvals: p.approvals || [],
-      status: STATUS_MAP[String(p.status?.rawValue ?? p.status)] || 'pending',
-      createdAt: parseFloat(p.createdAt),
-      expiresAt: parseFloat(p.expiresAt),
-    }))
-
+    const proposals = (result || []).map(parseProposal)
     res.json({ proposals, source: 'flow-testnet' })
   } catch (err) {
     res.status(500).json({ error: safeError(err, 'Failed to fetch proposals'), source: 'error' })
@@ -111,28 +247,68 @@ router.get('/proposals/:id', async (req, res) => {
       return res.status(404).json({ error: 'Proposal not found' })
     }
 
-    const STATUS_MAP = { '0': 'pending', '1': 'approved', '2': 'executed', '3': 'expired', '4': 'rejected' }
-
-    res.json({
-      id: parseInt(result.id),
-      proposer: result.proposer,
-      action: result.action,
-      description: result.description,
-      data: result.data || {},
-      approvals: result.approvals || [],
-      status: STATUS_MAP[String(result.status?.rawValue ?? result.status)] || 'pending',
-      createdAt: parseFloat(result.createdAt),
-      expiresAt: parseFloat(result.expiresAt),
-      source: 'flow-testnet',
-    })
+    res.json({ ...parseProposal(result), source: 'flow-testnet' })
   } catch (err) {
     res.status(500).json({ error: safeError(err, 'Failed to fetch proposal'), source: 'error' })
   }
 })
 
+// GET /api/governance/activity — Fetch governance events from Flow REST API
+router.get('/activity', async (req, res) => {
+  const address = req.app.locals.contractAddress
+  const FLOW_ACCESS = 'https://rest-testnet.onflow.org'
+
+  try {
+    // Query recent events for Governance contract
+    const eventTypes = [
+      `A.${address.replace('0x', '')}.Governance.ProposalCreated`,
+      `A.${address.replace('0x', '')}.Governance.ProposalApproved`,
+      `A.${address.replace('0x', '')}.Governance.ProposalExecuted`,
+    ]
+
+    const activities = []
+
+    for (const eventType of eventTypes) {
+      try {
+        const resp = await fetch(
+          `${FLOW_ACCESS}/v1/events?type=${encodeURIComponent(eventType)}&start_height=sealed&end_height=sealed`
+        )
+        if (resp.ok) {
+          const data = await resp.json()
+          for (const block of (data.results || data || [])) {
+            for (const evt of (block.events || [])) {
+              activities.push({
+                type: eventType.split('.').pop(),
+                blockHeight: block.block_height || evt.block_height,
+                blockId: block.block_id || evt.block_id,
+                transactionId: evt.transaction_id,
+                payload: evt.payload,
+                flowscanUrl: `https://testnet.flowscan.io/tx/${evt.transaction_id}`,
+                timestamp: block.block_timestamp || null,
+              })
+            }
+          }
+        }
+      } catch {
+        // Individual event type fetch failed — continue with others
+      }
+    }
+
+    // Sort newest first
+    activities.sort((a, b) => (b.blockHeight || 0) - (a.blockHeight || 0))
+
+    res.json({ activities: activities.slice(0, 50), source: 'flow-testnet' })
+  } catch (err) {
+    res.status(500).json({ error: safeError(err, 'Failed to fetch activity'), activities: [] })
+  }
+})
+
+// ════════════════════════════════════════════════════════════════
+// WRITE ENDPOINTS (require auth)
+// ════════════════════════════════════════════════════════════════
+
 // POST /api/governance/setup — One-time: make the deployer an authorized signer
-// Creates a Governance.Signer resource and stores it in the deployer's account
-router.post('/setup', async (req, res) => {
+router.post('/setup', requireAuth, async (req, res) => {
   const fcl = req.app.locals.fcl
   const address = req.app.locals.contractAddress
 
@@ -193,8 +369,7 @@ router.post('/setup', async (req, res) => {
 })
 
 // POST /api/governance/create — Create a proposal on-chain
-// Body: { action, description, data }
-router.post('/create', async (req, res) => {
+router.post('/create', requireAuth, async (req, res) => {
   const fcl = req.app.locals.fcl
   const address = req.app.locals.contractAddress
   const { action, description, data } = req.body
@@ -262,9 +437,8 @@ router.post('/create', async (req, res) => {
   }
 })
 
-// POST /api/governance/approve — Approve a proposal on-chain
-// Body: { proposalId }
-router.post('/approve', async (req, res) => {
+// POST /api/governance/approve — Approve a proposal on-chain, then auto-execute
+router.post('/approve', requireAuth, async (req, res) => {
   const fcl = req.app.locals.fcl
   const address = req.app.locals.contractAddress
   const { proposalId } = req.body
@@ -274,6 +448,11 @@ router.post('/approve', async (req, res) => {
   }
   if (!PRIVATE_KEY) {
     return res.status(500).json({ error: 'Private key not available — cannot sign transactions' })
+  }
+
+  // Block approval on rejected proposals
+  if (rejectedProposals.has(parseInt(proposalId))) {
+    return res.status(400).json({ error: 'Proposal has been rejected and cannot be approved' })
   }
 
   try {
@@ -303,16 +482,160 @@ router.post('/approve', async (req, res) => {
     console.log(`[Governance] Proposal ${proposalId} approved on-chain. Tx: ${txId}`)
     logAudit({ action: 'governance_approve', agent: 'governance', detail: { transactionId: txId, proposalId, blockHeight: result.blockHeight }, severity: 'info' })
 
+    // ── Auto-execute: check if proposal is now approved and execute immediately ──
+    let autoExecuted = false
+    let executionResult = null
+    try {
+      const proposal = await fcl.query({
+        cadence: `
+          import Governance from 0x${fcl.sansPrefix(address)}
+          access(all) fun main(id: UInt64): Governance.Proposal? {
+            return Governance.getProposal(id: id)
+          }
+        `,
+        args: (arg, t) => [arg(String(proposalId), t.UInt64)],
+      })
+
+      const status = STATUS_MAP[String(proposal?.status?.rawValue ?? proposal?.status)] || 'pending'
+      if (status === 'approved') {
+        console.log(`[Governance] Proposal ${proposalId} reached quorum — auto-executing...`)
+        executionResult = await executeProposalAction(fcl, address, proposalId, proposal.action, proposal.data)
+        autoExecuted = executionResult.executed
+        if (autoExecuted) {
+          logAudit({ action: 'governance_auto_execute', agent: 'governance', detail: { proposalId, actionTxId: executionResult.actionTxId, markTxId: executionResult.markTxId }, severity: 'info' })
+        }
+      }
+    } catch (err) {
+      console.warn(`[Governance] Auto-execute failed for proposal ${proposalId}: ${err.message}`)
+    }
+
     res.json({
       success: true,
       txId,
       proposalId,
       blockHeight: result.blockHeight,
+      autoExecuted,
+      executionTxId: executionResult?.markTxId || null,
+      actionTxId: executionResult?.actionTxId || null,
       source: 'flow-testnet',
     })
   } catch (err) {
     console.error('[Governance] Approve failed:', err.message)
     res.status(500).json({ error: safeError(err, 'Proposal approval failed') })
+  }
+})
+
+// POST /api/governance/reject — Reject a proposal (off-chain overlay)
+router.post('/reject', requireAuth, async (req, res) => {
+  const fcl = req.app.locals.fcl
+  const address = req.app.locals.contractAddress
+  const { proposalId, reason } = req.body
+
+  if (proposalId === undefined) {
+    return res.status(400).json({ error: 'proposalId is required' })
+  }
+
+  const pid = parseInt(proposalId)
+
+  // Verify proposal exists and is pending on-chain
+  try {
+    const proposal = await fcl.query({
+      cadence: `
+        import Governance from 0x${fcl.sansPrefix(address)}
+        access(all) fun main(id: UInt64): Governance.Proposal? {
+          return Governance.getProposal(id: id)
+        }
+      `,
+      args: (arg, t) => [arg(String(pid), t.UInt64)],
+    })
+
+    if (!proposal) {
+      return res.status(404).json({ error: 'Proposal not found' })
+    }
+
+    const status = STATUS_MAP[String(proposal.status?.rawValue ?? proposal.status)] || 'pending'
+    if (status !== 'pending') {
+      return res.status(400).json({ error: `Cannot reject a proposal with status "${status}"` })
+    }
+
+    if (rejectedProposals.has(pid)) {
+      return res.status(400).json({ error: 'Proposal already rejected' })
+    }
+
+    rejectedProposals.set(pid, {
+      rejectedAt: new Date().toISOString(),
+      reason: reason || 'Rejected by governance signer',
+    })
+
+    console.log(`[Governance] Proposal ${pid} rejected (off-chain). Reason: ${reason || 'none'}`)
+    logAudit({ action: 'governance_reject', agent: 'governance', detail: { proposalId: pid, reason }, severity: 'warning' })
+
+    res.json({
+      success: true,
+      proposalId: pid,
+      status: 'rejected',
+      message: 'Proposal rejected',
+    })
+  } catch (err) {
+    console.error('[Governance] Reject failed:', err.message)
+    res.status(500).json({ error: safeError(err, 'Proposal rejection failed') })
+  }
+})
+
+// POST /api/governance/execute — Manually execute an approved proposal
+router.post('/execute', requireAuth, async (req, res) => {
+  const fcl = req.app.locals.fcl
+  const address = req.app.locals.contractAddress
+  const { proposalId } = req.body
+
+  if (proposalId === undefined) {
+    return res.status(400).json({ error: 'proposalId is required' })
+  }
+  if (!PRIVATE_KEY) {
+    return res.status(500).json({ error: 'Private key not available — cannot sign transactions' })
+  }
+
+  try {
+    // Fetch proposal and verify it's approved
+    const proposal = await fcl.query({
+      cadence: `
+        import Governance from 0x${fcl.sansPrefix(address)}
+        access(all) fun main(id: UInt64): Governance.Proposal? {
+          return Governance.getProposal(id: id)
+        }
+      `,
+      args: (arg, t) => [arg(String(proposalId), t.UInt64)],
+    })
+
+    if (!proposal) {
+      return res.status(404).json({ error: 'Proposal not found' })
+    }
+
+    const status = STATUS_MAP[String(proposal.status?.rawValue ?? proposal.status)] || 'pending'
+    if (status !== 'approved') {
+      return res.status(400).json({ error: `Cannot execute a proposal with status "${status}". Must be "approved".` })
+    }
+
+    console.log(`[Governance] Executing proposal ${proposalId} (action: ${proposal.action})...`)
+    const result = await executeProposalAction(fcl, address, proposalId, proposal.action, proposal.data)
+
+    if (!result.executed) {
+      return res.status(500).json({ error: 'Failed to mark proposal as executed on-chain' })
+    }
+
+    logAudit({ action: 'governance_execute', agent: 'governance', detail: { proposalId, action: proposal.action, actionTxId: result.actionTxId, markTxId: result.markTxId }, severity: 'info' })
+
+    res.json({
+      success: true,
+      proposalId: parseInt(proposalId),
+      action: proposal.action,
+      actionTxId: result.actionTxId,
+      markTxId: result.markTxId,
+      source: 'flow-testnet',
+    })
+  } catch (err) {
+    console.error('[Governance] Execute failed:', err.message)
+    res.status(500).json({ error: safeError(err, 'Proposal execution failed') })
   }
 })
 

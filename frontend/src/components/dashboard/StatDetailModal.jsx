@@ -54,7 +54,7 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
                 </div>
                 <p className="text-[10px] text-white/20 leading-relaxed">
                   This is your FLOW token balance on testnet. These are <strong className="text-white/40">free test tokens</strong> — not real cryptocurrency.
-                  Your balance decreases slightly with each transaction (gas fees ~0.001 FLOW), but gas is sponsored so users pay nothing.
+                  Gas fees are sponsored by FlowShield, so your balance is only used for deposits and borrows.
                 </p>
                 <a href={`https://testnet.flowscan.io/account/${live.address}`} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-emerald-500/[0.08] hover:border-emerald-500/30 transition-colors">
@@ -71,7 +71,7 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
                 <div className="space-y-2">
                   <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                     <span className="text-[11px] text-white/40">Pool Contract</span>
-                    <span className="text-[11px] text-white/70 font-medium font-mono">DemoLendingPool</span>
+                    <span className="text-[11px] text-white/70 font-medium font-mono">Lending Pool</span>
                   </div>
                   <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                     <span className="text-[11px] text-white/40">Pool Total Deposits</span>
@@ -87,9 +87,9 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
                   </div>
                 </div>
                 <p className="text-[10px] text-white/20 leading-relaxed">
-                  <strong className="text-white/40">What is depositing?</strong> You supply liquidity to the DemoLendingPool smart contract.
-                  Other users can borrow from the pool, and you earn interest (APY) on your deposits. Every deposit is compliance-checked
-                  on-chain via ComplianceAction.verify() — this happens automatically and invisibly. Gas fees are sponsored by FlowShield.
+                  <strong className="text-white/40">What is depositing?</strong> You supply liquidity to the Lending Pool smart contract.
+                  Other users can borrow from the pool, and you earn interest (APY) on your deposits. Every deposit is automatically
+                  compliance-checked on-chain before it executes. Gas fees are sponsored by FlowShield.
                 </p>
               </>)}
 
@@ -109,7 +109,7 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
                   </div>
                   <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                     <span className="text-[11px] text-white/40">Compliance Required</span>
-                    <span className="text-[11px] text-white/70 font-medium">Full (verifyFull)</span>
+                    <span className="text-[11px] text-white/70 font-medium">Full compliance required</span>
                   </div>
                   <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.02]">
                     <span className="text-[11px] text-white/40">Gas Fees</span>
@@ -118,8 +118,8 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
                 </div>
                 <p className="text-[10px] text-white/20 leading-relaxed">
                   <strong className="text-white/40">What is borrowing?</strong> You borrow from the pool using your deposits as collateral ({live.maxLTVPercent ?? '—'}% loan-to-value ratio).
-                  Borrowing requires <strong className="text-white/40">full compliance</strong> — ComplianceAction.verifyFull() is called on-chain, which checks
-                  your credential tier is "compliant" (not just semi-compliant). Gas fees are sponsored by FlowShield — completely free for users.
+                  Borrowing requires <strong className="text-white/40">full compliance</strong> — a full on-chain compliance check verifies
+                  your credential tier is "compliant" before the transaction executes. Gas fees are sponsored by FlowShield.
                 </p>
               </>)}
             </div>

@@ -10,7 +10,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/copilot', label: 'Builder Copilot', icon: MessageSquare },
   { to: '/operator', label: 'Operator', icon: Settings },
-  { to: '/pricing', label: 'API Pricing', icon: Coins },
+  { to: '/pricing', label: 'Pricing', icon: Coins },
 ]
 
 export default function Layout() {
@@ -94,7 +94,7 @@ export default function Layout() {
           <FlowShieldLogo size={26} />
           <div>
             <h1 className="text-[15px] font-semibold tracking-tight text-white">FlowShield</h1>
-            <p className="text-[10px] text-white/25 tracking-wider uppercase">Compliance Infrastructure</p>
+            <p className="text-[10px] text-white/25 tracking-wider uppercase">Autonomous Compliance for DeFi</p>
           </div>
         </NavLink>
       </div>
@@ -224,19 +224,19 @@ export default function Layout() {
                     <span className="text-[9px] text-white/25">Regulatory Radar</span>
                     <span className="flex items-center gap-1 text-[8px] text-emerald-400/60">
                       <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                      Scanning
+                      Scanning jurisdictions
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-white/25">Risk Monitor</span>
                     <span className="flex items-center gap-1 text-[8px] text-emerald-400/60">
                       <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                      Active
+                      Monitoring active
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-white/25">Jurisdictions</span>
-                    <span className="text-[8px] text-white/30">5 monitored</span>
+                    <span className="text-[8px] text-white/30">5 covered</span>
                   </div>
                 </div>
               </div>
@@ -248,8 +248,8 @@ export default function Layout() {
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 px-3 py-2 mt-1 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.08] hover:border-emerald-500/20 transition-all group"
               >
-                <span className="text-[9px] text-white/40 group-hover:text-white/60 transition-colors font-medium tracking-wide">POWERED BY</span>
-                <span className="text-[10px] font-bold text-emerald-400">FLOW</span>
+                <span className="text-[9px] text-white/40 group-hover:text-white/60 transition-colors font-medium tracking-wide">Powered by</span>
+                <span className="text-[10px] font-bold text-emerald-400">Flow</span>
               </a>
             </motion.div>
           )}
@@ -322,7 +322,7 @@ export default function Layout() {
             exit={{ opacity: 0, y: 20 }}
           >
             <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
-            <p className="text-[12px] text-white/60">Waking up backend... ~10s on first visit</p>
+            <p className="text-[12px] text-white/60">Getting things ready... this may take a few seconds</p>
           </motion.div>
         )}
       </AnimatePresence>

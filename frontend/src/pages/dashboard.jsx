@@ -129,7 +129,7 @@ export default function Dashboard() {
     await new Promise((r) => setTimeout(r, 600))
 
     // Step 2: Fetch REAL on-chain rules
-    setReVerifySteps(prev => [...prev, { label: `Querying RuleEngine contract for ${newCode} rules...`, done: false }])
+    setReVerifySteps(prev => [...prev, { label: `Loading on-chain rules for ${newCode}...`, done: false }])
     let realRules = null
     try {
       const res = await fetch(`${API}/api/compliance/rules/${newCode}`)
@@ -146,7 +146,7 @@ export default function Dashboard() {
     await new Promise((r) => setTimeout(r, 500))
 
     // Step 3: Compliance check
-    setReVerifySteps(prev => [...prev, { label: 'Querying ComplianceCredential contract...', done: false }])
+    setReVerifySteps(prev => [...prev, { label: 'Checking compliance status...', done: false }])
     try {
       await fetch(`${API}/api/compliance/status/${walletAddr || '0x93c691a98b975493'}`)
       setReVerifySteps(prev => {

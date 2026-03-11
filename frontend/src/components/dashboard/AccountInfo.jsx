@@ -5,14 +5,14 @@ export default function AccountInfo({ live }) {
     <div className="mt-4 p-6 rounded-xl border border-emerald-500/[0.08]">
       <div className="flex items-center gap-2 mb-5">
         <Activity className="w-4 h-4 text-white/40" />
-        <h3 className="text-sm font-semibold text-white/80">Account Info</h3>
+        <h3 className="text-sm font-semibold text-white/80">On-Chain Account</h3>
       </div>
       <div className="space-y-2">
         {[
           { label: 'Account Age', value: live.accountAge != null ? `${live.accountAge} days` : '—' },
           { label: 'Transactions (24h)', value: live.txCount != null ? `${live.txCount}` : '—' },
-          { label: 'Contracts', value: live.contractCount != null ? `${live.contractCount}` : '—' },
-          { label: 'Keys', value: live.keyCount != null ? `${live.keyCount}` : '—' },
+          { label: 'Contracts Deployed', value: live.contractCount != null ? `${live.contractCount}` : '—' },
+          { label: 'Signing Keys', value: live.keyCount != null ? `${live.keyCount}` : '—' },
           { label: 'Funding Sources', value: live.fundingSources != null ? `${live.fundingSources}` : '—' },
         ].map((item, i) => (
           <div key={i} className="flex items-center justify-between py-1.5">

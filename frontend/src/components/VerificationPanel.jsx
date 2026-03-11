@@ -64,7 +64,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
     const runTransaction = async () => {
       try {
         // Step 1: Check credential
-        addStep('Checking compliance credential...', 'Querying ComplianceCredential on Flow testnet', 'active')
+        addStep('Checking compliance credential...', 'Querying credential on Flow testnet', 'active')
         await new Promise(r => setTimeout(r, 500))
 
         // Use the connected user's wallet address and email
@@ -85,7 +85,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
             // Skip pre-mint if no email (the atomic deposit/borrow tx will auto-mint anyway)
             updateLastStep('No credential — will auto-mint during transaction', 'Skipping standalone mint (no email for custodial lookup)')
           } else {
-            updateLastStep('No credential found — minting...', 'Calling ZKVerifier + ComplianceCredential.mint()', 'active')
+            updateLastStep('No credential found — issuing...', 'Verifying identity and issuing credential', 'active')
             const mintRes = await fetch(`${API}/api/accounts/mint-credential`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -93,10 +93,10 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
             })
             const mintData = await mintRes.json()
             if (mintData.success) {
-              updateLastStep('Credential minted on-chain', `Tx: ${mintData.transactionId?.slice(0, 12)}... · Minted to: ${mintData.mintedTo?.slice(0, 10)}...`)
+              updateLastStep('Credential issued on-chain', `Tx: ${mintData.transactionId?.slice(0, 12)}... · Issued to: ${mintData.mintedTo?.slice(0, 10)}...`)
             } else {
-              updateLastStep('Credential minting failed', mintData.error || 'Unknown error', 'error')
-              setError(mintData.error || 'Credential minting failed. Please re-onboard.')
+              updateLastStep('Credential issuance failed', mintData.error || 'Unknown error', 'error')
+              setError(mintData.error || 'Credential issuance failed. Please try again.')
               return
             }
           }
@@ -106,20 +106,20 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         await new Promise(r => setTimeout(r, 400))
 
         // Step 2: Real on-chain compliance check — re-read after any mint above
-        addStep('ComplianceAction.verify() — on-chain gate', 'Reading ComplianceCredential capability', 'active')
+        addStep('On-chain compliance check', 'Verifying credential on Flow testnet', 'active')
         await new Promise(r => setTimeout(r, 400))
         const verifyRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
         const verifyData = await verifyRes.json()
         if (!verifyData.hasCredential || !verifyData.isValid) {
-          updateLastStep('ComplianceAction.verify() → false', 'No valid credential on this address — deposit blocked', 'error')
+          updateLastStep('Compliance check failed', 'No valid credential on this address — transaction blocked', 'error')
           setError('No valid compliance credential on your account. Please complete onboarding to receive one.')
           return
         }
-        updateLastStep('ComplianceAction.verify() → true', `Credential valid · Tier: ${verifyData.tier}`)
+        updateLastStep('Compliance check passed', `Credential valid · Tier: ${verifyData.tier}`)
         await new Promise(r => setTimeout(r, 300))
 
         // Step 3: Send REAL transaction
-        addStep(`Sending ${action} transaction to Flow testnet...`, `DemoLendingPool.${action}(${amount} FLOW)`, 'active')
+        addStep(`Sending ${action} transaction to Flow testnet...`, `Lending Pool · ${action}(${amount} FLOW)`, 'active')
 
         const txRes = await authFetch(`${API}/api/pool/${action}`, {
           method: 'POST',
@@ -137,7 +137,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         if (txData.success) {
           setTxResult(txData)
           updateLastStep(
-            `Transaction SEALED on Flow testnet`,
+            `Transaction confirmed on Flow testnet`,
             `Tx: ${txData.transactionId?.slice(0, 16)}...`
           )
           await new Promise(r => setTimeout(r, 400))
@@ -195,10 +195,10 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-500/[0.06]">
             <div>
               <h3 className="text-[15px] font-semibold text-white">
-                {completed ? 'Transaction Sealed' : error ? 'Transaction Failed' : `Processing ${action}`}
+                {completed ? 'Transaction Confirmed' : error ? 'Transaction Failed' : `Processing ${action}`}
               </h3>
               <p className="text-[12px] text-white/30 mt-0.5">
-                {completed ? 'Real transaction on Flow testnet' : `${amount} FLOW · DemoLendingPool`}
+                {completed ? 'Confirmed on Flow testnet' : `${amount} FLOW · Lending Pool`}
               </p>
             </div>
             <button onClick={onClose} className="text-white/20 hover:text-white/50 transition-colors">
@@ -265,7 +265,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                     <ShieldCheck className="w-5 h-5 text-emerald-400" />
                   </motion.div>
                   <div>
-                    <p className="text-[13px] font-semibold text-emerald-400">Compliant {action} sealed</p>
+                    <p className="text-[13px] font-semibold text-emerald-400">Compliant {action} confirmed</p>
                     <p className="text-[11px] text-white/25">Gas: {txResult.events?.find(e => e.type === 'FeesDeducted')?.data?.amount || '~0.001'} FLOW (sponsored)</p>
                   </div>
                 </div>

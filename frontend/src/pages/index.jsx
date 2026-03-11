@@ -415,11 +415,11 @@ export default function LandingPage() {
             transition={{ delay: 0.15, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
             <span className="block text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.1] font-extrabold tracking-[-0.02em] uppercase text-white/95">
-              The Complete
+              DeFi Compliance,
             </span>
             <span className="inline-block mt-2 px-5 py-2 rounded-xl border border-emerald-500/[0.15] bg-emerald-500/[0.03]">
               <span className="text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.1] font-extrabold tracking-[-0.02em] uppercase text-white/95">
-                Compliance Engine
+                Solved.
               </span>
             </span>
           </motion.h1>
@@ -431,8 +431,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
-            An interconnected suite of AI agents that scan regulations across five jurisdictions and enforce
-            them on-chain with zero-knowledge proofs — we <em className="text-white/55">finally</em> cracked DeFi compliance.
+            AI agents scan five jurisdictions, enforce rules on-chain, and verify identity with zero-knowledge proofs — no personal data ever touches the blockchain.
           </motion.p>
 
           {/* CTA */}
@@ -486,13 +485,13 @@ export default function LandingPage() {
                   onClick={handleLaunch}
                   className="px-5 py-2.5 rounded-full bg-white/[0.06] border border-emerald-500/[0.1] text-[13px] font-medium text-white/70 hover:bg-white/[0.1] transition-colors flex items-center gap-2"
                 >
-                  SIGN UP <ArrowRight className="w-3.5 h-3.5" />
+                  Sign Up <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => handleNavigate('/copilot')}
                   className="px-5 py-2.5 rounded-full text-[13px] font-medium text-white/40 hover:text-white/60 transition-colors tracking-wide"
                 >
-                  LEARN MORE
+                  Learn More
                 </button>
               </div>
 
@@ -595,19 +594,19 @@ export default function LandingPage() {
                 n: '01',
                 icon: Fingerprint,
                 t: 'Passkey Sign-Up',
-                d: 'User taps a fingerprint. WebAuthn creates a Flow account in the background — no seed phrases, no wallet extensions.',
+                d: 'Tap your fingerprint. WebAuthn creates a Flow account in the background — no seed phrases, no wallet extensions.',
               },
               {
                 n: '02',
                 icon: Lock,
-                t: 'ZK Proof Verifies',
-                d: 'A zero-knowledge proof runs client-side. The chain receives a boolean, never identity data. Privacy guaranteed.',
+                t: 'Identity Verified Privately',
+                d: 'A zero-knowledge proof runs client-side. The chain receives a yes or no, never identity data.',
               },
               {
                 n: '03',
                 icon: Scan,
-                t: 'Agents Enforce',
-                d: 'ComplianceAction.verify() runs before any deposit, borrow, or swap. Agents continuously update rules from live regulations.',
+                t: 'Agents Enforce Compliance',
+                d: 'Every deposit, borrow, or swap is compliance-checked on-chain. Agents continuously update rules from live regulations.',
               },
             ].map((step, i) => (
               <motion.div
