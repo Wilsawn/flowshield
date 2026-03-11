@@ -327,33 +327,34 @@ export default function FlowAutomation({ onAuditEntry }) {
           return (
             <div key={auto.id} className={`rounded-xl border ${auto.enabled ? c.border : 'border-white/[0.04]'} ${auto.enabled ? c.bg : 'bg-white/[0.01]'} transition-all duration-300`}>
               {/* Header row */}
-              <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : auto.id)}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${auto.enabled ? c.bg : 'bg-white/[0.03]'} border ${auto.enabled ? c.border : 'border-white/[0.04]'}`}>
-                  <Icon className={`w-4 h-4 ${auto.enabled ? c.text : 'text-white/25'}`} />
+              <div className="flex items-center gap-3 px-4 py-3.5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : auto.id)}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${auto.enabled ? c.bg : 'bg-white/[0.03]'} border ${auto.enabled ? c.border : 'border-white/[0.04]'}`}>
+                  <Icon className={`w-4 h-4 ${auto.enabled ? c.text : 'text-white/30'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[12px] font-medium ${auto.enabled ? 'text-white/80' : 'text-white/50'}`}>{auto.label}</span>
-                    <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/20 font-medium">{auto.flowPrimitive}</span>
+                    <span className={`text-[13px] font-semibold truncate ${auto.enabled ? 'text-white/90' : 'text-white/60'}`}>{auto.label}</span>
                     {auto.lastResult && (
-                      <span className="ml-auto mr-1">{statusIcon(auto.lastResult.status)}</span>
+                      <span className="shrink-0">{statusIcon(auto.lastResult.status)}</span>
                     )}
                   </div>
-                  <p className="text-[10px] text-white/25 mt-0.5">{auto.description}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/25 font-medium shrink-0">{auto.flowPrimitive}</span>
+                    {auto.enabled && (
+                      <span className="text-[10px] text-white/30 font-medium">every {auto.interval}{auto.unit[0]}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {auto.enabled && (
-                    <span className="text-[9px] text-white/20">every {auto.interval}{auto.unit[0]}</span>
-                  )}
+                <div className="flex items-center gap-3 shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleAutomation(auto.id) }}
-                    className={`w-10 h-5 rounded-full relative transition-all duration-300 ${auto.enabled ? 'bg-emerald-500/30' : 'bg-white/[0.06]'}`}
+                    className={`w-11 h-6 rounded-full relative transition-all duration-300 ${auto.enabled ? 'bg-emerald-500/30' : 'bg-white/[0.06]'}`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-300 ${auto.enabled ? 'left-5.5 bg-emerald-400' : 'left-0.5 bg-white/20'}`}
-                      style={{ left: auto.enabled ? '22px' : '2px' }}
+                    <span className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-300 ${auto.enabled ? 'bg-emerald-400' : 'bg-white/25'}`}
+                      style={{ left: auto.enabled ? '24px' : '4px' }}
                     />
                   </button>
-                  <ChevronRight className={`w-3 h-3 text-white/15 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`w-3.5 h-3.5 text-white/20 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
                 </div>
               </div>
 
