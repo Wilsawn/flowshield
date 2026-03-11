@@ -267,34 +267,34 @@ const initialNodes = [
   {
     id: 'copilot',
     type: 'copilot',
-    position: { x: 520, y: -20 },
+    position: { x: 500, y: -30 },
   },
   {
     id: 'orchestrator',
     type: 'orchestrator',
-    position: { x: 520, y: 380 },
+    position: { x: 540, y: 420 },
   },
   {
     id: 'radar',
     type: 'radar',
-    position: { x: 20, y: 450 },
+    position: { x: 0, y: 480 },
   },
   {
     id: 'status-flow',
     type: 'status',
-    position: { x: 740, y: 600 },
+    position: { x: 760, y: 650 },
     data: { label: 'Flow Testnet', color: 'bg-emerald-400', pulse: true, badge: 'LIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400', delay: 0.4 },
   },
   {
     id: 'status-compliance',
     type: 'status',
-    position: { x: -80, y: 390 },
+    position: { x: -100, y: 400 },
     data: { label: 'Compliance Check', color: 'bg-cyan-400', pulse: false, badge: 'PASSED', badgeClass: 'bg-cyan-500/10 text-cyan-400', delay: 0.36 },
   },
   {
     id: 'status-guard',
     type: 'status',
-    position: { x: 740, y: 150 },
+    position: { x: 900, y: 160 },
     data: { label: 'Prompt Guard', color: 'bg-cyan-400', pulse: false, badge: 'ACTIVE', badgeClass: 'bg-cyan-500/10 text-cyan-400', delay: 0.32 },
   },
 ]
