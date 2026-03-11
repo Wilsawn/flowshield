@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, Fingerprint, Zap, Bot, Lock, Scale, Cpu, Radar, ArrowRight, Scan, Globe, ChevronRight, Check, AlertTriangle, BarChart3, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,6 +11,46 @@ import VerticalBarsNoise from '@/components/ui/vertical-bars'
 /* ── shared glass card style ── */
 const glass = 'rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/60 backdrop-blur-sm'
 const glassInner = 'rounded-xl border border-emerald-500/[0.06] bg-emerald-500/[0.02]'
+
+const starPath = "M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+
+function MarqueeStrip() {
+  const groupRef = useRef(null)
+  const [groupWidth, setGroupWidth] = useState(0)
+
+  useEffect(() => {
+    if (!groupRef.current) return
+    const measure = () => setGroupWidth(groupRef.current.scrollWidth)
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  const items = [...Array(6)].map((_, i) => (
+    <div key={i} className="flex items-center shrink-0">
+      <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.08] select-none whitespace-nowrap px-6">
+        FlowShield
+      </span>
+      <svg className="w-[clamp(2rem,5vw,4rem)] h-[clamp(2rem,5vw,4rem)] text-white/[0.08] shrink-0 mx-6" viewBox="0 0 24 24" fill="currentColor">
+        <path d={starPath} />
+      </svg>
+    </div>
+  ))
+
+  return (
+    <div className="relative overflow-hidden py-12 border-t border-emerald-500/[0.06]">
+      <motion.div
+        className="flex"
+        style={{ willChange: 'transform' }}
+        animate={groupWidth ? { x: [0, -groupWidth] } : {}}
+        transition={groupWidth ? { x: { duration: 30, ease: 'linear', repeat: Infinity, repeatType: 'loop' } } : {}}
+      >
+        <div ref={groupRef} className="flex shrink-0">{items}</div>
+        <div className="flex shrink-0">{items}</div>
+      </motion.div>
+    </div>
+  )
+}
 
 export default function LandingPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -888,29 +928,7 @@ export default function LandingPage() {
           </div>
 
           {/* Giant scrolling brand marquee */}
-          <div className="relative overflow-hidden py-12 border-t border-emerald-500/[0.06]">
-            {(() => {
-              const marqueeItem = (key) => (
-                <div key={key} className="flex items-center shrink-0">
-                  <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.08] select-none whitespace-nowrap px-6">
-                    FlowShield
-                  </span>
-                  <svg className="w-[clamp(2rem,5vw,4rem)] h-[clamp(2rem,5vw,4rem)] text-white/[0.08] shrink-0 mx-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                  </svg>
-                </div>
-              )
-              return (
-                <div
-                  className="flex animate-[marqueeScroll_30s_linear_infinite]"
-                  style={{ width: 'max-content', willChange: 'transform', backfaceVisibility: 'hidden' }}
-                >
-                  {[...Array(6)].map((_, i) => marqueeItem(`a${i}`))}
-                  {[...Array(6)].map((_, i) => marqueeItem(`b${i}`))}
-                </div>
-              )
-            })()}
-          </div>
+          <MarqueeStrip />
 
           {/* Copyright */}
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
