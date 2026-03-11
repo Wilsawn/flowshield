@@ -889,8 +889,8 @@ export default function LandingPage() {
 
           {/* Giant scrolling brand marquee */}
           <div className="relative overflow-hidden py-12 border-t border-emerald-500/[0.06]">
-            <div className="flex animate-[marqueeScroll_20s_linear_infinite] whitespace-nowrap">
-              {[...Array(6)].map((_, i) => (
+            <div className="flex animate-[marqueeScroll_30s_linear_infinite] whitespace-nowrap will-change-transform backface-visibility-hidden" style={{ backfaceVisibility: 'hidden' }}>
+              {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex items-center gap-8 mx-8 shrink-0">
                   <span className="text-[clamp(4rem,10vw,8rem)] font-extrabold tracking-[-0.04em] uppercase text-white/[0.08] select-none">
                     FlowShield
