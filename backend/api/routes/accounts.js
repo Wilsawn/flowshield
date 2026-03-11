@@ -285,6 +285,57 @@ async function _handleCreate(req, res, emailKey, authMethod) {
 }
 
 /**
+ * POST /api/accounts/fund
+ * Body: { address, amount }
+ * Sends FLOW tokens from the deployer to any testnet account.
+ */
+router.post('/fund', authRateLimit, async (req, res) => {
+  if (isMainnet) return res.status(403).json({ error: 'Funding disabled on mainnet' })
+
+  const { address, amount = 10000 } = req.body
+  if (!address) return res.status(400).json({ error: 'address is required' })
+
+  const fundAmount = Math.min(parseFloat(amount) || 10000, 100000)
+  const fcl = req.app.locals.fcl
+  const deployerAddress = req.app.locals.contractAddress
+
+  try {
+    const fundAuthz = serverAuthorization(fcl, deployerAddress)
+    const txId = await fcl.mutate({
+      cadence: `
+        import FungibleToken from ${getAddress('FungibleToken')}
+        import FlowToken from ${getAddress('FlowToken')}
+
+        transaction(amount: UFix64, recipient: Address) {
+          prepare(signer: auth(Storage) &Account) {
+            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+              from: /storage/flowTokenVault
+            )!
+            let tokens <- vault.withdraw(amount: amount)
+            let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
+              /public/flowTokenReceiver
+            ) ?? panic("Could not borrow receiver")
+            receiverRef.deposit(from: <- tokens)
+          }
+        }
+      `,
+      args: (arg, t) => [
+        arg(fundAmount.toFixed(8), t.UFix64),
+        arg(address, t.Address),
+      ],
+      proposer: fundAuthz,
+      payer: fundAuthz,
+      authorizations: [fundAuthz],
+      limit: 999,
+    })
+    await fcl.tx(txId).onceSealed()
+    res.json({ success: true, amount: fundAmount, transactionId: txId, address })
+  } catch (err) {
+    res.status(500).json({ error: safeError(err, 'Funding failed') })
+  }
+})
+
+/**
  * POST /api/accounts/login
  * Body: { email }
  *
