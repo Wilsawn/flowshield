@@ -409,7 +409,7 @@ export default function LandingPage() {
 
           {/* Hero heading - uppercase with bordered highlight */}
           <motion.h1
-            className="mb-6"
+            className="mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
@@ -543,7 +543,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── STATS STRIP ─── */}
-      <section className="py-16 md:py-20">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <motion.div
             className="grid grid-cols-2 md:grid-cols-4 gap-3"
@@ -735,7 +735,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── CTA ─── */}
-      <section className="py-32 md:py-44 relative">
+      <section className="py-24 md:py-36 relative">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/[0.03] blur-[120px] rounded-full" />
         </div>
@@ -780,7 +780,7 @@ export default function LandingPage() {
 
       {/* ─── PRODUCT SUMMARY STRIP ─── */}
       <section className="border-y border-emerald-500/[0.06]">
-        <div className="max-w-[1200px] mx-auto px-6 py-10">
+        <div className="max-w-[1200px] mx-auto px-6 py-14">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { icon: Radar, name: 'Regulatory Radar', tagline: 'Scan five jurisdictions in real-time' },
