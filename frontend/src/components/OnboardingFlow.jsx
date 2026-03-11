@@ -46,6 +46,7 @@ export default function OnboardingFlow({ onComplete, onBack }) {
   const [scanPulse, setScanPulse] = useState(false)
   const [veriffUrl, setVeriffUrl] = useState(null)
   const [emailLoading, setEmailLoading] = useState(false)
+  const [passkeyAttempts, setPasskeyAttempts] = useState(0)
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
@@ -95,6 +96,10 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
 
   const handlePasskeySetup = async () => {
+    if (passkeyAttempts >= 3) {
+      setError('Too many failed attempts. Please go back and try again.')
+      return
+    }
     setScanPulse(true)
     setError(null)
 
@@ -135,8 +140,10 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
         passkeySuccess = true
       } else {
-        await new Promise((r) => setTimeout(r, 1200))
-        passkeySuccess = true
+        // Device doesn't support WebAuthn — block onboarding
+        setScanPulse(false)
+        setError('Your device does not support passkeys. Please use a device with biometric authentication (fingerprint or Face ID).')
+        return
       }
     } catch (err) {
       console.warn('[FlowShield] WebAuthn:', err.name)
@@ -145,12 +152,17 @@ export default function OnboardingFlow({ onComplete, onBack }) {
         passkeySuccess = true
       } else if (err.name === 'NotAllowedError') {
         setScanPulse(false)
-        setError('Passkey setup was cancelled. Please try again to continue.')
+        setPasskeyAttempts(prev => prev + 1)
+        const remaining = 3 - (passkeyAttempts + 1)
+        setError(remaining > 0
+          ? `Passkey setup was cancelled. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
+          : 'Too many failed attempts. Please go back and try again.')
         return
       } else {
-        console.warn('[FlowShield] WebAuthn error, using fallback:', err.name)
+        console.warn('[FlowShield] WebAuthn error:', err.name)
         setScanPulse(false)
-        setError(`Passkey error: ${err.message}. Tap to retry.`)
+        setPasskeyAttempts(prev => prev + 1)
+        setError('Passkey verification failed. Please try again.')
         return
       }
     }
@@ -326,9 +338,13 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
       <div className="w-full max-w-[460px] relative z-10">
         {/* Back button */}
-        {step === 'email' && (
+        {(step === 'email' || step === 'jurisdiction' || step === 'passkey') && (
           <motion.button
-            onClick={onBack}
+            onClick={() => {
+              if (step === 'email') { onBack() }
+              else if (step === 'jurisdiction') { setStep('email'); setError(null) }
+              else if (step === 'passkey') { setStep('jurisdiction'); setError(null); setPasskeyAttempts(0) }
+            }}
             className="flex items-center gap-1.5 text-[13px] text-white/30 hover:text-white/60 mb-6 transition-colors"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -60,8 +60,10 @@ export default function LandingPage() {
 
   const isLoggedIn = () => {
     try {
-      const stored = localStorage.getItem('flowshield_user')
-      return stored && JSON.parse(stored).email
+      const token = localStorage.getItem('flowshield_token')
+      const wallet = localStorage.getItem('flowshield_wallet')
+      const parsed = wallet ? JSON.parse(wallet) : null
+      return token && parsed?.loggedIn && parsed?.addr
     } catch { return false }
   }
 
@@ -77,8 +79,16 @@ export default function LandingPage() {
     setShowOnboarding(true)
   }
 
+  const handleOnboardingBack = () => {
+    // Clear any partial auth state when user abandons onboarding
+    localStorage.removeItem('flowshield_token')
+    localStorage.removeItem('flowshield_wallet')
+    localStorage.removeItem('flowshield_user')
+    setShowOnboarding(false)
+  }
+
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={() => setShowOnboarding(false)} />
+    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={handleOnboardingBack} />
   }
 
   const agents = [

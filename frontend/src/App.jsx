@@ -12,13 +12,18 @@ import NotFound from './pages/NotFound'
 
 function RequireAuth({ children }) {
   try {
-    const stored = localStorage.getItem('flowshield_user')
+    const token = localStorage.getItem('flowshield_token')
     const wallet = localStorage.getItem('flowshield_wallet')
-    // Allow access for both email users and wallet-connected users
-    if (stored && JSON.parse(stored).email) return children
-    if (stored && JSON.parse(stored).flowAddress) return children
-    if (wallet && JSON.parse(wallet).loggedIn) return children
+    const parsed = wallet ? JSON.parse(wallet) : null
+
+    // Must have both a session token AND a valid wallet with an address
+    if (token && parsed?.loggedIn && parsed?.addr) return children
   } catch { /* ignore */ }
+
+  // Clear any partial/stale auth state
+  localStorage.removeItem('flowshield_token')
+  localStorage.removeItem('flowshield_wallet')
+  localStorage.removeItem('flowshield_user')
   return <Navigate to="/" replace />
 }
 
