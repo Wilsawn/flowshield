@@ -4,7 +4,7 @@
 
 **Privacy-preserving compliance infrastructure for DeFi on Flow.**
 
-[Live Demo](https://flowshield.netlify.app) · [Contracts on Flowscan](https://testnet.flowscan.io/account/0x93c691a98b975493) · [Architecture](docs/ARCHITECTURE.md) · [Demo Guide](docs/DEMO.md)
+[Live Demo](https://flowshield.netlify.app) · [Contracts on Flowscan](https://testnet.flowscan.io/account/0x93c691a98b975493) · [Architecture](docs/ARCHITECTURE.md) · [Setup Guide](docs/SETUP.md) · [Demo Script](docs/DEMO.md)
 
 ![Flow](https://img.shields.io/badge/Flow-Testnet-00ef8b?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMiIgZmlsbD0iIzAwZWY4YiIvPjwvc3ZnPg==)
 ![Cadence](https://img.shields.io/badge/Cadence-1.0-00ef8b?style=flat-square)
@@ -116,7 +116,7 @@ flowshield/
 ├── evm/
 │   ├── contracts/          Solidity Groth16 verifier for FlowEVM
 │   └── circuits/           circom ZK circuit for compliance proof generation
-├── docs/                   Architecture deep-dive + demo guide
+├── docs/                   Architecture, setup guide, demo script
 └── scripts/                Deployment scripts
 ```
 
