@@ -166,35 +166,42 @@ export default function OnboardingFlow({ onComplete, onBack }) {
 
     setCurrentVerifyStep(1)
     let userFlowAddress = null
-    try {
-      const acctRes = await fetch(`${API}/api/accounts/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, authMethod }),
-      })
-      const acctData = await acctRes.json()
-      if (acctData.address) {
-        userFlowAddress = acctData.address
-        if (acctData.token) {
-          localStorage.setItem('flowshield_token', acctData.token)
+    let retries = 2
+    while (retries >= 0 && !userFlowAddress) {
+      try {
+        const acctRes = await fetch(`${API}/api/accounts/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, authMethod }),
+        })
+        const acctData = await acctRes.json()
+        if (acctData.address) {
+          userFlowAddress = acctData.address
+          if (acctData.token) {
+            localStorage.setItem('flowshield_token', acctData.token)
+          }
+          localStorage.setItem('flowshield_wallet', JSON.stringify({
+            loggedIn: true,
+            addr: acctData.address,
+            custodial: true,
+            email: email,
+          }))
+          window.dispatchEvent(new Event('storage'))
+        } else if (acctData.error) {
+          console.error('[FlowShield] Account creation failed:', acctData.error)
         }
-        localStorage.setItem('flowshield_wallet', JSON.stringify({
-          loggedIn: true,
-          addr: acctData.address,
-          custodial: true,
-          email: email,
-        }))
-        window.dispatchEvent(new Event('storage'))
-      } else if (acctData.error) {
-        console.error('[FlowShield] Account creation failed:', acctData.error)
+      } catch (err) {
+        console.warn('[FlowShield] Account creation attempt:', err.message)
       }
-    } catch (err) {
-      console.warn('[FlowShield] Account creation:', err.message)
+      if (!userFlowAddress && retries > 0) {
+        await new Promise(r => setTimeout(r, 1500))
+      }
+      retries--
     }
 
     if (!userFlowAddress) {
       setScanPulse(false)
-      setError('Account creation failed — could not get a Flow address. Please try again.')
+      setError('Account creation failed — could not reach the server. Please check your connection and try again.')
       setStep('passkey')
       return
     }
