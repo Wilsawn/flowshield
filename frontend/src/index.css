@@ -361,6 +361,10 @@
     50% { transform: translate(20%, -15%) scale(1.15); }
   }
 
+  .marquee-scroll {
+    animation: marqueeScroll 120s linear infinite;
+  }
+
   @keyframes marqueeScroll {
     from { transform: translate3d(0, 0, 0); }
     to { transform: translate3d(-50%, 0, 0); }
