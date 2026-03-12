@@ -104,7 +104,8 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
       await signInWithGoogle()
       // Redirect happens automatically — user returns via index.jsx callback
     } catch (err) {
-      setError('Google sign-in failed. Please try again.')
+      console.error('[FlowShield] Google sign-in error:', err)
+      setError(`Google sign-in failed: ${err.message}`)
       setGoogleLoading(false)
     }
   }
