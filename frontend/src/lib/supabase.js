@@ -15,3 +15,26 @@ export function getSupabase() {
   supabase = createClient(supabaseUrl, supabaseAnonKey)
   return supabase
 }
+
+export async function signInWithGoogle() {
+  const sb = getSupabase()
+  if (!sb) throw new Error('Supabase not configured')
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
+  if (error) throw error
+}
+
+export async function getSupabaseSession() {
+  const sb = getSupabase()
+  if (!sb) return null
+  const { data: { session } } = await sb.auth.getSession()
+  return session
+}
+
+export async function signOutSupabase() {
+  const sb = getSupabase()
+  if (!sb) return
+  await sb.auth.signOut()
+}

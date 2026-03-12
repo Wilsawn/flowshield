@@ -7,6 +7,8 @@ import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
 import AnimatedGenerateButton from '@/components/ui/animated-generate-button'
 import VerticalBarsNoise from '@/components/ui/vertical-bars'
+import { getSupabaseSession, signOutSupabase } from '@/lib/supabase'
+import { API } from '@/lib/api'
 
 /* ── shared glass card style ── */
 const glass = 'rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/60 backdrop-blur-sm'
@@ -40,7 +42,57 @@ export default function LandingPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [redirectTarget, setRedirectTarget] = useState('/dashboard')
   const [activeAgent, setActiveAgent] = useState(0)
+  const [googleEmail, setGoogleEmail] = useState(null)
   const navigate = useNavigate()
+
+  // Handle Google OAuth callback
+  useEffect(() => {
+    async function handleOAuthReturn() {
+      const session = await getSupabaseSession()
+      if (!session?.user?.email) return
+      const email = session.user.email
+
+      // Clear Supabase auth session — we use our own HMAC tokens
+      await signOutSupabase()
+
+      // Try logging in as existing user
+      try {
+        const res = await fetch(`${API}/api/accounts/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.token) localStorage.setItem('flowshield_token', data.token)
+          localStorage.setItem('flowshield_wallet', JSON.stringify({
+            loggedIn: true,
+            addr: data.address,
+            custodial: true,
+            email,
+          }))
+          localStorage.setItem('flowshield_user', JSON.stringify({
+            email,
+            flowAddress: data.address,
+            displayName: email.split('@')[0],
+            authMethod: data.authMethod || 'google',
+            createdAt: data.createdAt,
+          }))
+          localStorage.setItem('flowshield_email', email)
+          window.dispatchEvent(new Event('storage'))
+          navigate('/dashboard')
+          return
+        }
+      } catch { /* login failed — new user */ }
+
+      // New user — open onboarding pre-filled at jurisdiction step
+      setGoogleEmail(email)
+      localStorage.setItem('flowshield_email', email)
+      setRedirectTarget('/dashboard')
+      setShowOnboarding(true)
+    }
+    handleOAuthReturn()
+  }, [navigate])
 
   const isLoggedIn = () => {
     try {
@@ -68,11 +120,12 @@ export default function LandingPage() {
     localStorage.removeItem('flowshield_token')
     localStorage.removeItem('flowshield_wallet')
     localStorage.removeItem('flowshield_user')
+    setGoogleEmail(null)
     setShowOnboarding(false)
   }
 
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={handleOnboardingBack} />
+    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={handleOnboardingBack} googleEmail={googleEmail} />
   }
 
   const agents = [
