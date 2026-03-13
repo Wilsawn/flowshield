@@ -3,7 +3,7 @@
 // Creates a real Flow account for each user, funded by the deployer.
 
 import { Router } from 'express'
-import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization, PRIVATE_KEY } from '../../lib/flow-signer.js'
+import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization } from '../../lib/flow-signer.js'
 import { logAudit, getSupabase } from '../../lib/supabase.js'
 import { encryptKey, decryptKey } from '../../lib/crypto.js'
 import { generateSessionToken } from '../../lib/middleware.js'
@@ -677,7 +677,8 @@ router.post('/mint-credential-wallet', async (req, res) => {
 router.post('/link-deployer', async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'email is required' })
-  if (!PRIVATE_KEY) return res.status(500).json({ error: 'Deployer key not available' })
+  const deployerKey = (process.env.FLOW_PRIVATE_KEY || '').trim()
+  if (!deployerKey) return res.status(500).json({ error: 'Deployer key not available' })
 
   const deployerAddress = req.app.locals.contractAddress
 
@@ -685,14 +686,14 @@ router.post('/link-deployer', async (req, res) => {
   const elliptic = (await import('elliptic')).default
   const EC = elliptic.ec
   const ec = new EC('p256')
-  const keyPair = ec.keyFromPrivate(Buffer.from(PRIVATE_KEY, 'hex'))
+  const keyPair = ec.keyFromPrivate(Buffer.from(deployerKey, 'hex'))
   const publicKey = keyPair.getPublic(false, 'hex').slice(2)
 
   await saveUser({
     email: email.toLowerCase(),
     address: deployerAddress,
     publicKey,
-    privateKey: PRIVATE_KEY,
+    privateKey: deployerKey,
     authMethod: 'deployer',
     createdAt: new Date().toISOString(),
   })
