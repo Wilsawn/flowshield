@@ -1,6 +1,9 @@
-// routes/governance.js
-// Governance API routes — reads AND writes real proposal data on-chain.
-// Uses server-side signing with the deployer's private key.
+/**
+ * @file Governance API Routes
+ * @module routes/governance
+ * @description On-chain multi-sig governance system for FlowShield admin operations.
+ *              Reads and writes real proposal data on Flow testnet via server-side signing.
+ */
 
 import { Router } from 'express'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'

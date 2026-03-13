@@ -1,7 +1,11 @@
-// regulatory-radar.js
-// AI-powered compliance agent with tool use.
-// Claude autonomously reads on-chain rules, runs gap detection, then enriches with regulatory analysis.
-// Falls back to deterministic checklist if no API key or agent fails.
+/**
+ * @file Regulatory Radar Agent
+ * @module agents/regulatory-radar
+ * @description Hybrid AI + deterministic compliance scanning agent.
+ *              Reads on-chain RuleEngine rules, compares against jurisdiction-specific regulatory
+ *              checklists (MiCA, FinCEN, FATF, MAS, FINTRAC), detects gaps, then enriches
+ *              findings with Claude AI regulatory context. Falls back to deterministic checklist.
+ */
 
 import { runAgentLoop, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 

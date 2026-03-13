@@ -1,7 +1,12 @@
-// anomaly-monitor.js
-// AI-powered behavioral monitoring agent with tool use.
-// Claude autonomously gathers on-chain data, runs anomaly detection, then reasons about context.
-// Falls back to deterministic thresholds if no API key or agent fails.
+/**
+ * @file Anomaly Monitor Agent
+ * @module agents/anomaly-monitor
+ * @description Hybrid AI + deterministic behavioral monitoring agent.
+ *              Gathers real on-chain activity data from Flow testnet, runs threshold-based
+ *              anomaly detection (velocity spikes, dormancy patterns, unusual balances),
+ *              then optionally enriches findings with Claude AI reasoning.
+ *              Falls back to pure deterministic thresholds if no API key or agent failure.
+ */
 
 import { runAgentLoop, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 

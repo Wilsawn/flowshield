@@ -1,6 +1,18 @@
-// lib/flow-signer.js
-// Shared server-side Flow transaction signing utility.
-// Loads private key from .pkey file OR FLOW_PRIVATE_KEY env var (for hosted deployments).
+/**
+ * @file Flow Transaction Signer
+ * @module lib/flow-signer
+ * @description Shared server-side signing utility for Flow blockchain transactions.
+ *              Loads the deployer's private key from .pkey file or FLOW_PRIVATE_KEY env var.
+ *              Provides authorization functions for single-signer (deployer) and two-signer
+ *              (deployer + custodial user) transaction patterns using P-256 / ECDSA_P256.
+ *
+ * @exports serverAuthorization - Authorization function for deployer-signed transactions
+ * @exports custodialAuthorization - Authorization function for user-signed transactions
+ * @exports generateKeyPair - Generates a new P-256 key pair for custodial accounts
+ * @exports createFlowAccount - Creates a new Flow account on-chain funded by the deployer
+ * @exports hasPrivateKey - Returns true if the deployer's private key is available
+ * @exports signWithKey - Low-level signing function for arbitrary messages
+ */
 
 import elliptic from 'elliptic'
 import pkg from 'js-sha3'

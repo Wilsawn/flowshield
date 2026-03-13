@@ -1,6 +1,9 @@
-// agents/agent-cards.js
-// A2A (Agent-to-Agent) protocol — Agent Card metadata for FlowShield's 4 agents.
-// Each card describes capabilities, input/output schemas, endpoint, auth, and rate limits.
+/**
+ * @file A2A Agent Cards
+ * @module agents/agent-cards
+ * @description Agent-to-Agent protocol metadata for FlowShield's 4 specialized agents.
+ *              Each card describes capabilities, input/output schemas, endpoints, auth, and rate limits.
+ */
 
 const FLOW_ADDRESS_PATTERN = '^0x[a-fA-F0-9]{16}$'
 

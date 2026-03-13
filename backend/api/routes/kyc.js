@@ -1,7 +1,10 @@
-// routes/kyc.js
-// Veriff KYC integration routes.
-// Creates verification sessions and handles webhook callbacks.
-// Docs: https://devdocs.veriff.com/apidocs/v1sessions
+/**
+ * @file KYC API Routes
+ * @module routes/kyc
+ * @description Veriff KYC integration for identity verification.
+ *              Creates verification sessions and handles webhook callbacks.
+ * @see https://devdocs.veriff.com/apidocs/v1sessions
+ */
 
 import { Router } from 'express'
 import crypto from 'crypto'

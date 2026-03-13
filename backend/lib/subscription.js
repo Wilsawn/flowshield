@@ -1,7 +1,10 @@
-// subscription.js
-// Tier-based access control for FlowShield API.
-//
-// Revenue model (3 channels):
+/**
+ * @file Subscription & Access Control
+ * @module lib/subscription
+ * @description Tier-based access control for FlowShield API.
+ *              Revenue model: on-chain verification fees, API subscriptions (Stripe),
+ *              and enterprise contract deployments.
+ */
 //   1. On-chain fees: 0.001 FLOW per verification, 0.01 FLOW per credential mint
 //   2. API subscriptions (below)
 //   3. Enterprise custom contracts

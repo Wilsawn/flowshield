@@ -1,3 +1,9 @@
+/**
+ * @file UI Utilities
+ * @module lib/utils
+ * @description Shared utility functions for className merging (cn), authenticated fetch,
+ *              and other common helpers used across the FlowShield frontend.
+ */
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 

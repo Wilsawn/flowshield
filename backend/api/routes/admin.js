@@ -1,6 +1,10 @@
-// routes/admin.js
-// Admin API routes — audit log, scan history, monitored addresses, webhooks, API keys.
-// All endpoints gracefully degrade when Supabase is not configured.
+/**
+ * @file Admin API Routes
+ * @module routes/admin
+ * @description Admin dashboard endpoints for audit logs, scan history, monitored addresses,
+ *              webhook management, and API key administration.
+ *              All endpoints gracefully degrade when Supabase is not configured.
+ */
 
 import { Router } from 'express'
 import {

@@ -1,5 +1,10 @@
-// routes/risk.js
-// Risk scoring API routes — connects to risk-scoring agent + Flow testnet.
+/**
+ * @file Risk Scoring API Routes
+ * @module routes/risk
+ * @description REST endpoints for wallet risk assessment and anomaly monitoring.
+ *              Connects to the risk-scoring agent and Flow testnet for real-time analysis.
+ *              Supports demo mode for injecting test threat scenarios.
+ */
 
 import { Router } from 'express'
 import { assessRisk, RISK_FACTORS } from '../../agents/risk-scoring.js'

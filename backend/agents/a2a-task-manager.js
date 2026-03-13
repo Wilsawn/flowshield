@@ -1,7 +1,10 @@
-// agents/a2a-task-manager.js
-// A2A Task lifecycle management.
-// Tasks flow: submitted → working → completed/failed
-// Auto-cleanup of tasks older than 1 hour.
+/**
+ * @file A2A Task Manager
+ * @module agents/a2a-task-manager
+ * @description A2A task lifecycle management.
+ *              Tasks flow: submitted -> working -> completed/failed.
+ *              Auto-cleanup of tasks older than 1 hour.
+ */
 
 import { randomUUID } from 'crypto'
 

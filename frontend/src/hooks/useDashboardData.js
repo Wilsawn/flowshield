@@ -1,3 +1,13 @@
+/**
+ * @file Dashboard Data Hook
+ * @module hooks/useDashboardData
+ * @description Fetches and manages all dashboard data from the FlowShield API.
+ *              Fires 4 API calls in parallel (risk, compliance, pool, position)
+ *              and renders data progressively as each responds.
+ *              Auto-refreshes every 30 seconds.
+ * @param {string} address - The Flow wallet address to fetch data for
+ * @returns {Object} Dashboard state including risk score, compliance status, pool data, and loading state
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { API } from '@/lib/api'
 import { authFetch } from '@/lib/utils'

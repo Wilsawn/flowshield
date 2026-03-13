@@ -1,6 +1,10 @@
-// lib/prompt-guard.js
-// Prompt injection protection for FlowShield AI agents.
-// Sanitizes user input, detects injection attempts, and filters response leaks.
+/**
+ * @file Prompt Injection Guard
+ * @module lib/prompt-guard
+ * @description Security layer for FlowShield AI agents.
+ *              Sanitizes user input, detects prompt injection attempts,
+ *              and filters sensitive data leaks from AI responses.
+ */
 
 import { logAudit } from './supabase.js'
 

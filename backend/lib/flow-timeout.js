@@ -1,5 +1,9 @@
-// flow-timeout.js
-// Wraps FCL calls with a timeout to prevent infinite hangs when Flow is slow.
+/**
+ * @file FCL Timeout Wrapper
+ * @module lib/flow-timeout
+ * @description Wraps FCL query/mutate calls with a configurable timeout
+ *              to prevent infinite hangs when Flow testnet is slow or unresponsive.
+ */
 
 const DEFAULT_QUERY_TIMEOUT = parseInt(process.env.FCL_QUERY_TIMEOUT || '15000')
 const DEFAULT_TX_TIMEOUT = parseInt(process.env.FCL_TX_TIMEOUT || '60000')

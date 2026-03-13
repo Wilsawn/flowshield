@@ -1,7 +1,15 @@
-// risk-scoring.js
-// AI-powered risk scoring agent with tool use.
-// Claude autonomously fetches wallet data, runs deterministic scoring, then reasons about results.
-// Falls back to pure deterministic pipeline if no API key or agent fails.
+/**
+ * @file Risk Scoring Agent
+ * @module agents/risk-scoring
+ * @description Deterministic + AI-powered risk scoring pipeline.
+ *              Scores Flow wallet addresses on 8 behavioral risk factors using public on-chain data.
+ *              No personal/KYC data is used — only blockchain activity (account age, tx velocity,
+ *              mixer interactions, funding patterns, etc.). Points sum to 0–100.
+ *              Optionally, Claude AI adjusts score by up to +/-10 points with reasoning.
+ *              Falls back to pure deterministic scoring if no API key or agent failure.
+ *
+ * @scoring Tiers: 0–30 = compliant, 31–70 = semi-compliant, 71–100 = non-compliant
+ */
 
 import { runAgentLoop, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'
 

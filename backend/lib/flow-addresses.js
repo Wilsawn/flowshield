@@ -1,6 +1,10 @@
-// flow-addresses.js
-// Network-aware Flow system contract addresses.
-// Centralizes all address lookups so we never hardcode testnet addresses in Cadence.
+/**
+ * @file Flow Contract Addresses
+ * @module lib/flow-addresses
+ * @description Network-aware Flow system contract address resolver.
+ *              Centralizes all address lookups for testnet/mainnet/emulator
+ *              so Cadence imports never hardcode addresses.
+ */
 
 const ADDRESSES = {
   testnet: {

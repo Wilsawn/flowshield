@@ -1,7 +1,10 @@
-// agents/orchestrator.js
-// Core agent routing and chaining for A2A protocol.
-// Maps agent capabilities to actual executor functions and supports multi-agent chains.
-// Production-grade: per-task timeouts, step logging, input validation, concurrency limits.
+/**
+ * @file Agent Orchestrator
+ * @module agents/orchestrator
+ * @description Core agent routing and chaining for A2A (Agent-to-Agent) protocol.
+ *              Maps agent capabilities to executor functions and supports multi-agent chains.
+ *              Production-grade: per-task timeouts, step logging, input validation, concurrency limits.
+ */
 
 import { createTask, updateTask, getTask } from './a2a-task-manager.js'
 import { chat, scanCode } from './builder-copilot.js'

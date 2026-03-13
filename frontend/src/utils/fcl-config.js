@@ -1,6 +1,9 @@
-// fcl-config.js
-// Flow Client Library (FCL) configuration for real wallet connections.
-//
+/**
+ * @file FCL Configuration
+ * @module utils/fcl-config
+ * @description Flow Client Library (FCL) setup for wallet connections.
+ *              Configures Flow testnet access node, wallet discovery, and app metadata.
+ */
 // Supports:
 //   - Lilico Wallet (Flow native)
 //   - Blocto Wallet

@@ -1,6 +1,9 @@
-// routes/subscription.js
-// Subscription management and credential minting API endpoints.
-// Mint endpoint sends REAL Cadence transactions on-chain via server-side signing.
+/**
+ * @file Subscription API Routes
+ * @module routes/subscription
+ * @description Subscription management, Stripe checkout, and credential minting endpoints.
+ *              Mint endpoint sends real Cadence transactions on-chain via server-side signing.
+ */
 
 import { Router } from 'express'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'

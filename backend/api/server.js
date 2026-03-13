@@ -1,3 +1,12 @@
+/**
+ * @file FlowShield API Server
+ * @description Express server entry point for the FlowShield compliance platform.
+ *              Configures middleware, mounts all route handlers, and connects to
+ *              Flow testnet via FCL. Auto-deploys on Railway from the main branch.
+ * @author FlowShield
+ * @version 1.0.0
+ */
+
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'

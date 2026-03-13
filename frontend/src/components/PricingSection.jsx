@@ -1,3 +1,10 @@
+/**
+ * @file Pricing Section
+ * @module components/PricingSection
+ * @description API pricing page with 3 tiers (Starter, Growth, Scale).
+ *              Includes scroll-triggered animations, Stripe checkout integration,
+ *              contact sales modal, and API key generation for free tier.
+ */
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 import { Check, X, Zap, Building2, Rocket, Copy, CheckCircle2, Loader2, ArrowRight, Mail, Send } from 'lucide-react'

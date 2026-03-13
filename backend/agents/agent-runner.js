@@ -1,7 +1,10 @@
-// agent-runner.js
-// Core agentic loop engine using @anthropic-ai/sdk.
-// Implements Claude tool-use loops with production-grade:
-//   - Timeout handling (AbortController per API call + overall deadline)
+/**
+ * @file Agent Runner Engine
+ * @module agents/agent-runner
+ * @description Core agentic loop engine using @anthropic-ai/sdk.
+ *              Implements Claude tool-use loops with production-grade timeout handling,
+ *              AbortController per API call, overall deadline enforcement, and error recovery.
+ */
 //   - Retry with exponential backoff for transient failures
 //   - Structured logging with severity, timestamps, request context
 //   - Token usage tracking

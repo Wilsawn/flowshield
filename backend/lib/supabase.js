@@ -1,6 +1,10 @@
-// lib/supabase.js
-// Supabase client for FlowShield backend — persistent database for audit trail,
-// scan history, regulatory requirements, operator profiles, and webhooks.
+/**
+ * @file Supabase Client
+ * @module lib/supabase
+ * @description Persistent database layer for FlowShield backend.
+ *              Manages audit trail, scan history, regulatory requirements,
+ *              operator profiles, webhook configuration, and API key validation.
+ */
 
 import { createClient } from '@supabase/supabase-js'
 

@@ -1,3 +1,10 @@
+/**
+ * @file Stats Row Component
+ * @module components/dashboard/StatsRow
+ * @description Renders the top-level stats cards on the dashboard:
+ *              Wallet Balance, Total Deposited, Total Borrowed, and Risk Score.
+ *              Each card is clickable and opens a detail modal.
+ */
 import AnimatedTicker from '@/components/ui/animated-ticker'
 
 export default function StatsRow({ live, chain, flowBalance, loading, onStatClick, onRiskClick }) {

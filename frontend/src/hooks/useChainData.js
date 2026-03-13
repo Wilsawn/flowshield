@@ -1,3 +1,11 @@
+/**
+ * @file Chain Data Hook
+ * @module hooks/useChainData
+ * @description Fetches live blockchain data from Flow testnet via the FlowShield backend.
+ *              Returns account info, latest block, contracts list, and compliance status.
+ * @param {string} address - The Flow wallet address to query
+ * @returns {Object} On-chain data including account, block height, contracts, and compliance
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { API } from '@/lib/api'
 

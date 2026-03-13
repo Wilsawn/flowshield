@@ -1,6 +1,10 @@
-// lib/demo-state.js
-// Shared demo simulation state — used by both risk.js (anomalies) and copilot.js (radar gaps).
-// Anomalies and radar gaps are LINKED: fixing a gap removes its corresponding anomaly.
+/**
+ * @file Demo State Manager
+ * @module lib/demo-state
+ * @description Shared in-memory demo simulation state for live presentations.
+ *              Used by risk.js (anomalies) and copilot.js (radar gaps).
+ *              Anomalies and radar gaps are linked — fixing a gap removes its anomaly.
+ */
 
 const state = {
   threats: null,

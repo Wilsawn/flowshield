@@ -1,3 +1,11 @@
+/**
+ * @file Operator Data Hook
+ * @module hooks/useOperatorData
+ * @description Fetches operator-specific data: risk scores, anomaly monitoring,
+ *              compliance status, and jurisdiction rules from all 5 supported regions.
+ * @param {string} walletAddress - The Flow wallet address to monitor
+ * @returns {Object} Operator state including risk, anomalies, compliance, and jurisdiction rules
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { API } from '@/lib/api'
 

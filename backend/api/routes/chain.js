@@ -1,6 +1,9 @@
-// routes/chain.js
-// Fetches REAL blockchain data from Flow testnet REST API.
-// No mocking, no fallbacks — if it fails, it says so.
+/**
+ * @file Chain Data API Routes
+ * @module routes/chain
+ * @description Fetches real blockchain data from Flow testnet REST API.
+ *              No mocking, no fallbacks — returns live chain data or error.
+ */
 
 import { Router } from 'express'
 import { safeError } from '../../lib/middleware.js'

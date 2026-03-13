@@ -1,7 +1,10 @@
-// builder-copilot.js
-// AI super-agent that orchestrates other agents via tool use.
-// Can autonomously call risk scoring, anomaly detection, and compliance scanning.
-// Falls back to pattern-matched responses if no API key or agent fails.
+/**
+ * @file Builder Copilot Agent
+ * @module agents/builder-copilot
+ * @description AI super-agent that orchestrates other agents via Claude tool use.
+ *              Autonomously calls risk scoring, anomaly detection, and compliance scanning.
+ *              Falls back to pattern-matched responses if no API key or agent failure.
+ */
 
 import { filterResponseLeaks } from '../lib/prompt-guard.js'
 import { runAgentLoop, runAgentChat, parseJsonFromText, isValidFlowAddress, agentLog } from './agent-runner.js'

@@ -1,17 +1,21 @@
 /// ComplianceAction.cdc
-/// Composable Flow Actions primitive for compliance verification.
 ///
-/// This is the one-line integration point for DeFi protocols.
-/// Any Cadence transaction can call ComplianceAction.verify(addr) as a
-/// pre-condition before executing financial operations.
+/// @notice Composable Flow Actions primitive for compliance verification.
+/// @dev    This is the one-line integration point for DeFi protocols.
+///         Any Cadence transaction can call ComplianceAction.verify(addr) as a
+///         pre-condition before executing financial operations.
 ///
-/// Revenue model: protocols pay a small per-verification fee (in FLOW)
-/// that accumulates in the FlowShield treasury vault.
+///         Revenue model: protocols pay a small per-verification fee (in FLOW)
+///         that accumulates in the FlowShield treasury vault.
 ///
-/// Usage in a transaction:
+/// @author FlowShield
+/// @version 1.0.0
+/// @network Flow Testnet — deployed at 0x93c691a98b975493
+///
+/// @example Usage in a DeFi transaction:
 ///   let isCompliant = ComplianceAction.verify(userAddress)
 ///   assert(isCompliant, message: "User is not compliant")
-///   // ... proceed with DeFi operation
+///   // ... proceed with deposit, borrow, etc.
 
 import ComplianceCredential from "./ComplianceCredential.cdc"
 import FungibleToken from 0x9a0766d93b6608b7

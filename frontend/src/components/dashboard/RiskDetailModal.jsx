@@ -1,3 +1,12 @@
+/**
+ * @file Risk Detail Modal
+ * @module components/dashboard/RiskDetailModal
+ * @description Full-screen modal showing risk score breakdown with:
+ *              - 4-step scoring pipeline visualization (Fetch -> Analyze -> Score -> Classify)
+ *              - 8 risk factors with pass/fail status and point values
+ *              - Tier legend (compliant 0-30, semi-compliant 31-70, non-compliant 71-100)
+ *              - Fix tips and Flowscan source links for each factor
+ */
 import { X, CheckCircle2, XCircle, ExternalLink, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 

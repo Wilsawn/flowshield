@@ -1,6 +1,10 @@
-// routes/pool.js
-// Sends REAL Flow transactions to DemoLendingPool on testnet.
-// Uses custodial signing for real FLOW token transfers.
+/**
+ * @file Lending Pool API Routes
+ * @module routes/pool
+ * @description REST endpoints for DemoLendingPool interactions on Flow testnet.
+ *              Sends real on-chain transactions for deposits, borrows, and repayments
+ *              using custodial signing with the user's stored private key.
+ */
 
 import { Router } from 'express'
 import { createHash } from 'crypto'

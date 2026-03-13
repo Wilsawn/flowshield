@@ -1,6 +1,10 @@
-// routes/copilot.js
-// Builder Copilot + Regulatory Radar API routes.
-// Includes prompt injection protection, per-user rate limiting, and saved conversations.
+/**
+ * @file Copilot API Routes
+ * @module routes/copilot
+ * @description Builder Copilot AI assistant and Regulatory Radar API endpoints.
+ *              Includes prompt injection protection, per-user rate limiting,
+ *              saved conversation history, and code scanning capabilities.
+ */
 
 import { Router } from 'express'
 import { chat, scanCode } from '../../agents/builder-copilot.js'

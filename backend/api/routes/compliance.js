@@ -1,5 +1,10 @@
-// routes/compliance.js
-// Compliance-related API routes — reads real data from Flow blockchain.
+/**
+ * @file Compliance API Routes
+ * @module routes/compliance
+ * @description REST endpoints for reading compliance status and jurisdiction rules
+ *              from the Flow blockchain. All data is fetched live from testnet via FCL scripts.
+ *              No data is cached — every request hits the chain for real-time accuracy.
+ */
 
 import { Router } from 'express'
 import { safeError } from '../../lib/middleware.js'

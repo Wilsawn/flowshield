@@ -1,6 +1,10 @@
-// lib/crypto.js
-// AES-256-GCM encryption for custodial private keys at rest.
-// Requires KEY_ENCRYPTION_KEY env var (64-char hex = 32 bytes).
+/**
+ * @file Cryptographic Utilities
+ * @module lib/crypto
+ * @description AES-256-GCM encryption/decryption for custodial private keys at rest.
+ *              Requires KEY_ENCRYPTION_KEY env var (64-char hex = 32 bytes).
+ *              Used by accounts.js to encrypt user private keys before Supabase storage.
+ */
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 

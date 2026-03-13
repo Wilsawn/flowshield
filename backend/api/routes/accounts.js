@@ -1,6 +1,11 @@
-// routes/accounts.js
-// Custodial account creation for walletless onboarding.
-// Creates a real Flow account for each user, funded by the deployer.
+/**
+ * @file Accounts API Routes
+ * @module routes/accounts
+ * @description Custodial account creation for walletless onboarding.
+ *              Creates real Flow accounts on testnet for each user, funded by the deployer.
+ *              Supports passkey (WebAuthn) and Google OAuth authentication methods.
+ *              User private keys are encrypted and stored in Supabase (or in-memory fallback).
+ */
 
 import { Router } from 'express'
 import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization } from '../../lib/flow-signer.js'

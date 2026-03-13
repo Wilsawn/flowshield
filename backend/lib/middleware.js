@@ -1,5 +1,9 @@
-// lib/middleware.js
-// Middleware for FlowShield API — authentication, rate limiting, etc.
+/**
+ * @file API Middleware
+ * @module lib/middleware
+ * @description Express middleware for authentication, rate limiting, session tokens,
+ *              API key validation, and safe error formatting.
+ */
 
 import { validateApiKey } from './supabase.js'
 import { createHmac, timingSafeEqual, randomBytes } from 'crypto'

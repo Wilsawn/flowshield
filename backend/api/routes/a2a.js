@@ -1,6 +1,10 @@
-// routes/a2a.js
-// A2A (Agent-to-Agent) protocol routes.
-// Discovery, agent cards, task submission, and chain execution.
+/**
+ * @file A2A Protocol Routes
+ * @module routes/a2a
+ * @description Agent-to-Agent protocol REST endpoints.
+ *              Handles discovery (/.well-known/agent.json), agent card listing,
+ *              task submission, and multi-agent chain execution.
+ */
 
 import { Router } from 'express'
 import { getAllAgentCards, getAgentCard, buildDiscoveryDocument } from '../../agents/agent-cards.js'
