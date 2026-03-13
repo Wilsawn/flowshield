@@ -6,118 +6,209 @@
 
 ---
 
-## Video Pitch Script
+## The Pitch (what to say)
 
-### Hook (0:00–0:10)
-
-> Every DeFi protocol building on Flow has the same problem — how do you verify a user is compliant without making them hand over their identity? Because right now, you can't. That's what FlowShield solves.
-
-### Who I Am + What I Built (0:10–0:30)
-
-> I'm Wilsawn Dideh, and I'm genuinely excited to show you this. I built FlowShield from scratch for DeFi protocols, compliance teams, and developers who need to add regulatory compliance without destroying the user experience. It's seven Cadence smart contracts, a Solidity Groth16 verifier on FlowEVM, four AI agents, a real cross-VM zero-knowledge proof pipeline, an A2A agent protocol, and a full platform — all deployed and live on Flow testnet right now. Let me show you what it actually does.
-
-### The Problem — Why This Matters (0:30–0:50)
-
-> Here's why this matters. A DeFi lending protocol launches on Flow. Regulators say you need to know your users. So the protocol adds KYC — and now you've got forms, wait times, and personal data sitting on a blockchain where anyone can see it. Users leave. Or the protocol skips compliance entirely — and gets shut down. There's no good option.
->
-> FlowShield gives them a third option. Users prove they're compliant using zero-knowledge proofs. The only things on-chain are a boolean and a proof hash. Never a name, never an ID. And for a developer adding this to their protocol? One line — import ComplianceAction, call verify. That's the entire integration.
-
-*Point to code snippet on landing page.*
-
-### Live Demo — Onboarding (0:50–1:35)
-
-> Let me show you what that looks like for a real user. I hit Launch Dashboard — enter an email, pick a jurisdiction — United States — and now it asks for my fingerprint. That's it. No wallet extension, no seed phrase, no MetaMask popup. This is WebAuthn — the same standard behind Apple Face ID and Google Passkeys.
->
-> What happened in those five seconds is the part I'm most proud of. FlowShield created a real Flow account on-chain with a server-signed key pair and funded it through sponsored transactions — the user never pays gas. Then it generated a ZK proof entirely in the browser using snarkjs with a custom circom circuit I wrote — five constraints covering KYC, jurisdiction, risk, expiry, and score range — without revealing any of those values. That proof crossed to FlowEVM where a Solidity Groth16 verifier validated it using BN256 elliptic curve pairings. The boolean result bridged back to Cadence through a Cadence-Owned Account, and a ComplianceCredential resource was minted into the user's own account storage. One fingerprint. *(slow down)* The user has no idea any of that happened. *(pause)* That's the point.
-
-*Walk through onboarding live.*
-
-### Live Demo — Dashboard + Risk Score (1:35–2:10)
-
-> Now on the dashboard — and I want to emphasize, everything here is live testnet data. Not mocked, not hardcoded. That badge says "Flow Testnet · LIVE."
->
-> The risk score is fully deterministic — no LLM involved. It queries the Flow Access API for the user's account, then runs eight factors: account age, transaction velocity, rapid in-out patterns, mixer interactions, flagged contracts, funding diversity, dormancy spikes. Points add up, capped at 100. Zero to 30 is compliant, above 70 is non-compliant. All from public chain data — no personal information touches this system.
->
-> Now watch — I deposit into the lending pool. That's a real on-chain transaction going through DemoLendingPool. ComplianceAction.verify runs automatically before it executes — the user doesn't see it, but the protocol is fully covered. Borrowing requires a higher tier since it's riskier. And gas? Zero. Sponsored transactions — the protocol pays, the user just signs with their passkey.
->
-> Click this Flowscan link right here — that's all seven contracts, verified on-chain.
-
-*Deposit, show Flowscan.*
-
-### Operator Tools — Radar + Governance (2:10–2:50)
-
-> Now here's where it gets powerful for protocol operators. The Regulatory Radar scans your on-chain RuleEngine rules against real regulatory checklists — MiCA for the EU, FinCEN CDD for the US, FATF travel rule, MAS for Singapore, FINTRAC for Canada. Five jurisdictions.
->
-> The design here is deliberate. Deterministic gap detection runs first — a hardcoded checklist compared against what's actually in the RuleEngine contract on-chain. Same input always gives the same output. Then Claude Haiku 4.5 enriches the results with regulatory context — specific regulation names, article numbers, what to do about it. But Claude can only add context to existing gaps — it cannot invent new ones or hide real ones. That means you get the intelligence of an AI with zero hallucination risk.
->
-> When a gap shows up, the operator approves and the fix pushes straight to the RuleEngine contract on-chain. One click — gap fixed.
->
-> Governance works the same way — fully on-chain multi-sig proposals. Create a proposal to update fees, change rules, add verifiers, or revoke credentials. Signers approve, quorum hits, and it auto-executes — actually calls the admin function on the target contract. Every action links to Flowscan so there's a full audit trail.
-
-*Show radar scan, approve a fix, show governance.*
-
-### What Makes This Different (2:50–3:05)
-
-> We use six Flow primitives — not as buzzwords, but deeply. Flow Actions for composable compliance checks. Cadence Resources so credentials live in the user's own storage. Flow Agents for autonomous wallet monitoring. Scheduled Transactions for recurring verification. Gasless UX through sponsored transactions. And WebAuthn Passkeys for onboarding that creates real Flow accounts without the user ever knowing.
->
-> Four AI agents — risk scoring, anomaly detection, Builder Copilot, Regulatory Radar — all orchestrated through an A2A agent protocol. The site is live right now at flowshield.netlify.app — you can try it yourself.
-
-### Closing (3:05–3:15)
-
-> FlowShield is the compliance layer that every DeFi app on Flow needs to operate legally — without ever putting identity on-chain. Just math and booleans. Thanks for watching.
+Each section is a few short sentences. Say them naturally — don't read word for word.
 
 ---
 
-## Delivery Tips
+### 1. HOOK (0:00–0:10)
 
-| Do | Don't |
-|---|---|
-| Start with the problem, not your name — hook them first | Don't list features without showing them |
-| Show the live demo — it's your strongest proof | Don't speed up to fit the time limit — cut content instead |
-| Pause after big moments — "one fingerprint" *pause* | Don't say "um", "uh", "like" — replace with silence |
-| Let your excitement show — you built something real | Don't read from a script — memorize the beats, talk naturally |
-| Name who this is for — "DeFi protocols, compliance teams" | Don't describe features without saying why they matter |
-| End with your vision, not "that's it" | Don't stack jargon — spread technical terms across sections |
-| Mention the site is live and they can try it | Don't wait until the end to prove it's real |
+> DeFi protocols on Flow can't verify if a user is compliant without asking for their identity.
+> That's a dealbreaker for regulators.
+> FlowShield fixes it.
 
-### The 7 Beats to Memorize
-
-Don't memorize the script word-for-word. Memorize these beats and talk naturally around each one:
-
-1. **Hook** — "DeFi protocols can't verify compliance without asking for identity"
-2. **Who + what** — "I built this for DeFi teams. Seven contracts, four agents, all live"
-3. **Why it matters** — "Real lending protocol, can't add KYC without killing UX"
-4. **Onboarding** — "One fingerprint. Here's what happened — ZK proof, cross-VM, credential minted"
-5. **Dashboard** — "Live data. Eight risk factors. Real deposit. Zero gas"
-6. **Operator** — "Radar finds gaps, one click fixes on-chain. Governance auto-executes"
-7. **Close** — "The compliance layer every DeFi app on Flow needs"
-
-### Pause Points
-
-These are the moments to slow down and let the point land:
-
-- After "That's what FlowShield solves" — *pause 1 second*
-- After "One fingerprint" during onboarding — *pause*
-- After "The user has no idea any of that happened. That's the point." — *pause 2 seconds*
-- After "Not mocked, not hardcoded" — *pause*
-- After "One click — gap fixed" — *pause*
-- After "Just math and booleans" at the close — *pause, then "thanks for watching"*
+*(pause)*
 
 ---
 
-## Key Talking Points
+### 2. WHO + WHAT (0:10–0:20)
 
-| Topic | What to Say |
-|---|---|
-| **Scale of the build** | "Seven contracts, four AI agents, a cross-VM ZK pipeline, full platform — all from scratch." |
-| **Who it's for** | "DeFi protocols, compliance teams, and developers who need compliance without killing UX." |
-| **One-line integration** | "Import ComplianceAction, call verify. That's it." |
-| **Zero identity on-chain** | "Just a boolean and a proof hash. Never a name, never an ID." |
-| **Cross-VM ZK** | "circom circuit, snarkjs in the browser, Groth16 on FlowEVM, result consumed by Cadence." |
-| **Six Flow primitives** | "Actions, Resources, Agents, Scheduled Transactions, Sponsored Transactions, Passkeys." |
-| **Hybrid AI** | "Deterministic first, Claude enriches. Same input, same output. No hallucinations." |
-| **Gas fees** | "Users pay zero. Sponsored Transactions." |
-| **It's live** | "Try it right now at flowshield.netlify.app. Click the Flowscan link." |
+> I'm Wilsawn. I built FlowShield — a compliance layer for DeFi on Flow.
+> Users prove they're compliant. Their identity never touches the chain.
+> It's live on testnet right now. Let me show you.
+
+---
+
+### 3. THE PROBLEM (0:20–0:40)
+
+> A lending protocol launches on Flow.
+> Regulators say: know your users.
+> So you add KYC. Now you've got forms, wait times, and personal data on a public blockchain.
+> Users leave.
+> Or you skip compliance — and get shut down.
+> There's no good option.
+>
+> FlowShield is the third option.
+> One line of code. Zero identity on-chain.
+
+*Point to the code snippet on the landing page.*
+
+---
+
+### 4. LIVE DEMO — ONBOARDING (0:40–1:15)
+
+*Click Launch Dashboard. Do the onboarding live.*
+
+> Watch. I enter an email. Pick a jurisdiction. Scan my fingerprint.
+> That's it. No wallet. No seed phrase. No MetaMask.
+
+*(pause — let them watch it happen)*
+
+> Here's what just happened in five seconds.
+> A ZK proof was generated in the browser.
+> It was verified on FlowEVM.
+> The result came back to Cadence.
+> A compliance credential was minted into the user's account.
+> A real Flow account was created and funded.
+> The user paid nothing.
+
+*(slow down)*
+
+> One fingerprint. The user had no idea any of that happened.
+
+*(pause 2 seconds)*
+
+> That's the point.
+
+---
+
+### 5. LIVE DEMO — DASHBOARD (1:15–1:55)
+
+*Switch to your pre-loaded dashboard tab.*
+
+> Everything here is live testnet data. Not mocked. Not hardcoded.
+
+*(pause)*
+
+> The risk score checks eight factors from public chain data.
+> Account age. Transaction speed. Mixer interactions. Funding sources.
+> Points add up. Capped at 100. No AI — fully deterministic.
+> Zero to 30 is compliant. Above 70 is blocked.
+
+*Do a deposit.*
+
+> I just deposited into a real lending pool on-chain.
+> Before it executed, ComplianceAction.verify ran automatically.
+> The user didn't see it. The protocol is fully covered.
+> Gas? Zero. Sponsored transactions.
+
+*(pause)*
+
+> That lending pool just verified a real user, on-chain, in under a second — with no gas and no personal data.
+
+---
+
+### 6. OPERATOR TOOLS (1:55–2:30)
+
+*Open Regulatory Radar.*
+
+> For protocol operators — the Regulatory Radar.
+> It scans your on-chain rules against five jurisdictions.
+> US, EU, UK, Singapore, Canada.
+> Deterministic gap detection first. Then Claude AI adds regulatory context.
+> The AI can only explain existing gaps. It can't invent new ones.
+
+*Approve a fix.*
+
+> One click. Fix pushed to the smart contract on-chain.
+
+*(pause)*
+
+> Governance works the same way. Multi-sig proposals. Auto-execute on quorum. Full audit trail on Flowscan.
+
+---
+
+### 7. WHAT I BUILT (2:30–2:50)
+
+> Here's the full scope.
+> Seven Cadence smart contracts.
+> A Solidity ZK verifier on FlowEVM.
+> A custom circom circuit.
+> Four AI agents.
+> Six Flow primitives used deeply — Actions, Resources, Agents, Scheduled Transactions, Sponsored Transactions, Passkeys.
+>
+> Existing tools like zkMe do identity. Chainalysis does monitoring. FlowShield does both — in one line.
+
+---
+
+### 8. CLOSE (2:50–3:00)
+
+> FlowShield is the compliance layer every DeFi app on Flow needs.
+> No identity on-chain. Just math and booleans.
+> Try it right now — flowshield.netlify.app.
+
+*(pause)*
+
+> Thanks for watching.
+
+---
+
+## How to Remember This
+
+**You don't memorize the script. You memorize 8 words.**
+
+Write these on a sticky note next to your screen:
+
+```
+HOOK → ME → PROBLEM → ONBOARD → DASHBOARD → OPERATOR → BUILT → CLOSE
+```
+
+For each word, you know one thing to say:
+
+| Word | The one thing you say |
+|------|----------------------|
+| HOOK | "DeFi can't do compliance without asking for identity" |
+| ME | "I'm Wilsawn. I built this. It's live." |
+| PROBLEM | "Add KYC, kill UX. Skip it, get shut down." |
+| ONBOARD | *Do the demo.* "One fingerprint. User had no idea." |
+| DASHBOARD | *Show it.* "Live data. Real deposit. Zero gas." |
+| OPERATOR | *Show radar.* "One click. Gap fixed on-chain." |
+| BUILT | "Seven contracts. Four agents. One line to integrate." |
+| CLOSE | "Just math and booleans. Try it." |
+
+**That's it.** The demo does the heavy lifting. You just narrate what's on screen.
+
+### Practice Plan
+
+1. **Tonight**: Read the script once while clicking through the app
+2. **Before bed**: Say just the 8 words and one sentence for each, from memory
+3. **Tomorrow morning**: Do a full run with just the sticky note — time yourself
+4. **Before the demo**: Hit the backend to warm it up, open your 3 tabs, breathe
+
+---
+
+## Before the Demo — Setup Checklist
+
+- [ ] **Tab 1**: Incognito browser → flowshield.netlify.app (for live onboarding)
+- [ ] **Tab 2**: Already logged in with pre-created account (for dashboard)
+- [ ] **Tab 3**: Flowscan open at contracts page
+- [ ] **Screen recording backup** ready
+- [ ] **Warm up backend**: `curl https://flowshield-production.up.railway.app/health`
+- [ ] **Test the WiFi** you'll present on
+- [ ] **Sticky note** on monitor: HOOK → ME → PROBLEM → ONBOARD → DASHBOARD → OPERATOR → BUILT → CLOSE
+- [ ] **Clean desktop** — hide bookmarks bar, close other tabs
+
+---
+
+## Pause Points
+
+These silences make you look confident, not lost:
+
+- After "FlowShield fixes it" — *1 second*
+- After "One fingerprint" — *1 second*
+- After "The user had no idea. That's the point." — *2 seconds*
+- After "Not mocked. Not hardcoded." — *1 second*
+- After "Gap fixed on-chain" — *1 second*
+- After "Just math and booleans" — *2 seconds, then "thanks for watching"*
+
+---
+
+## If You Forget What to Say
+
+1. **Look at the screen.** Describe what you see. You built this — you know what it does.
+2. **Glance at your sticky note.** Find the next word. Say one sentence about it.
+3. **Never say "sorry" or "wait."** Just pause and keep going. Nobody knows what you planned to say.
 
 ---
 
@@ -125,31 +216,28 @@ These are the moments to slow down and let the point land:
 
 | Question | Answer |
 |---|---|
-| "Is this actually on-chain?" | Yes — 7 Cadence contracts + 1 Solidity verifier on Flow testnet. Open Flowscan. |
-| "How's this different from zkMe/zkPass?" | Those are identity-only. We're full-stack: credentials, rule engine, agents, governance, A2A protocol, and one-line DeFi integration. |
-| "Did you build the ZK circuit?" | Yes — custom circom circuit with five constraints. Proofs generated client-side, verified on FlowEVM via Groth16 BN256 pairings. |
-| "How does cross-VM work?" | Cadence calls FlowEVM through a Cadence-Owned Account. The Solidity verifier returns a boolean, Cadence mints the credential. |
-| "What AI do you use?" | Claude Haiku 4.5 for copilot and radar. Risk scoring and anomaly detection are deterministic — no LLM. |
-| "What's the gas cost?" | Zero for users. Sponsored Transactions. |
-| "Can this work cross-chain?" | ZK layer is portable. Cadence contracts are Flow-native, FlowEVM bridge is built. |
-| "What about privacy regulations?" | No personal data on-chain. Regulators see "verified: true" — the ZK proof is the mechanism, not the output. |
-| "How does the risk score work?" | Eight rule-based factors scored from public chain data — account age, tx velocity, mixer interaction, funding patterns. Points add up to 100. No LLM, fully deterministic. |
-| "Can I try it?" | Yes — flowshield.netlify.app. Create an account, it takes five seconds. |
+| "Is this actually on-chain?" | Yes — 7 contracts on Flow testnet. Open Flowscan right now. |
+| "How's this different from zkMe?" | They do identity only. We're full-stack — credentials, rules, agents, governance, and one-line integration. |
+| "Did you build the ZK circuit?" | Yes — custom circom circuit, five constraints, verified on FlowEVM via Groth16. |
+| "What AI do you use?" | Claude Haiku 4.5 for copilot and radar. Risk scoring is deterministic — no LLM. |
+| "What's the gas cost?" | Zero for users. Sponsored transactions. |
+| "Can I try it?" | Yes — flowshield.netlify.app. Takes five seconds. |
+| "How does the risk score work?" | Eight factors from public chain data. Points add up to 100. No personal info. |
+| "What about privacy regulations?" | No personal data on-chain. Regulators see "verified: true." The ZK proof is the mechanism. |
 
 ---
 
 ## Backup Plan
 
-If the live demo has issues:
+If the live demo breaks:
 
-- Have a screen recording ready as backup
-- Have Flowscan open showing the 7 deployed contracts
-- Run API calls directly to prove the backend is live:
+1. **Switch to your screen recording** — don't fumble
+2. **Show Flowscan** — contracts are on-chain regardless
+3. **Run curl commands** from terminal:
 
 ```bash
 curl https://flowshield-production.up.railway.app/health
 curl https://flowshield-production.up.railway.app/api/compliance/rules/US
-curl https://flowshield-production.up.railway.app/api/compliance/rules/EU
 curl -X POST https://flowshield-production.up.railway.app/api/risk/score \
   -H "Content-Type: application/json" \
   -d '{"address": "0x93c691a98b975493"}'

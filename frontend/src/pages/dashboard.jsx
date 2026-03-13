@@ -271,7 +271,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060a13] text-white p-6 md:p-10">
+    <div className="min-h-screen bg-[#060e09] text-white p-6 md:p-10">
       <div className="max-w-[1100px] mx-auto">
 
         {/* Header — clean two-row layout */}
@@ -297,7 +297,7 @@ export default function Dashboard() {
                 <AnimatePresence>
                   {showJurisdictionPicker && (
                     <motion.div
-                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a1410] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
                       initial={{ opacity: 0, y: -8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}
