@@ -3,6 +3,7 @@ import { API } from '@/lib/api'
 import { authFetch } from '@/lib/utils'
 
 // No fake fallbacks — always show real chain data or 0
+// Data renders progressively as each API responds.
 
 export default function useDashboardData(address) {
   const [data, setData] = useState({
@@ -28,6 +29,8 @@ export default function useDashboardData(address) {
     totalBorrowed: null,
     availableLiquidity: null,
     utilizationRate: null,
+    deposited: 0,
+    borrowed: 0,
     // Meta
     loading: true,
     lastUpdated: null,
@@ -40,90 +43,95 @@ export default function useDashboardData(address) {
       return
     }
     const targetAddress = address
-    const sources = {}
-    let riskData = null
-    let complianceData = null
-    let poolData = null
 
-    // Fetch all 4 APIs in parallel — risk, compliance, global pool stats, and per-user position
-    let userPosition = null
-    try {
-      const [riskRes, complianceRes, poolRes, positionRes] = await Promise.allSettled([
-        authFetch(`${API}/api/risk/score`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: targetAddress }),
-        }).then(r => r.json()),
+    // Fire all 4 requests independently — update state as each one resolves
+    // This way the UI renders progressively instead of waiting for all 4.
 
-        authFetch(`${API}/api/compliance/status/${targetAddress}`).then(r => r.json()),
-
-        authFetch(`${API}/api/pool/status`).then(r => r.json()),
-
-        authFetch(`${API}/api/pool/position/${targetAddress}`).then(r => r.json()),
-      ])
-
-      if (riskRes.status === 'fulfilled') {
-        riskData = riskRes.value
-        sources.risk = riskData.walletData?.source || 'api'
-      }
-      if (complianceRes.status === 'fulfilled') {
-        complianceData = complianceRes.value
-        sources.compliance = complianceData.source || 'api'
-      }
-      if (poolRes.status === 'fulfilled') {
-        poolData = poolRes.value
-        sources.pool = poolData.source || 'api'
-      }
-      if (positionRes.status === 'fulfilled') {
-        userPosition = positionRes.value
-      }
-    } catch (err) {
-      // API fetch error — data will show as 0 or null
-    }
-
-    // Parse wallet balance from risk data (real FLOW balance from testnet)
-    const walletBalance = riskData?.walletData?.balance ?? 0
-    // Per-user position from on-chain (not global pool totals)
-    const deposited = userPosition?.deposited ?? 0
-    const borrowed = userPosition?.borrowed ?? 0
-
-    setData({
-      // Wallet — real from Flow testnet
-      walletBalance,
-      deposited,
-      borrowed,
-      earnedYield: deposited > 0 && poolData?.baseAPY ? deposited * parseFloat(poolData.baseAPY) / 12 : 0,
-      accountAge: riskData?.walletData?.accountAgeDays || null,
-      txCount: riskData?.walletData?.txCount24h || null,
-      contractCount: riskData?.walletData?.contractCount || null,
-      keyCount: riskData?.walletData?.keyCount || null,
-      fundingSources: riskData?.walletData?.fundingSources || null,
-      // Risk — real score from backend (null = unavailable, distinct from 0 = low risk)
-      riskScore: riskData?.score ?? null,
-      riskTier: riskData?.tier || null,
-      riskFactors: riskData?.factors || [],
-      // Compliance — real from on-chain
-      hasCredential: complianceData?.hasCredential || false,
-      isValid: complianceData?.isValid || false,
-      credentialTier: complianceData?.tier || null,
-      expiresAt: complianceData?.expiresAt || null,
-      jurisdiction: complianceData?.jurisdiction || null,
-      // Pool — global stats from on-chain
-      totalDeposits: parseFloat(poolData?.totalDeposits) || 0,
-      totalBorrowed: parseFloat(poolData?.totalBorrowed) || 0,
-      availableLiquidity: parseFloat(poolData?.availableLiquidity) || 0,
-      utilizationRate: parseFloat(poolData?.utilizationRate) || 0,
-      baseAPYPercent: poolData?.baseAPYPercent ?? null,
-      maxLTVPercent: poolData?.maxLTVPercent ?? null,
-      borrowRatePercent: poolData?.borrowRatePercent ?? null,
-      maxBorrowRemaining: userPosition?.maxBorrowRemaining ?? 0,
-      // Meta
-      loading: false,
-      lastUpdated: new Date(),
-      sources,
-      isLive: Object.values(sources).some(s => s === 'flow-testnet'),
-      address: targetAddress,
+    // 1. Risk score (usually slowest)
+    authFetch(`${API}/api/risk/score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: targetAddress }),
     })
+      .then(r => r.json())
+      .then(riskData => {
+        setData(prev => ({
+          ...prev,
+          walletBalance: riskData?.walletData?.balance ?? prev.walletBalance,
+          accountAge: riskData?.walletData?.accountAgeDays || prev.accountAge,
+          txCount: riskData?.walletData?.txCount24h || prev.txCount,
+          contractCount: riskData?.walletData?.contractCount || prev.contractCount,
+          keyCount: riskData?.walletData?.keyCount || prev.keyCount,
+          fundingSources: riskData?.walletData?.fundingSources || prev.fundingSources,
+          riskScore: riskData?.score ?? prev.riskScore,
+          riskTier: riskData?.tier || prev.riskTier,
+          riskFactors: riskData?.factors || prev.riskFactors,
+          sources: { ...prev.sources, risk: riskData?.walletData?.source || 'api' },
+          loading: false,
+          lastUpdated: new Date(),
+          address: targetAddress,
+        }))
+      })
+      .catch(() => {
+        setData(prev => ({ ...prev, loading: false }))
+      })
+
+    // 2. Compliance status
+    authFetch(`${API}/api/compliance/status/${targetAddress}`)
+      .then(r => r.json())
+      .then(complianceData => {
+        setData(prev => ({
+          ...prev,
+          hasCredential: complianceData?.hasCredential || false,
+          isValid: complianceData?.isValid || false,
+          credentialTier: complianceData?.tier || null,
+          expiresAt: complianceData?.expiresAt || null,
+          jurisdiction: complianceData?.jurisdiction || null,
+          sources: { ...prev.sources, compliance: complianceData?.source || 'api' },
+          loading: false,
+          lastUpdated: new Date(),
+          address: targetAddress,
+        }))
+      })
+      .catch(() => {})
+
+    // 3. Global pool stats
+    authFetch(`${API}/api/pool/status`)
+      .then(r => r.json())
+      .then(poolData => {
+        setData(prev => ({
+          ...prev,
+          totalDeposits: parseFloat(poolData?.totalDeposits) || 0,
+          totalBorrowed: parseFloat(poolData?.totalBorrowed) || 0,
+          availableLiquidity: parseFloat(poolData?.availableLiquidity) || 0,
+          utilizationRate: parseFloat(poolData?.utilizationRate) || 0,
+          baseAPYPercent: poolData?.baseAPYPercent ?? null,
+          maxLTVPercent: poolData?.maxLTVPercent ?? null,
+          borrowRatePercent: poolData?.borrowRatePercent ?? null,
+          sources: { ...prev.sources, pool: poolData?.source || 'api' },
+          loading: false,
+          lastUpdated: new Date(),
+          address: targetAddress,
+        }))
+      })
+      .catch(() => {})
+
+    // 4. User pool position
+    authFetch(`${API}/api/pool/position/${targetAddress}`)
+      .then(r => r.json())
+      .then(userPosition => {
+        setData(prev => ({
+          ...prev,
+          deposited: userPosition?.deposited ?? 0,
+          borrowed: userPosition?.borrowed ?? 0,
+          maxBorrowRemaining: userPosition?.maxBorrowRemaining ?? 0,
+          loading: false,
+          lastUpdated: new Date(),
+          address: targetAddress,
+        }))
+      })
+      .catch(() => {})
+
   }, [address])
 
   useEffect(() => {
@@ -132,5 +140,7 @@ export default function useDashboardData(address) {
     return () => clearInterval(interval)
   }, [fetchAll])
 
-  return { ...data, refresh: fetchAll }
+  const isLive = Object.values(data.sources).some(s => s === 'flow-testnet')
+
+  return { ...data, isLive, refresh: fetchAll }
 }
