@@ -182,7 +182,7 @@ export default function OperatorDashboard() {
           {[
             { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
             { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
-            { label: 'Contracts', value: live.walletData?.contractCount ?? 0, icon: <ShieldAlert className="w-4 h-4" />, color: 'text-emerald-400', sub: `${live.walletData?.keyCount ?? 0} signing keys` },
+            { label: 'Compliance', value: live.hasCredential ? 'Valid' : 'None', icon: <ShieldAlert className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-amber-400', sub: live.credentialTier ? `Tier: ${live.credentialTier}` : 'No credential issued', noTicker: true },
             { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
           ].map((stat, i) => (
             <SpotlightCard key={i} className="p-5">
@@ -191,7 +191,7 @@ export default function OperatorDashboard() {
                 <div className="text-white/20">{stat.icon}</div>
               </div>
               <p className={`text-[1.75rem] font-bold tracking-tight ${stat.color}`}>
-                <AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />{stat.suffix || ''}
+                {stat.noTicker ? stat.value : <><AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />{stat.suffix || ''}</>}
               </p>
               <p className="text-[11px] text-white/25 mt-1.5">{stat.sub}</p>
             </SpotlightCard>

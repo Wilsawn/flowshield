@@ -26,11 +26,12 @@ export default function useOperatorData(walletAddress) {
     if (!address) { setData(prev => ({ ...prev, loading: false })); return }
     let riskData = null
     let monitorData = null
+    let complianceData = null
     let jurisdictionData = {}
     let isLive = false
 
     try {
-      const [riskRes, monitorRes, ...jurisdictionResults] = await Promise.allSettled([
+      const [riskRes, monitorRes, complianceRes, ...jurisdictionResults] = await Promise.allSettled([
         // Risk score
         fetch(`${API}/api/risk/score`, {
           method: 'POST',
@@ -45,6 +46,9 @@ export default function useOperatorData(walletAddress) {
           body: JSON.stringify({ address }),
         }).then(r => r.json()),
 
+        // Compliance status
+        fetch(`${API}/api/compliance/status/${address}`).then(r => r.json()),
+
         // Jurisdiction rules from on-chain
         ...['US', 'EU', 'UK', 'SG', 'CA'].map(code =>
           fetch(`${API}/api/compliance/rules/${code}`).then(r => r.json())
@@ -57,6 +61,9 @@ export default function useOperatorData(walletAddress) {
       }
       if (monitorRes.status === 'fulfilled') {
         monitorData = monitorRes.value
+      }
+      if (complianceRes.status === 'fulfilled') {
+        complianceData = complianceRes.value
       }
 
       // Parse jurisdiction rules
@@ -84,6 +91,8 @@ export default function useOperatorData(walletAddress) {
       riskTier: riskData?.tier || null,
       riskFactors: riskData?.factors || [],
       walletData,
+      hasCredential: complianceData?.hasCredential || false,
+      credentialTier: complianceData?.tier || null,
       anomalies: monitorData?.anomalies || [],
       anomalyCount: monitorData?.anomalyCount ?? monitorData?.anomalies?.length ?? 0,
       monitorRiskLevel: monitorData?.highestSeverity || monitorData?.riskLevel || null,
