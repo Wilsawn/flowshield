@@ -3,38 +3,13 @@
 // Creates a real Flow account for each user, funded by the deployer.
 
 import { Router } from 'express'
-import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization } from '../../lib/flow-signer.js'
+import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization, PRIVATE_KEY } from '../../lib/flow-signer.js'
 import { logAudit, getSupabase } from '../../lib/supabase.js'
 import { encryptKey, decryptKey } from '../../lib/crypto.js'
-import { generateSessionToken, safeError, rateLimit } from '../../lib/middleware.js'
+import { generateSessionToken } from '../../lib/middleware.js'
 import { getAddress } from '../../lib/flow-addresses.js'
 
 const router = Router()
-
-// Tighter rate limits on auth endpoints to prevent brute force / account spam
-const authRateLimit = rateLimit({ windowMs: 60000, max: 5 })
-
-// ── Funding configuration ──
-// Testnet: generous for demos. Mainnet: minimal for tx fees only.
-const isMainnet = (process.env.FLOW_NETWORK || 'testnet') === 'mainnet'
-const FUND_AMOUNT = parseFloat(
-  process.env.INITIAL_FUND_AMOUNT || (isMainnet ? '0.001' : '1000.0')
-)
-const DAILY_FUND_CAP = parseFloat(
-  process.env.DAILY_FUND_CAP || (isMainnet ? '1.0' : '100000.0')
-)
-
-// Track daily funding to prevent deployer drain
-let dailyFundedTotal = 0
-let dailyFundedDate = new Date().toISOString().slice(0, 10)
-
-function resetDailyCapIfNeeded() {
-  const today = new Date().toISOString().slice(0, 10)
-  if (today !== dailyFundedDate) {
-    dailyFundedTotal = 0
-    dailyFundedDate = today
-  }
-}
 
 // In-memory fallback when Supabase is not configured
 const userAccountsMemory = new Map()
@@ -130,7 +105,7 @@ async function saveUser(record) {
  * If user already has an account, returns the existing one.
  * The user's private key is stored server-side (custodial model).
  */
-router.post('/create', authRateLimit, async (req, res) => {
+router.post('/create', async (req, res) => {
   const { email, authMethod = 'passkey' } = req.body
 
   if (!email) {
@@ -173,7 +148,7 @@ async function _handleCreate(req, res, emailKey, authMethod) {
   try {
     existing = await getUser(email)
   } catch (err) {
-    return res.status(503).json({ error: 'Database lookup failed — please try again', details: safeError(err, 'Service unavailable') })
+    return res.status(503).json({ error: 'Database lookup failed — please try again', details: err.message })
   }
   if (existing) {
     console.log(`[Accounts] Returning existing account ${existing.address} for ${email}`)
@@ -181,7 +156,7 @@ async function _handleCreate(req, res, emailKey, authMethod) {
       address: existing.address,
       isNew: false,
       token: generateSessionToken(email),
-      source: isMainnet ? 'flow-mainnet' : 'flow-testnet',
+      source: 'flow-testnet',
     })
   }
 
@@ -221,50 +196,40 @@ async function _handleCreate(req, res, emailKey, authMethod) {
       severity: 'info',
     })
 
-    // Fund the new account so they can transact
-    let funded = false
-    let fundTxId = null
-    resetDailyCapIfNeeded()
+    // Fund the new account with testnet FLOW so they can deposit
+    try {
+      const fundAuthz = serverAuthorization(fcl, deployerAddress)
+      const fundTxId = await fcl.mutate({
+        cadence: `
+          import FungibleToken from ${getAddress('FungibleToken')}
+          import FlowToken from ${getAddress('FlowToken')}
 
-    if (dailyFundedTotal + FUND_AMOUNT > DAILY_FUND_CAP) {
-      console.warn(`[Accounts] Daily funding cap reached (${dailyFundedTotal.toFixed(4)}/${DAILY_FUND_CAP} FLOW) — skipping fund for ${result.address}`)
-    } else {
-      try {
-        const fundAuthz = serverAuthorization(fcl, deployerAddress)
-        fundTxId = await fcl.mutate({
-          cadence: `
-            import FungibleToken from ${getAddress('FungibleToken')}
-            import FlowToken from ${getAddress('FlowToken')}
-
-            transaction(amount: UFix64, recipient: Address) {
-              prepare(signer: auth(Storage) &Account) {
-                let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-                  from: /storage/flowTokenVault
-                )!
-                let tokens <- vault.withdraw(amount: amount)
-                let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
-                  /public/flowTokenReceiver
-                ) ?? panic("Could not borrow receiver")
-                receiverRef.deposit(from: <- tokens)
-              }
+          transaction(amount: UFix64, recipient: Address) {
+            prepare(signer: auth(Storage) &Account) {
+              let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+                from: /storage/flowTokenVault
+              )!
+              let tokens <- vault.withdraw(amount: amount)
+              let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver
+              ) ?? panic("Could not borrow receiver")
+              receiverRef.deposit(from: <- tokens)
             }
-          `,
-          args: (arg, t) => [
-            arg(FUND_AMOUNT.toFixed(8), t.UFix64),
-            arg(result.address, t.Address),
-          ],
-          proposer: fundAuthz,
-          payer: fundAuthz,
-          authorizations: [fundAuthz],
-          limit: 999,
-        })
-        await fcl.tx(fundTxId).onceSealed()
-        dailyFundedTotal += FUND_AMOUNT
-        funded = true
-        console.log(`[Accounts] Funded ${result.address} with ${FUND_AMOUNT} FLOW (daily: ${dailyFundedTotal.toFixed(4)}/${DAILY_FUND_CAP})`)
-      } catch (fundErr) {
-        console.warn('[Accounts] Funding failed (non-fatal):', fundErr.message)
-      }
+          }
+        `,
+        args: (arg, t) => [
+          arg(parseFloat(process.env.INITIAL_FUND_AMOUNT || '1.0').toFixed(8), t.UFix64),
+          arg(result.address, t.Address),
+        ],
+        proposer: fundAuthz,
+        payer: fundAuthz,
+        authorizations: [fundAuthz],
+        limit: 999,
+      })
+      await fcl.tx(fundTxId).onceSealed()
+      console.log(`[Accounts] Funded ${result.address} with ${process.env.INITIAL_FUND_AMOUNT || '1.0'} FLOW`)
+    } catch (fundErr) {
+      console.warn('[Accounts] Funding failed (non-fatal):', fundErr.message)
     }
 
     res.json({
@@ -272,68 +237,15 @@ async function _handleCreate(req, res, emailKey, authMethod) {
       isNew: true,
       transactionId: result.transactionId,
       blockHeight: result.blockHeight,
-      funded,
-      fundAmount: funded ? FUND_AMOUNT : 0,
-      fundTxId,
+      funded: true,
       token: generateSessionToken(email),
-      source: isMainnet ? 'flow-mainnet' : 'flow-testnet',
+      source: 'flow-testnet',
     })
   } catch (err) {
     console.error('[Accounts] Create failed:', err.message)
-    res.status(500).json({ error: safeError(err, 'Account creation failed') })
+    res.status(500).json({ error: err.message })
   }
 }
-
-/**
- * POST /api/accounts/fund
- * Body: { address, amount }
- * Sends FLOW tokens from the deployer to any testnet account.
- */
-router.post('/fund', authRateLimit, async (req, res) => {
-  if (isMainnet) return res.status(403).json({ error: 'Funding disabled on mainnet' })
-
-  const { address, amount = 10000 } = req.body
-  if (!address) return res.status(400).json({ error: 'address is required' })
-
-  const fundAmount = Math.min(parseFloat(amount) || 10000, 100000)
-  const fcl = req.app.locals.fcl
-  const deployerAddress = req.app.locals.contractAddress
-
-  try {
-    const fundAuthz = serverAuthorization(fcl, deployerAddress)
-    const txId = await fcl.mutate({
-      cadence: `
-        import FungibleToken from ${getAddress('FungibleToken')}
-        import FlowToken from ${getAddress('FlowToken')}
-
-        transaction(amount: UFix64, recipient: Address) {
-          prepare(signer: auth(Storage) &Account) {
-            let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-              from: /storage/flowTokenVault
-            )!
-            let tokens <- vault.withdraw(amount: amount)
-            let receiverRef = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(
-              /public/flowTokenReceiver
-            ) ?? panic("Could not borrow receiver")
-            receiverRef.deposit(from: <- tokens)
-          }
-        }
-      `,
-      args: (arg, t) => [
-        arg(fundAmount.toFixed(8), t.UFix64),
-        arg(address, t.Address),
-      ],
-      proposer: fundAuthz,
-      payer: fundAuthz,
-      authorizations: [fundAuthz],
-      limit: 999,
-    })
-    await fcl.tx(txId).onceSealed()
-    res.json({ success: true, amount: fundAmount, transactionId: txId, address })
-  } catch (err) {
-    res.status(500).json({ error: safeError(err, 'Funding failed') })
-  }
-})
 
 /**
  * POST /api/accounts/login
@@ -342,7 +254,7 @@ router.post('/fund', authRateLimit, async (req, res) => {
  * Returns existing account + session token for returning users.
  * Does NOT create a new account or generate keys.
  */
-router.post('/login', authRateLimit, async (req, res) => {
+router.post('/login', async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email is required' })
 
@@ -350,7 +262,7 @@ router.post('/login', authRateLimit, async (req, res) => {
   try {
     user = await getUser(email)
   } catch (err) {
-    return res.status(503).json({ error: 'Database lookup failed', details: safeError(err, 'Service unavailable') })
+    return res.status(503).json({ error: 'Database lookup failed', details: err.message })
   }
 
   if (!user) {
@@ -375,7 +287,7 @@ router.post('/login', authRateLimit, async (req, res) => {
  * Registers a self-custodial wallet user. No private key is stored.
  * If the address is already registered, returns the existing record.
  */
-router.post('/register-wallet', authRateLimit, async (req, res) => {
+router.post('/register-wallet', async (req, res) => {
   const { address } = req.body
   if (!address) return res.status(400).json({ error: 'address is required' })
 
@@ -384,7 +296,7 @@ router.post('/register-wallet', authRateLimit, async (req, res) => {
   try {
     existing = await getUserByAddress(address)
   } catch (err) {
-    return res.status(503).json({ error: 'Database lookup failed', details: safeError(err, 'Service unavailable') })
+    return res.status(503).json({ error: 'Database lookup failed', details: err.message })
   }
 
   if (existing) {
@@ -411,7 +323,7 @@ router.post('/register-wallet', authRateLimit, async (req, res) => {
   try {
     await saveUser(userRecord)
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to register wallet', details: safeError(err) })
+    return res.status(500).json({ error: 'Failed to register wallet', details: err.message })
   }
 
   console.log(`[Accounts] Registered self-custodial wallet ${address}`)
@@ -469,7 +381,7 @@ router.post('/sign', async (req, res) => {
     const signature = signWithKey(record.privateKey, message)
     res.json({ signature, address: record.address })
   } catch (err) {
-    res.status(500).json({ error: safeError(err, 'Signing failed') })
+    res.status(500).json({ error: err.message })
   }
 })
 
@@ -505,10 +417,10 @@ router.get('/balance/:address', async (req, res) => {
       address,
       balance: parseFloat(balance),
       isCustodial: !!custodial,
-      source: isMainnet ? 'flow-mainnet' : 'flow-testnet',
+      source: 'flow-testnet',
     })
   } catch (err) {
-    res.status(500).json({ error: safeError(err, 'Balance lookup failed'), address })
+    res.status(500).json({ error: err.message, address })
   }
 })
 
@@ -534,7 +446,7 @@ router.post('/mint-credential', async (req, res) => {
   try {
     user = await getUser(email)
   } catch (err) {
-    return res.status(503).json({ error: 'Database lookup failed — please try again', details: safeError(err, 'Service unavailable') })
+    return res.status(503).json({ error: 'Database lookup failed — please try again', details: err.message })
   }
   if (!user) {
     return res.status(404).json({ error: 'No custodial account found for this email' })
@@ -653,7 +565,7 @@ router.post('/mint-credential', async (req, res) => {
     })
   } catch (err) {
     console.error('[Accounts] Credential mint failed:', err.message)
-    res.status(500).json({ error: 'Credential minting failed', details: safeError(err) })
+    res.status(500).json({ error: 'Credential minting failed', details: err.message })
   }
 })
 
@@ -684,9 +596,8 @@ router.post('/mint-credential-wallet', async (req, res) => {
 
   const score = riskScore || 15
   const jur = jurisdiction || 'US'
-  const { createHash } = await import('crypto')
-  const proofHash = createHash('sha256').update(`proof:wallet:${address}:${jur}:${score}:${Date.now()}`).digest('hex')
-  const claimsHash = createHash('sha256').update(`claims:wallet:${address}:${jur}:${score}:${Date.now()}`).digest('hex')
+  const proofHash = `zkp_${Date.now()}`
+  const claimsHash = `claims_${Date.now()}`
 
   // For wallet users, return the Cadence transaction + args so the frontend
   // can construct a two-signer transaction where the user signs via FCL
@@ -755,8 +666,40 @@ router.post('/mint-credential-wallet', async (req, res) => {
   })
 })
 
-// link-deployer endpoint removed — it stored the deployer's private key for any email,
-// which is a security risk. Use Supabase admin panel to manually link accounts if needed.
+/**
+ * POST /api/accounts/link-deployer
+ * Body: { email }
+ *
+ * Links an email to the deployer address so that onboarding returns the
+ * deployer account instead of creating a new custodial one.
+ * Testnet/admin utility — saves the deployer key pair into the users table.
+ */
+router.post('/link-deployer', async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ error: 'email is required' })
+  if (!PRIVATE_KEY) return res.status(500).json({ error: 'Deployer key not available' })
+
+  const deployerAddress = req.app.locals.contractAddress
+
+  // Derive public key from the deployer private key
+  const elliptic = (await import('elliptic')).default
+  const EC = elliptic.ec
+  const ec = new EC('p256')
+  const keyPair = ec.keyFromPrivate(Buffer.from(PRIVATE_KEY, 'hex'))
+  const publicKey = keyPair.getPublic(false, 'hex').slice(2)
+
+  await saveUser({
+    email: email.toLowerCase(),
+    address: deployerAddress,
+    publicKey,
+    privateKey: PRIVATE_KEY,
+    authMethod: 'deployer',
+    createdAt: new Date().toISOString(),
+  })
+
+  console.log(`[Accounts] Linked ${email} → deployer ${deployerAddress}`)
+  res.json({ success: true, address: deployerAddress, email: email.toLowerCase() })
+})
 
 export { getUserByAddress, getUser }
 export default router

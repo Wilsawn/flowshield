@@ -9,8 +9,6 @@ import { JURISDICTION_LIST, getJurisdiction } from '@/data/jurisdictions'
 import useDashboardData from '@/hooks/useDashboardData'
 import useChainData from '@/hooks/useChainData'
 
-import { API } from '@/lib/api'
-import DemoWelcomeBanner from '@/components/DemoWelcomeBanner'
 import StatsRow from '@/components/dashboard/StatsRow'
 import NetworkBar from '@/components/dashboard/NetworkBar'
 import WalletStatus from '@/components/dashboard/WalletStatus'
@@ -62,6 +60,7 @@ export default function Dashboard() {
   // Fetch real on-chain FLOW balance
   const fetchBalance = useCallback(async () => {
     if (!walletAddr) return // Don't fall back to deployer address
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     try {
       const res = await fetch(`${API}/api/accounts/balance/${walletAddr}`)
       const data = await res.json()
@@ -124,12 +123,14 @@ export default function Dashboard() {
     setReVerifySteps([])
 
     const newJ = getJurisdiction(newCode)
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+
     // Step 1: Switching
     setReVerifySteps([{ label: `Switching jurisdiction to ${newJ.name}`, done: true }])
     await new Promise((r) => setTimeout(r, 600))
 
     // Step 2: Fetch REAL on-chain rules
-    setReVerifySteps(prev => [...prev, { label: `Loading on-chain rules for ${newCode}...`, done: false }])
+    setReVerifySteps(prev => [...prev, { label: `Querying RuleEngine contract for ${newCode} rules...`, done: false }])
     let realRules = null
     try {
       const res = await fetch(`${API}/api/compliance/rules/${newCode}`)
@@ -146,7 +147,7 @@ export default function Dashboard() {
     await new Promise((r) => setTimeout(r, 500))
 
     // Step 3: Compliance check
-    setReVerifySteps(prev => [...prev, { label: 'Checking compliance status...', done: false }])
+    setReVerifySteps(prev => [...prev, { label: 'Querying ComplianceCredential contract...', done: false }])
     try {
       await fetch(`${API}/api/compliance/status/${walletAddr || '0x93c691a98b975493'}`)
       setReVerifySteps(prev => {
@@ -197,6 +198,7 @@ export default function Dashboard() {
   const handleRenewCredential = useCallback(async () => {
     setRenewing(true)
     try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
       // Use the custodial mint endpoint (two-signer tx) so the credential lands
       // in the user's own account, not the deployer's.
       const walletInfo = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()
@@ -269,7 +271,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060e09] text-white p-6 md:p-10">
+    <div className="min-h-screen bg-[#060a13] text-white p-6 md:p-10">
       <div className="max-w-[1100px] mx-auto">
 
         {/* Header — clean two-row layout */}
@@ -286,7 +288,7 @@ export default function Dashboard() {
               <div className="relative" ref={jurisdictionRef}>
                 <button
                   onClick={() => setShowJurisdictionPicker(!showJurisdictionPicker)}
-                  className="flex items-center gap-2 h-9 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-emerald-500/[0.12] transition-all"
+                  className="flex items-center gap-2 h-9 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all"
                 >
                   <span className="text-sm leading-none">{currentJurisdiction.flag}</span>
                   <span>{currentJurisdiction.code}</span>
@@ -295,7 +297,7 @@ export default function Dashboard() {
                 <AnimatePresence>
                   {showJurisdictionPicker && (
                     <motion.div
-                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-emerald-500/[0.08] bg-[#0a1410] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a0f1a] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
                       initial={{ opacity: 0, y: -8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -333,8 +335,8 @@ export default function Dashboard() {
                 onClick={() => setShowCompliance(!showCompliance)}
                 className={`h-9 px-3 rounded-lg border text-[12px] transition-all ${
                   showCompliance
-                    ? 'border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-400'
-                    : 'border-emerald-500/[0.08] bg-white/[0.02] text-white/30 hover:text-white/50'
+                    ? 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-400'
+                    : 'border-white/[0.06] bg-white/[0.02] text-white/30 hover:text-white/50'
                 }`}
                 title={showCompliance ? 'Hide compliance layer' : 'Show compliance layer'}
               >
@@ -367,12 +369,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <DemoWelcomeBanner />
-
         {/* Connect Wallet Prompt */}
         {!walletAddr && (
-          <div className="mb-6 p-6 rounded-2xl border border-emerald-500/[0.08] bg-white/[0.02] text-center">
-            <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-emerald-500/[0.08] flex items-center justify-center mx-auto mb-4">
+          <div className="mb-6 p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] text-center">
+            <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
               <Wallet className="w-6 h-6 text-white/30" />
             </div>
             <p className="text-[15px] font-semibold text-white/80 mb-1">Connect your wallet to get started</p>
@@ -431,7 +431,6 @@ export default function Dashboard() {
           live={live}
           chain={chain}
           flowBalance={flowBalance}
-          loading={live.loading}
           onStatClick={setShowStatDetail}
           onRiskClick={() => setShowRiskDetail(true)}
         />
