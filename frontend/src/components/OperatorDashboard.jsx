@@ -182,7 +182,7 @@ export default function OperatorDashboard() {
           {[
             { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
             { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
-            { label: 'Compliance', value: live.hasCredential ? 'Valid' : 'None', icon: <ShieldAlert className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-amber-400', sub: live.credentialTier ? `Tier: ${live.credentialTier}` : 'No credential issued', noTicker: true },
+            { label: 'Compliance', value: live.hasCredential ? '\u2713' : '\u2717', icon: <ShieldAlert className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-red-400', sub: live.hasCredential ? `${live.credentialTier || 'Active'} · credential valid` : 'No credential issued', noTicker: true },
             { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
           ].map((stat, i) => (
             <SpotlightCard key={i} className="p-5">
