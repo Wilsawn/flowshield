@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useRef } from 'react'
+import { motion, AnimatePresence, useInView } from 'framer-motion'
 import { Check, X, Zap, Building2, Rocket, Copy, CheckCircle2, Loader2, ArrowRight, Mail, Send } from 'lucide-react'
 import { API } from '@/lib/api'
 
@@ -161,18 +161,30 @@ export default function PricingSection() {
     }
   }
 
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, margin: '-80px' })
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" ref={sectionRef}>
       {/* Header */}
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.5 }}
+      >
         <h2 className="text-2xl font-bold text-white">API Pricing</h2>
         <p className="text-[13px] text-white/30 mt-1">
           Compliance infrastructure for DeFi protocols on Flow. Usage-based on-chain fees + optional API subscription for advanced features.
         </p>
-      </div>
+      </motion.div>
 
       {/* On-chain fees callout */}
-      <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-4">
+      <motion.div
+        className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
         <p className="text-[12px] font-semibold text-emerald-400 mb-2">On-Chain Fees (all tiers)</p>
         <div className="flex flex-wrap gap-6">
           <div>
@@ -189,7 +201,7 @@ export default function PricingSection() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tier cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -198,23 +210,33 @@ export default function PricingSection() {
           return (
             <motion.div
               key={tier.id}
-              className={`relative rounded-xl border ${c.border} ${c.bg} p-5 flex flex-col`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              className={`relative rounded-xl border ${c.border} ${c.bg} p-5 flex flex-col transition-shadow duration-300 hover:shadow-[0_0_40px_rgba(52,211,153,0.06)]`}
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.2 + i * 0.12 }}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
             >
               {tier.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-white uppercase tracking-wider">
+                <motion.div
+                  className="absolute -top-3 left-1/2 -translate-x-1/2"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={isInView ? { opacity: 1, scale: 1 } : {}}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                >
+                  <span className="px-3 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-white uppercase tracking-wider shadow-[0_0_20px_rgba(52,211,153,0.3)]">
                     Most Popular
                   </span>
-                </div>
+                </motion.div>
               )}
 
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-9 h-9 rounded-lg ${c.icon} border flex items-center justify-center`}>
+                <motion.div
+                  className={`w-9 h-9 rounded-lg ${c.icon} border flex items-center justify-center`}
+                  whileHover={{ rotate: 8, scale: 1.1 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
                   <tier.icon className={`w-4.5 h-4.5 ${c.text}`} />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className={`text-[15px] font-bold ${c.text}`}>{tier.name}</h3>
                 </div>
@@ -233,7 +255,13 @@ export default function PricingSection() {
 
               <div className="space-y-2 mb-6 flex-1">
                 {tier.features.map((f, j) => (
-                  <div key={j} className="flex items-center gap-2">
+                  <motion.div
+                    key={j}
+                    className="flex items-center gap-2"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={isInView ? { opacity: 1, x: 0 } : {}}
+                    transition={{ duration: 0.3, delay: 0.3 + i * 0.12 + j * 0.04 }}
+                  >
                     {f.included ? (
                       <Check className={`w-3.5 h-3.5 ${c.check} shrink-0`} />
                     ) : (
@@ -242,16 +270,18 @@ export default function PricingSection() {
                     <span className={`text-[12px] ${f.included ? 'text-white/50' : 'text-white/15'}`}>
                       {f.label}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
 
-              <button
+              <motion.button
                 onClick={() => handleTierAction(tier.id)}
                 disabled={loading === tier.id}
                 className={`w-full py-2.5 rounded-lg border text-[13px] font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                   tier.popular ? c.button : `${c.button} border`
                 } disabled:opacity-50`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 {loading === tier.id ? (
                   <>
@@ -262,7 +292,7 @@ export default function PricingSection() {
                     {tier.cta} <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
-              </button>
+              </motion.button>
             </motion.div>
           )
         })}
@@ -389,12 +419,17 @@ export default function PricingSection() {
       </AnimatePresence>
 
       {/* Comparison note */}
-      <div className="text-center">
+      <motion.div
+        className="text-center"
+        initial={{ opacity: 0 }}
+        animate={isInView ? { opacity: 1 } : {}}
+        transition={{ duration: 0.5, delay: 0.8 }}
+      >
         <p className="text-[11px] text-white/15 leading-relaxed max-w-lg mx-auto">
           Pricing compared: Sumsub ($199–499/mo), Chainalysis (enterprise-only), ComplyAdvantage ($500–2k/mo).
           FlowShield undercuts by 60–80% — ZK proofs eliminate manual review overhead.
         </p>
-      </div>
+      </motion.div>
     </div>
   )
 }
