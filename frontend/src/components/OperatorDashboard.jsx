@@ -182,7 +182,7 @@ export default function OperatorDashboard() {
           {[
             { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
             { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
-            { label: 'Compliance', value: live.hasCredential ? '\u2713' : '\u2717', icon: <ShieldAlert className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-red-400', sub: live.hasCredential ? `${live.credentialTier || 'Active'} · credential valid` : 'No credential issued', noTicker: true },
+            { label: 'Compliance', value: live.hasCredential ? 'Active' : 'Inactive', icon: <ShieldAlert className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-red-400', sub: live.hasCredential ? `${live.credentialTier || 'compliant'} · credential valid` : 'No credential issued', noTicker: true, dot: live.hasCredential ? 'bg-emerald-400' : 'bg-red-400' },
             { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
           ].map((stat, i) => (
             <SpotlightCard key={i} className="p-5">
@@ -190,7 +190,8 @@ export default function OperatorDashboard() {
                 <span className="text-[13px] text-white/35">{stat.label}</span>
                 <div className="text-white/20">{stat.icon}</div>
               </div>
-              <p className={`text-[1.75rem] font-bold tracking-tight ${stat.color}`}>
+              <p className={`text-[1.75rem] font-bold tracking-tight ${stat.color} flex items-center gap-2.5`}>
+                {stat.dot && <span className={`w-2.5 h-2.5 rounded-full ${stat.dot} shrink-0 shadow-[0_0_8px_currentColor]`} />}
                 {stat.noTicker ? stat.value : <><AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />{stat.suffix || ''}</>}
               </p>
               <p className="text-[11px] text-white/25 mt-1.5">{stat.sub}</p>
