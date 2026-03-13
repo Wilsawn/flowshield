@@ -1,4 +1,4 @@
-import { X, CheckCircle2, XCircle, ExternalLink } from 'lucide-react'
+import { X, CheckCircle2, XCircle, ExternalLink, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const RISK_FACTORS = [
@@ -42,7 +42,34 @@ export default function RiskDetailModal({ show, onClose, live }) {
               </button>
             </div>
 
-            <div className="px-6 py-5">
+            <div className="px-6 py-5 max-h-[75vh] overflow-y-auto">
+              {/* How it works */}
+              <div className="mb-5 p-4 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/[0.08]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[12px] font-semibold text-emerald-400">How the Score Works</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {[
+                    { step: '1', title: 'Fetch', desc: 'Pull public on-chain data from Flow' },
+                    { step: '2', title: 'Analyze', desc: 'Check wallet against 8 risk factors' },
+                    { step: '3', title: 'Score', desc: 'Sum triggered factor points (0–100)' },
+                    { step: '4', title: 'Classify', desc: 'Map score to compliance tier' },
+                  ].map(s => (
+                    <div key={s.step} className="text-center">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-1.5">
+                        <span className="text-[10px] font-bold text-emerald-400">{s.step}</span>
+                      </div>
+                      <p className="text-[10px] font-semibold text-white/60">{s.title}</p>
+                      <p className="text-[9px] text-white/25 leading-tight mt-0.5">{s.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-white/30 leading-relaxed">
+                  Each factor adds points if triggered. The total is capped at 100. An optional <strong className="text-white/50">AI agent</strong> can adjust the score by up to ±10 points based on correlated signals. No personal data or KYC is used — only public blockchain activity.
+                </p>
+              </div>
+
               {/* Score gauge */}
               <div className="flex items-center gap-5 mb-6">
                 <div className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center ${
