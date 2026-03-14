@@ -1,17 +1,17 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/FlowShield-Compliance_Infrastructure-00ef8b?style=for-the-badge&labelColor=0d1117" alt="FlowShield" />
+# FlowShield
 
-### Privacy-preserving compliance for DeFi on Flow.
+**Privacy-preserving compliance infrastructure for DeFi on Flow.**
 
 Users prove compliance with zero-knowledge proofs. Identity never touches the chain.
 
 [Live App](https://flowshield.netlify.app) &nbsp;·&nbsp; [Contracts on Flowscan](https://testnet.flowscan.io/account/0x93c691a98b975493) &nbsp;·&nbsp; [Architecture](docs/ARCHITECTURE.md) &nbsp;·&nbsp; [Setup Guide](docs/SETUP.md)
 
-![Flow Testnet](https://img.shields.io/badge/Flow-Testnet-00ef8b?style=flat-square)
-![Cadence 1.0](https://img.shields.io/badge/Cadence-1.0-00ef8b?style=flat-square)
-![React 19](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=white)
-![License: MIT](https://img.shields.io/badge/License-MIT-white?style=flat-square)
+[![Flow](https://img.shields.io/badge/Flow-Testnet-00ef8b?style=flat-square)](https://testnet.flowscan.io/account/0x93c691a98b975493)
+[![Cadence](https://img.shields.io/badge/Cadence-1.0-00ef8b?style=flat-square)](https://developers.flow.com/cadence)
+[![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=white)](https://react.dev)
+[![License](https://img.shields.io/badge/License-MIT-white?style=flat-square)](LICENSE)
 
 </div>
 
