@@ -132,8 +132,8 @@ export default function LandingPage() {
     {
       icon: Radar,
       name: 'Regulatory Radar',
-      sub: 'Continuous monitoring',
-      desc: 'AI reads your on-chain RuleEngine state and compares it against live regulations from FinCEN, MiCA, FCA, MAS, and FINTRAC. Gaps are detected in seconds.',
+      sub: 'Protocol + Operator · Continuous monitoring',
+      desc: 'On-chain RuleEngine plus AI context for operators. Reads your rules on Flow and compares them against checklists for FinCEN, MiCA, FCA, MAS, and FINTRAC to surface real gaps.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -188,8 +188,8 @@ export default function LandingPage() {
     {
       icon: Scan,
       name: 'Compliance Scanner',
-      sub: 'Smart contract analysis',
-      desc: 'Upload Cadence, Solidity, or any smart contract. The scanner identifies missing compliance checks, incorrect thresholds, and jurisdiction-specific issues.',
+      sub: 'Developers · Smart contract analysis',
+      desc: 'Static analysis for Cadence, Solidity, or any smart contract. Highlights missing ComplianceAction checks, incorrect thresholds, and jurisdiction-specific issues before deploy.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -235,8 +235,8 @@ export default function LandingPage() {
     {
       icon: Bot,
       name: 'Builder Copilot',
-      sub: 'Context-aware assistant',
-      desc: 'Ask anything about compliance. Get Cadence integration code, regulatory explanations, and live risk analysis with your on-chain context in every response.',
+      sub: 'Developers · Context-aware assistant',
+      desc: 'AI copilot for protocol teams. Answers compliance questions, generates Cadence integration code, and pulls in live risk and credential state from Flow with every response.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -275,8 +275,8 @@ export default function LandingPage() {
     {
       icon: Lock,
       name: 'ZK Verification',
-      sub: 'Privacy-preserving proofs',
-      desc: 'Groth16 circuit generates a client-side proof. The chain receives a boolean — never identity data. Privacy is cryptographically guaranteed.',
+      sub: 'Protocol · Privacy-preserving proofs',
+      desc: 'Groth16 circuit and FlowEVM verifier give your contracts a single on-chain boolean. Proof runs client-side; the chain only sees a yes/no and expiry, never identity data.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -324,8 +324,8 @@ export default function LandingPage() {
     {
       icon: Cpu,
       name: 'A2A Orchestrator',
-      sub: 'Agent-to-agent protocol',
-      desc: 'Agent-to-agent protocol that chains multi-agent workflows. Risk scoring feeds anomaly detection which feeds the copilot — all automated.',
+      sub: 'Protocol + Agents · Agent-to-agent protocol',
+      desc: 'Agent-to-agent orchestration that chains risk scoring, anomaly detection, and the copilot. Designed for operator workflows like full risk review and compliance review.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -635,13 +635,34 @@ export default function LandingPage() {
                 <p className="text-[11px] text-white/30 mt-1.5">Travel rule, KYC, re-verify every 365 days</p>
               </div>
             </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 pb-4 text-[11px] text-white/28 border-t border-emerald-500/[0.06]">
+              <span>7 contracts on Flow Testnet</span>
+              <span className="text-white/20">·</span>
+              <span>5 jurisdictions monitored</span>
+              <span className="text-white/20">·</span>
+              <span>0% PII on-chain</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── PRODUCT SHOWCASE (Clover-style interactive cards) ─── */}
+      {/* ─── PROTOCOL SURFACES ─── */}
       <section className="py-20 md:py-32">
         <div className="max-w-[1200px] mx-auto px-6">
+          <div className="mb-10 text-left">
+            <motion.p
+              className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/40 mb-3"
+              initial={{ opacity: 0, y: 4 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            >
+              Protocol surfaces
+            </motion.p>
+            <motion.p
+              className="text-[14px] text-white/35 max-w-xl"
+              initial={{ opacity: 0, y: 4 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
+            >
+              Four products ship with FlowShield: on-chain rules, contract scanning, ZK verification, and an on-chain aware copilot for builders and operators.
+            </motion.p>
+          </div>
           <motion.div
             className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-4"
             initial={{ opacity: 0, y: 24 }}
