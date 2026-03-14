@@ -8,10 +8,17 @@ Users prove compliance with zero-knowledge proofs. Identity never touches the ch
 
 [Live App](https://flowshield.netlify.app) &nbsp;·&nbsp; [Contracts on Flowscan](https://testnet.flowscan.io/account/0x93c691a98b975493) &nbsp;·&nbsp; [Architecture](docs/ARCHITECTURE.md) &nbsp;·&nbsp; [Setup Guide](docs/SETUP.md)
 
-[![Flow](https://img.shields.io/badge/Flow-Testnet-00ef8b?style=flat-square)](https://testnet.flowscan.io/account/0x93c691a98b975493)
-[![Cadence](https://img.shields.io/badge/Cadence-1.0-00ef8b?style=flat-square)](https://developers.flow.com/cadence)
-[![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=white)](https://react.dev)
-[![License](https://img.shields.io/badge/License-MIT-white?style=flat-square)](LICENSE)
+[![Flow Testnet](https://img.shields.io/badge/Flow-Testnet-00ef8b?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMiIgZmlsbD0iIzAwZWY4YiIvPjwvc3ZnPg==&logoColor=white)](https://testnet.flowscan.io/account/0x93c691a98b975493)
+[![Cadence](https://img.shields.io/badge/Cadence-1.0-00ef8b?style=for-the-badge)](https://developers.flow.com/cadence)
+[![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+
+[![Claude AI](https://img.shields.io/badge/Claude_AI-Haiku_4.5-d97706?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMiIgZmlsbD0iI2Q5NzcwNiIvPjwvc3ZnPg==&logoColor=white)](https://anthropic.com)
+[![Solidity](https://img.shields.io/badge/Solidity-Groth16-363636?style=for-the-badge&logo=solidity&logoColor=white)](https://soliditylang.org)
+[![Zero Knowledge](https://img.shields.io/badge/ZK_Proofs-circom-8B5CF6?style=for-the-badge)](https://docs.circom.io)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![License](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)](LICENSE)
 
 </div>
 
