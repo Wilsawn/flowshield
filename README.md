@@ -154,7 +154,7 @@ GET   /.well-known/agent.json          A2A agent discovery
 ```
 ┌─────────────────────────────────────────────┐
 │  User Experience                            │
-│  React 19 · Vite · TailwindCSS · Passkeys  │
+│  React 19 · Vite · TailwindCSS · Passkeys   │
 ├─────────────────────────────────────────────┤
 │  A2A Protocol                               │
 │  Orchestrator · Task Manager · Agent Cards  │
@@ -166,7 +166,7 @@ GET   /.well-known/agent.json          A2A agent discovery
 │  7 Cadence contracts · Fee treasury · Gov   │
 ├─────────────────────────────────────────────┤
 │  Zero-Knowledge Verification (Cross-VM)     │
-│  circom → snarkjs → FlowEVM Groth16        │
+│  circom → snarkjs → FlowEVM Groth16         │
 └─────────────────────────────────────────────┘
 ```
 
