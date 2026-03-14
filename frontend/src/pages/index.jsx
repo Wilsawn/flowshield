@@ -391,32 +391,68 @@ export default function LandingPage() {
 
       {/* ─── NAV ─── */}
       <nav className="sticky top-0 z-50 border-b border-emerald-500/[0.06] bg-[#060e09]/80 backdrop-blur-xl">
-        <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <FlowShieldLogo size={22} />
-            <span className="text-[14px] font-semibold tracking-[-0.01em] text-white/90">FlowShield</span>
-          </div>
-          <div className="hidden md:flex items-center">
-            <div className="flex items-center gap-1 px-2 py-1.5 rounded-full border border-emerald-500/[0.06] bg-white/[0.02]">
-              {['Copilot', 'Operator', 'Dashboard'].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => handleNavigate(`/${item.toLowerCase()}`)}
-                  className="text-[13px] text-white/40 hover:text-white/70 transition-colors duration-200 px-4 py-1.5 rounded-full hover:bg-white/[0.04]"
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="h-14 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <FlowShieldLogo size={22} />
+              <span className="text-[14px] font-semibold tracking-[-0.01em] text-white/90">FlowShield</span>
+            </div>
+            <div className="hidden md:flex items-center">
+              <div className="flex items-center gap-1 px-2 py-1.5 rounded-full border border-emerald-500/[0.06] bg-white/[0.02]">
+                {['Copilot', 'Operator', 'Dashboard'].map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => handleNavigate(`/${item.toLowerCase()}`)}
+                    className="text-[13px] text-white/40 hover:text-white/70 transition-colors duration-200 px-4 py-1.5 rounded-full hover:bg-white/[0.04]"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/[0.08] bg-[#020806]/70">
+                <span className="flex items-center gap-1.5 text-[11px] text-emerald-300/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Flow Testnet
+                </span>
+                <span className="text-white/15">·</span>
+                <a
+                  href="https://testnet.flowscan.io/account/0x93c691a98b975493"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-mono text-white/40 hover:text-white/70 transition-colors"
                 >
-                  {item}
-                </button>
-              ))}
+                  0x93c6…5493
+                </a>
+              </div>
+              <AnimatedGenerateButton
+                onClick={handleLaunch}
+                labelIdle="Launch dApp"
+                labelActive="Loading..."
+                highlightHueDeg={160}
+                size="sm"
+                icon={ArrowRight}
+              />
             </div>
           </div>
-          <AnimatedGenerateButton
-            onClick={handleLaunch}
-            labelIdle="Get Started"
-            labelActive="Loading..."
-            highlightHueDeg={160}
-            size="sm"
-            icon={ArrowRight}
-          />
+          <div className="sm:hidden pb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/[0.08] bg-[#020806]/70">
+              <span className="flex items-center gap-1.5 text-[11px] text-emerald-300/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Flow Testnet
+              </span>
+              <span className="text-white/15">·</span>
+              <a
+                href="https://testnet.flowscan.io/account/0x93c691a98b975493"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-mono text-white/40 hover:text-white/70 transition-colors"
+              >
+                0x93c6…5493
+              </a>
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -438,29 +474,24 @@ export default function LandingPage() {
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-emerald-600/[0.06] blur-[180px] pointer-events-none" />
 
         {/* Floating product icons */}
-        <motion.div className="absolute top-[18%] left-[8%] hidden lg:block" animate={{ y: [0, -14, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/[0.12] flex items-center justify-center shadow-lg shadow-emerald-900/20">
-            <ShieldCheck className="w-7 h-7 text-emerald-400/60" />
+        <motion.div className="absolute top-[20%] left-[6%] hidden lg:block" animate={{ y: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-transparent border border-emerald-500/[0.12] flex items-center justify-center shadow-lg shadow-emerald-900/30">
+            <ShieldCheck className="w-6 h-6 text-emerald-400/50" />
           </div>
         </motion.div>
-        <motion.div className="absolute top-[30%] right-[6%] hidden lg:block" animate={{ y: [0, 12, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/[0.12] flex items-center justify-center shadow-lg shadow-emerald-900/20">
-            <Lock className="w-7 h-7 text-emerald-400/60" />
+        <motion.div className="absolute top-[32%] right-[8%] hidden lg:block" animate={{ y: [0, 8, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/16 to-transparent border border-emerald-500/[0.1] flex items-center justify-center shadow-lg shadow-emerald-900/25">
+            <Lock className="w-6 h-6 text-emerald-400/45" />
           </div>
         </motion.div>
-        <motion.div className="absolute top-[55%] left-[5%] hidden lg:block" animate={{ y: [0, 10, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
-            <Radar className="w-6 h-6 text-emerald-400/40" />
+        <motion.div className="absolute top-[56%] left-[7%] hidden lg:block" animate={{ y: [0, 8, 0] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}>
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/12 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
+            <Radar className="w-5 h-5 text-emerald-400/35" />
           </div>
         </motion.div>
-        <motion.div className="absolute top-[12%] right-[12%] hidden lg:block" animate={{ y: [0, -10, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
-            <Fingerprint className="w-6 h-6 text-emerald-400/40" />
-          </div>
-        </motion.div>
-        <motion.div className="absolute top-[60%] right-[10%] hidden lg:block" animate={{ y: [0, -8, 0] }} transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
-            <Bot className="w-5 h-5 text-emerald-400/40" />
+        <motion.div className="absolute top-[14%] right-[14%] hidden lg:block" animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/12 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
+            <Fingerprint className="w-5 h-5 text-emerald-400/35" />
           </div>
         </motion.div>
 
@@ -513,28 +544,37 @@ export default function LandingPage() {
 
           {/* Subtitle */}
           <motion.p
-            className="text-[17px] leading-[1.7] text-white/40 max-w-[560px] mx-auto mb-10"
+            className="text-[17px] leading-[1.7] text-white/40 max-w-[560px] mx-auto mb-8"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
-            AI agents scan five jurisdictions, enforce rules on-chain, and verify identity with zero-knowledge proofs — no personal data ever touches the blockchain.
+            Privacy-preserving compliance for DeFi on Flow. Smart contracts get a single on-chain “yes or no” — never identity data.
           </motion.p>
 
           {/* CTA */}
           <motion.div
-            className="flex justify-center"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
             <AnimatedGenerateButton
               onClick={handleLaunch}
-              labelIdle="Start Building"
+              labelIdle="Launch dApp"
               labelActive="Launching..."
               highlightHueDeg={160}
               size="lg"
             />
+            <a
+              href="https://testnet.flowscan.io/account/0x93c691a98b975493"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5"
+            >
+              <span>View live contracts</span>
+              <ChevronRight className="w-3 h-3" />
+            </a>
           </motion.div>
         </div>
 
@@ -542,6 +582,60 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-0 right-0 h-[200px]">
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-[300px] rounded-[50%] bg-emerald-500/[0.04] blur-[60px]" />
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/[0.15] to-transparent" />
+        </div>
+      </section>
+
+      {/* ─── DAPP PREVIEW FRAME ─── */}
+      <section className="pb-10 md:pb-16 -mt-6">
+        <div className="max-w-[900px] mx-auto px-6">
+          <div className={`${glass} border-emerald-500/[0.12] bg-[#050b08]/80`}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-emerald-500/[0.08]">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
+                <span className="text-[12px] font-medium text-white/50">FlowShield dApp</span>
+                <span className="text-white/15">·</span>
+                <span className="text-[11px] text-emerald-300/80 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Flow Testnet
+                </span>
+              </div>
+              <button
+                onClick={handleLaunch}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/[0.2] bg-emerald-500/[0.08] text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/[0.16] transition-colors"
+              >
+                <span>Connect / Create</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-5 py-4">
+              <div className={`${glassInner} p-3.5`}>
+                <p className="text-[11px] text-white/30 mb-1">Compliance</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                  <span className="text-[13px] font-medium text-emerald-100">Active credential</span>
+                </div>
+                <p className="text-[11px] text-white/30 mt-1.5">On-chain boolean · no PII</p>
+              </div>
+              <div className={`${glassInner} p-3.5`}>
+                <p className="text-[11px] text-white/30 mb-1">Risk score</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[20px] font-bold text-white/90">12</span>
+                  <span className="text-[11px] text-white/35">/ 100 · compliant</span>
+                </div>
+                <div className="mt-2 h-1.5 rounded-full bg-emerald-500/[0.18] overflow-hidden">
+                  <div className="h-full w-[18%] rounded-full bg-emerald-400" />
+                </div>
+              </div>
+              <div className={`${glassInner} p-3.5`}>
+                <p className="text-[11px] text-white/30 mb-1">Jurisdiction</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-medium text-white/80">US · FinCEN</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/[0.12] text-emerald-200">ON-CHAIN</span>
+                </div>
+                <p className="text-[11px] text-white/30 mt-1.5">Travel rule, KYC, re-verify every 365 days</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
