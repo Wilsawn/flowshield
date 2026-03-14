@@ -11,8 +11,27 @@ import { Router } from 'express'
 import { generateKeyPair, createFlowAccount, hasPrivateKey, signWithKey, serverAuthorization, custodialAuthorization } from '../../lib/flow-signer.js'
 import { logAudit, getSupabase } from '../../lib/supabase.js'
 import { encryptKey, decryptKey } from '../../lib/crypto.js'
-import { generateSessionToken } from '../../lib/middleware.js'
+import { generateSessionToken, requireAuth } from '../../lib/middleware.js'
 import { getAddress } from '../../lib/flow-addresses.js'
+import isEmail from 'validator/lib/isEmail.js'
+import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity'
+
+// Profanity filter — uses the obscenity package's built-in English word list
+// so we never hardcode offensive words in our codebase.
+// Also catches leet speak (f@ck), repetition (fuuuck), and unicode tricks.
+const profanityMatcher = new RegExpMatcher({ ...englishDataset.build(), ...englishRecommendedTransformers })
+
+// Validates email format (RFC 5322) and blocks inappropriate language in the local part.
+// Used on /create, /login, and /mint-credential to enforce validation server-side
+// even if someone bypasses the frontend.
+function validateEmail(email) {
+  if (!email || typeof email !== 'string') return 'Email is required'
+  const trimmed = email.trim()
+  if (!isEmail(trimmed)) return 'Please enter a valid email address'
+  const localPart = trimmed.split('@')[0]
+  if (profanityMatcher.hasMatch(localPart)) return 'Email contains inappropriate language'
+  return null
+}
 
 const router = Router()
 
@@ -113,8 +132,9 @@ async function saveUser(record) {
 router.post('/create', async (req, res) => {
   const { email, authMethod = 'passkey' } = req.body
 
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' })
+  const emailErr = validateEmail(email)
+  if (emailErr) {
+    return res.status(400).json({ error: emailErr })
   }
 
   const emailKey = email.toLowerCase()
@@ -261,7 +281,8 @@ async function _handleCreate(req, res, emailKey, authMethod) {
  */
 router.post('/login', async (req, res) => {
   const { email } = req.body
-  if (!email) return res.status(400).json({ error: 'Email is required' })
+  const loginEmailErr = validateEmail(email)
+  if (loginEmailErr) return res.status(400).json({ error: loginEmailErr })
 
   let user
   try {
@@ -351,12 +372,18 @@ router.post('/register-wallet', async (req, res) => {
 
 /**
  * GET /api/accounts/lookup/:email
- * Returns the Flow address for a given email, if it exists.
+ * Returns the Flow address for a given email.
+ * Requires authentication — users can only look up their own account.
+ * Prevents email enumeration attacks (someone checking which emails are registered).
  */
-router.get('/lookup/:email', async (req, res) => {
+router.get('/lookup/:email', requireAuth, async (req, res) => {
+  if (req.userEmail && req.userEmail.toLowerCase() !== req.params.email.toLowerCase()) {
+    return res.status(403).json({ error: 'You can only look up your own account' })
+  }
+
   const record = await getUser(req.params.email)
   if (!record) {
-    return res.status(404).json({ error: 'No account found for this email' })
+    return res.status(404).json({ error: 'No account found' })
   }
   res.json({
     address: record.address,
@@ -368,13 +395,19 @@ router.get('/lookup/:email', async (req, res) => {
 /**
  * POST /api/accounts/sign
  * Body: { email, message }
- * Signs a message on behalf of a custodial user.
- * Used when the user needs to sign transactions without a wallet.
+ * Signs a message on behalf of a custodial user (server holds their private key).
+ * Requires authentication — users can only sign for their own account.
+ * Without this auth check, anyone could forge signatures for any user.
  */
-router.post('/sign', async (req, res) => {
+router.post('/sign', requireAuth, async (req, res) => {
   const { email, message } = req.body
   if (!email || !message) {
     return res.status(400).json({ error: 'email and message are required' })
+  }
+
+  // Ensure authenticated user can only sign for themselves
+  if (req.userEmail && req.userEmail.toLowerCase() !== email.toLowerCase()) {
+    return res.status(403).json({ error: 'You can only sign messages for your own account' })
   }
 
   const record = await getUser(email)
@@ -440,8 +473,9 @@ router.get('/balance/:address', async (req, res) => {
 router.post('/mint-credential', async (req, res) => {
   const { email, jurisdiction, riskScore } = req.body
 
-  if (!email) {
-    return res.status(400).json({ error: 'email is required' })
+  const mintEmailErr = validateEmail(email)
+  if (mintEmailErr) {
+    return res.status(400).json({ error: mintEmailErr })
   }
   if (!hasPrivateKey()) {
     return res.status(500).json({ error: 'Server signing not available' })

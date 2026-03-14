@@ -6,6 +6,12 @@ import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
 import { API } from '@/lib/api'
 import { signInWithGoogle } from '@/lib/supabase'
+import isEmail from 'validator/lib/isEmail'                                      // RFC 5322 email format validation
+import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity'  // profanity filter with built-in word list
+
+// Blocks slurs, profanity, and leet-speak variants in email input.
+// Word list is maintained by the obscenity package — no offensive words in our codebase.
+const profanityMatcher = new RegExpMatcher({ ...englishDataset.build(), ...englishRecommendedTransformers })
 
 const VERIFY_STEPS = [
   { label: 'Creating your Flow account', detail: 'Unique on-chain account — funded by FlowShield', delay: 800 },
@@ -51,11 +57,24 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
   const [emailLoading, setEmailLoading] = useState(false)
   const [passkeyAttempts, setPasskeyAttempts] = useState(0)
 
+  // Client-side email validation: checks format + blocks profanity.
+  // Server-side validation mirrors this in accounts.js as a second layer of defense.
+  const validateEmail = (value) => {
+    const trimmed = value.trim()
+    if (!isEmail(trimmed)) return 'Please enter a valid email address'
+    const localPart = trimmed.split('@')[0]
+    if (profanityMatcher.hasMatch(localPart)) {
+      return 'Email contains inappropriate language. Please use a different email.'
+    }
+    return null
+  }
+
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
     if (emailLoading) return
-    if (!email.includes('@') || !email.includes('.')) {
-      setError('Please enter a valid email')
+    const emailError = validateEmail(email)
+    if (emailError) {
+      setError(emailError)
       return
     }
     setError(null)

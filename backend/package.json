@@ -25,7 +25,9 @@
     "express": "^4.21.2",
     "helmet": "^8.1.0",
     "js-sha3": "^0.9.3",
-    "stripe": "^20.4.0"
+    "obscenity": "^0.4.6",
+    "stripe": "^20.4.0",
+    "validator": "^13.15.26"
   },
   "license": "MIT"
 }
