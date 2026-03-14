@@ -14,22 +14,29 @@ import { encryptKey, decryptKey } from '../../lib/crypto.js'
 import { generateSessionToken, requireAuth } from '../../lib/middleware.js'
 import { getAddress } from '../../lib/flow-addresses.js'
 import isEmail from 'validator/lib/isEmail.js'
-import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity'
+import verifyEmail from 'node-email-verifier'
 
-// Profanity filter — uses the obscenity package's built-in English word list
-// so we never hardcode offensive words in our codebase.
-// Also catches leet speak (f@ck), repetition (fuuuck), and unicode tricks.
-const profanityMatcher = new RegExpMatcher({ ...englishDataset.build(), ...englishRecommendedTransformers })
-
-// Validates email format (RFC 5322) and blocks inappropriate language in the local part.
-// Used on /create, /login, and /mint-credential to enforce validation server-side
-// even if someone bypasses the frontend.
+// Validates email format (RFC 5322).
+// Used on /create, /login, and /mint-credential to enforce validation server-side.
 function validateEmail(email) {
   if (!email || typeof email !== 'string') return 'Email is required'
   const trimmed = email.trim()
   if (!isEmail(trimmed)) return 'Please enter a valid email address'
-  const localPart = trimmed.split('@')[0]
-  if (profanityMatcher.hasMatch(localPart)) return 'Email contains inappropriate language'
+  return null
+}
+
+// Deep email validation — checks MX records + blocks disposable domains.
+// Only used on /create (account creation) to avoid slowing down login.
+async function validateEmailDeep(email) {
+  const formatErr = validateEmail(email)
+  if (formatErr) return formatErr
+  try {
+    const isValid = await verifyEmail(email.trim(), { checkDisposable: true })
+    if (!isValid) return 'Please use a valid, permanent email address'
+  } catch {
+    // DNS lookup failed — domain likely doesn't exist
+    return 'Email domain does not exist'
+  }
   return null
 }
 
@@ -132,7 +139,7 @@ async function saveUser(record) {
 router.post('/create', async (req, res) => {
   const { email, authMethod = 'passkey' } = req.body
 
-  const emailErr = validateEmail(email)
+  const emailErr = await validateEmailDeep(email)
   if (emailErr) {
     return res.status(400).json({ error: emailErr })
   }

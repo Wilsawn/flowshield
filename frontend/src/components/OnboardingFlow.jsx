@@ -6,12 +6,8 @@ import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
 import { API } from '@/lib/api'
 import { signInWithGoogle } from '@/lib/supabase'
-import isEmail from 'validator/lib/isEmail'                                      // RFC 5322 email format validation
-import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity'  // profanity filter with built-in word list
-
-// Blocks slurs, profanity, and leet-speak variants in email input.
-// Word list is maintained by the obscenity package — no offensive words in our codebase.
-const profanityMatcher = new RegExpMatcher({ ...englishDataset.build(), ...englishRecommendedTransformers })
+import isEmail from 'validator/lib/isEmail'
+import Mailcheck from 'mailcheck'
 
 const VERIFY_STEPS = [
   { label: 'Creating your Flow account', detail: 'Unique on-chain account — funded by FlowShield', delay: 800 },
@@ -56,16 +52,22 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
   const [veriffUrl, setVeriffUrl] = useState(null)
   const [emailLoading, setEmailLoading] = useState(false)
   const [passkeyAttempts, setPasskeyAttempts] = useState(0)
+  const [emailSuggestion, setEmailSuggestion] = useState(null)
 
-  // Client-side email validation: checks format + blocks profanity.
-  // Server-side validation mirrors this in accounts.js as a second layer of defense.
+  // Check for typos in email domain (e.g. "gmial.com" → "gmail.com")
+  const checkEmailTypo = (value) => {
+    Mailcheck.run({
+      email: value,
+      suggested: (suggestion) => setEmailSuggestion(suggestion.full),
+      empty: () => setEmailSuggestion(null),
+    })
+  }
+
+  // Client-side email validation: RFC 5322 format check.
+  // Server-side validation in accounts.js adds disposable domain + MX record checks.
   const validateEmail = (value) => {
     const trimmed = value.trim()
     if (!isEmail(trimmed)) return 'Please enter a valid email address'
-    const localPart = trimmed.split('@')[0]
-    if (profanityMatcher.hasMatch(localPart)) {
-      return 'Email contains inappropriate language. Please use a different email.'
-    }
     return null
   }
 
@@ -468,11 +470,20 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                         type="email"
                         placeholder="you@email.com"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => { setEmail(e.target.value); checkEmailTypo(e.target.value) }}
                         className="w-full h-12 bg-emerald-500/[0.02] border border-emerald-500/[0.08] rounded-xl pl-11 pr-4 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/25 focus:bg-emerald-500/[0.04] transition-all duration-300"
                         autoFocus
                       />
                     </div>
+                    {emailSuggestion && (
+                      <p className="text-[12px] text-amber-400/80">
+                        Did you mean{' '}
+                        <button type="button" className="underline hover:text-amber-300 transition-colors" onClick={() => { setEmail(emailSuggestion); setEmailSuggestion(null) }}>
+                          {emailSuggestion}
+                        </button>
+                        ?
+                      </p>
+                    )}
                     {error && <p className="text-[12px] text-red-400">{error}</p>}
                     <GlowButton type="submit" disabled={emailLoading}>
                       {emailLoading ? (
