@@ -6,6 +6,7 @@ import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
 import AnimatedGenerateButton from '@/components/ui/animated-generate-button'
+import MagneticButton from '@/components/ui/MagneticButton'
 import TiltCard from '@/components/ui/TiltCard'
 import VerticalBarsNoise from '@/components/ui/vertical-bars'
 import { getSupabaseSession, signOutSupabase } from '@/lib/supabase'
@@ -468,10 +469,10 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ─── HERO ─── */}
-      <section className="relative pt-28 pb-20 md:pt-40 md:pb-32 overflow-hidden flowshield-pattern">
-        {/* Vertical bars noise background */}
-        <div className="absolute inset-0 opacity-[0.06] pointer-events-none">
+      {/* ─── HERO (premium: restraint, one focal point, more space) ─── */}
+      <section className="relative pt-32 pb-24 md:pt-44 md:pb-36 overflow-hidden flowshield-pattern">
+        {/* Subtle background — no heavy noise for premium feel */}
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none">
           <VerticalBarsNoise
             backgroundColor="#060e09"
             lineColor="#1a4a35"
@@ -482,36 +483,31 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* Green ambient glow */}
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-emerald-600/[0.05] blur-[180px] pointer-events-none" />
+        {/* Single soft glow — restrained */}
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-emerald-600/[0.03] blur-[160px] pointer-events-none" />
 
         <div className="relative max-w-[880px] mx-auto px-6 text-center">
-          {/* Logo icon with glow */}
+          {/* Logo — premium: subtle, no strong glow */}
           <motion.div
             className="flex justify-center mb-8"
             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
           >
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/[0.15] flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/12 to-emerald-500/5 border border-emerald-500/[0.1] flex items-center justify-center">
                 <FlowShieldLogo size={32} />
               </div>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-emerald-500/20 blur-lg rounded-full" />
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-10 h-3 bg-emerald-500/10 blur-md rounded-full" />
             </div>
           </motion.div>
 
-          {/* Announcement pill */}
+          {/* One-line status — premium: minimal */}
           <motion.div
-            className="flex justify-center mb-8"
+            className="flex justify-center mb-10"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/[0.1] bg-emerald-500/[0.03]">
-              <span className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-400/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Live on Testnet
-              </span>
-              <span className="text-white/15">|</span>
-              <span className="text-[12px] text-white/40">Autonomous compliance agents for Flow</span>
-              <span className="text-[10px] font-medium text-emerald-400/60 bg-emerald-500/[0.08] px-1.5 py-0.5 rounded">NEW</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/[0.08] bg-emerald-500/[0.02]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/90" />
+              <span className="text-[12px] text-white/50 tracking-wide">Live on Flow Testnet</span>
             </div>
           </motion.div>
 
@@ -532,9 +528,9 @@ export default function LandingPage() {
             </span>
           </motion.h1>
 
-          {/* Subtitle */}
+          {/* Subtitle — premium: generous line-height, subtle color */}
           <motion.p
-            className="text-[17px] leading-[1.7] text-white/40 max-w-[560px] mx-auto mb-2"
+            className="text-[17px] md:text-[18px] leading-[1.75] text-white/45 max-w-[540px] mx-auto mb-3 tracking-[-0.01em]"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
@@ -542,7 +538,7 @@ export default function LandingPage() {
             Privacy-preserving compliance for DeFi on Flow. Smart contracts get a single on-chain “yes or no” — never identity data.
           </motion.p>
           <motion.p
-            className="text-[14px] font-medium tracking-wide text-emerald-400/70 mb-8"
+            className="text-[13px] font-medium tracking-[0.02em] text-emerald-400/60 mb-10 uppercase"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35, duration: 0.5 }}
@@ -550,49 +546,38 @@ export default function LandingPage() {
             One import. Compliant.
           </motion.p>
 
-          {/* CTA */}
+          {/* CTA — one primary button (magnetic cursor-follow), secondary links muted */}
           <motion.div
-            className="flex flex-col sm:flex-row items-center justify-center gap-3"
+            className="flex flex-col items-center justify-center gap-4"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
-            <AnimatedGenerateButton
-              onClick={handleLaunch}
-              labelIdle="Launch dApp"
-              labelActive="Launching..."
-              highlightHueDeg={160}
-              size="lg"
-            />
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-              <a
-                href="https://testnet.flowscan.io/account/0x93c691a98b975493"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[13px] text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5"
-              >
-                <span>View live contracts</span>
-                <ChevronRight className="w-3 h-3" />
+            <MagneticButton strength={0.12} range={100}>
+              <AnimatedGenerateButton
+                onClick={handleLaunch}
+                labelIdle="Launch dApp"
+                labelActive="Launching..."
+                highlightHueDeg={160}
+                size="lg"
+              />
+            </MagneticButton>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[12px] text-white/30 hover:text-white/50 transition-colors">
+              <a href="https://testnet.flowscan.io/account/0x93c691a98b975493" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
+                View live contracts <ChevronRight className="w-3 h-3" />
               </a>
-              <a
-                href="#integration-code"
-                className="text-[13px] text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5"
-              >
-                <span>See integration code</span>
-                <ChevronRight className="w-3 h-3" />
+              <a href="#integration-code" className="inline-flex items-center gap-1">
+                See integration code <ChevronRight className="w-3 h-3" />
               </a>
             </div>
-            <p className="text-[12px] text-white/30 mt-4">
+            <p className="text-[11px] text-white/20 mt-2 tracking-wide">
               Trusted by Flow ecosystem builders
             </p>
           </motion.div>
         </div>
 
-        {/* Bottom horizon glow */}
-        <div className="absolute bottom-0 left-0 right-0 h-[200px]">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-[300px] rounded-[50%] bg-emerald-500/[0.04] blur-[60px]" />
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/[0.15] to-transparent" />
-        </div>
+        {/* Bottom edge — single line, no big glow */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/[0.12] to-transparent" />
       </section>
 
       {/* ─── DAPP PREVIEW FRAME ─── */}
