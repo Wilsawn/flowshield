@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    /* Semantic (Tailwind theme) */
     --background: 142 40% 4%;
     --foreground: 213 31% 91%;
     --card: 224 71% 4%;
@@ -24,6 +25,16 @@
     --radius: 0.75rem;
     --emerald: #34d399;
     --cyan: #06b6d4;
+    /* FlowShield design system (skill: flowshield-design) — base & panels */
+    --flowshield-bg: #060e09;
+    --flowshield-bg-darker: #050b08;
+    --flowshield-panel: #0a1410;
+    /* Elevation (3–5 named levels; use these instead of ad hoc shadows) */
+    --elevation-surface: 0 1px 0 rgba(255, 255, 255, 0.03);
+    --elevation-card: 0 4px 24px rgba(0, 0, 0, 0.25);
+    --elevation-dropdown: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --elevation-modal: 0 12px 48px rgba(0, 0, 0, 0.5);
+    --elevation-toast: 0 8px 32px rgba(0, 0, 0, 0.35);
   }
 
   * {
@@ -47,6 +58,19 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Display font for hero and section headlines (original, non-generic) */
+  .font-display {
+    font-family: 'Syne', 'Inter', sans-serif;
+  }
+}
+
+/* FlowShield custom background pattern — subtle hex-inspired grid */
+.flowshield-pattern {
+  background-image:
+    linear-gradient(rgba(52, 211, 153, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 211, 153, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 @layer components {
@@ -174,6 +198,49 @@
   .glow-green-strong {
     box-shadow: 0 0 40px hsl(160 84% 39% / 0.25);
   }
+
+  /* Elevation system — use these instead of arbitrary shadows for hierarchy */
+  .elevation-surface {
+    box-shadow: var(--elevation-surface);
+  }
+  .elevation-card {
+    box-shadow: var(--elevation-card);
+  }
+  .elevation-dropdown {
+    box-shadow: var(--elevation-dropdown);
+  }
+  .elevation-modal {
+    box-shadow: var(--elevation-modal);
+  }
+  .elevation-toast {
+    box-shadow: var(--elevation-toast);
+  }
+
+  /* 3D feel — perspective and tilt (use with .tilt-3d-hover or TiltCard) */
+  .perspective-3d {
+    perspective: 1000px;
+  }
+  .perspective-3d-near {
+    perspective: 600px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  /* Subtle CSS-only hover tilt for cards */
+  .tilt-3d-hover {
+    transform-style: preserve-3d;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .tilt-3d-hover:hover {
+    transform: perspective(1000px) rotateX(2deg) rotateY(2deg) translateZ(8px);
+  }
+  /* Depth layer (use translateZ so children sit in 3D space) */
+  .depth-1 { transform: translateZ(1px); }
+  .depth-2 { transform: translateZ(4px); }
+  .depth-3 { transform: translateZ(12px); }
 
   .gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400;

@@ -2,6 +2,9 @@
 
 Everything you need to go from localhost to a live deployment.
 
+**Production stack:** Frontend → Netlify · Backend → Railway · Auth/DB → Supabase.  
+Live: [flowshield.netlify.app](https://flowshield.netlify.app) · API: `VITE_API_URL` on Netlify points to your Railway backend.
+
 ---
 
 ## 1. Supabase (Database)

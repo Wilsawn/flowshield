@@ -434,7 +434,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
               {/* Step: Email */}
               {step === 'email' && (
                 <motion.form key="email" onSubmit={handleEmailSubmit} {...slideIn}>
-                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Create your account</h2>
+                  <h2 className="font-display text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Create your account</h2>
                   <p className="text-[13px] text-white/35 mb-7 leading-relaxed">
                     No wallet needed. No seed phrases. We create a secure Flow account for you automatically.
                   </p>
@@ -503,7 +503,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
               {/* Step: Jurisdiction */}
               {step === 'jurisdiction' && (
                 <motion.div key="jurisdiction" {...slideIn}>
-                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Select your jurisdiction</h2>
+                  <h2 className="font-display text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Select your jurisdiction</h2>
                   <p className="text-[13px] text-white/35 mb-6 leading-relaxed">
                     This determines which compliance rules apply to your account. You can change it later.
                   </p>
@@ -561,7 +561,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
               {/* Step: Passkey */}
               {step === 'passkey' && (
                 <motion.div key="passkey" {...slideIn}>
-                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Set up passkey</h2>
+                  <h2 className="font-display text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Set up passkey</h2>
                   <p className="text-[13px] text-white/35 mb-8 leading-relaxed">
                     Use your fingerprint, face, or device PIN. Fast, secure, no passwords ever.
                   </p>
@@ -626,10 +626,11 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
               {/* Step: Verifying */}
               {step === 'verifying' && (
                 <motion.div key="verifying" {...slideIn}>
-                  <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Setting up your account</h2>
-                  <p className="text-[13px] text-white/35 mb-8">
+                  <h2 className="font-display text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">Setting up your account</h2>
+                  <p className="text-[13px] text-white/35 mb-1">
                     Invisible compliance — just a moment...
                   </p>
+                  <p className="text-[12px] text-emerald-400/70 mb-8">Compliant in under 2 minutes</p>
                   <div className="space-y-4">
                     {VERIFY_STEPS.map((vs, i) => {
                       const done = i < currentVerifyStep
@@ -712,7 +713,15 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <h2 className="text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">You're all set!</h2>
+                    <motion.div
+                      className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 mb-4"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.35 }}
+                    >
+                      <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                    </motion.div>
+                    <h2 className="font-display text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">You're all set!</h2>
                     <p className="text-[13px] text-white/35 mb-3">
                       Account created, verified, and compliant.
                     </p>

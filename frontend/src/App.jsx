@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
+import { ToastProvider } from './contexts/ToastContext'
 import LandingPage from './pages/index'
 import Dashboard from './pages/dashboard'
 import CopilotPage from './pages/copilot'
@@ -30,6 +31,7 @@ function RequireAuth({ children }) {
 export default function App() {
   return (
     <ErrorBoundary>
+      <ToastProvider>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -42,6 +44,7 @@ export default function App() {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </ToastProvider>
     </ErrorBoundary>
   )
 }

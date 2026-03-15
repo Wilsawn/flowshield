@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShieldCheck, Fingerprint, Zap, FileCheck, Loader2, CheckCircle2, X, ExternalLink, AlertTriangle } from 'lucide-react'
 import { API } from '@/lib/api'
 import { authFetch } from '@/lib/utils'
+import { useToast } from '@/contexts/ToastContext'
 
 function friendlyError(raw) {
   if (!raw) return 'Transaction failed'
@@ -17,6 +18,7 @@ function friendlyError(raw) {
 }
 
 export default function VerificationPanel({ isOpen, onClose, action = 'deposit', amount = '0', onComplete, clientError }) {
+  const { toast } = useToast()
   const [steps, setSteps] = useState([])
   const [txResult, setTxResult] = useState(null)
   const [error, setError] = useState(null)
@@ -156,14 +158,18 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
           }
 
           setCompleted(true)
+          toast.success(action === 'deposit' ? 'Deposit confirmed' : action === 'borrow' ? 'Borrow confirmed' : 'Repay confirmed')
         } else {
           const friendly = friendlyError(txData.error)
           setError(friendly)
           updateLastStep('Transaction failed', friendly, 'error')
+          toast.error(friendly)
         }
       } catch (err) {
-        setError(err.message)
-        addStep('Error', err.message, 'error')
+        const msg = err.message || 'Transaction failed'
+        setError(msg)
+        addStep('Error', msg, 'error')
+        toast.error(msg)
       }
     }
 

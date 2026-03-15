@@ -6,7 +6,7 @@
 
 Users prove compliance with zero-knowledge proofs. Identity never touches the chain.
 
-[Live App](https://flowshield.netlify.app) &nbsp;·&nbsp; [Contracts on Flowscan](https://testnet.flowscan.io/account/0x93c691a98b975493) &nbsp;·&nbsp; [Architecture](docs/ARCHITECTURE.md) &nbsp;·&nbsp; [Setup Guide](docs/SETUP.md)
+[Live App](https://flowshield.netlify.app) &nbsp;·&nbsp; [Contracts on Flowscan](https://testnet.flowscan.io/account/0x93c691a98b975493) &nbsp;·&nbsp; [Docs](docs/README.md) &nbsp;·&nbsp; [Setup](docs/SETUP.md) &nbsp;·&nbsp; [Contributing](CONTRIBUTING.md)
 
 [![Flow Testnet](https://img.shields.io/badge/Flow-Testnet-00ef8b?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMiIgZmlsbD0iIzAwZWY4YiIvPjwvc3ZnPg==&logoColor=white)](https://testnet.flowscan.io/account/0x93c691a98b975493)
 [![Cadence](https://img.shields.io/badge/Cadence-1.0-00ef8b?style=for-the-badge)](https://developers.flow.com/cadence)
@@ -131,8 +131,10 @@ flowshield/
 ├── evm/
 │   ├── contracts/      Solidity Groth16 verifier
 │   └── circuits/       circom ZK circuit
-└── docs/               Architecture, setup guide
+└── docs/               Documentation ([index](docs/README.md))
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 
 ## API
 
