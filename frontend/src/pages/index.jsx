@@ -6,6 +6,7 @@ import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
 import AnimatedGenerateButton from '@/components/ui/animated-generate-button'
+import TiltCard from '@/components/ui/TiltCard'
 import VerticalBarsNoise from '@/components/ui/vertical-bars'
 import { getSupabaseSession, signOutSupabase } from '@/lib/supabase'
 import { API } from '@/lib/api'
@@ -13,6 +14,9 @@ import { API } from '@/lib/api'
 /* ── shared glass card style ── */
 const glass = 'rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/60 backdrop-blur-sm'
 const glassInner = 'rounded-xl border border-emerald-500/[0.06] bg-emerald-500/[0.02]'
+
+/** Replace with your case study or integration doc when live */
+const CASE_STUDY_URL = 'https://github.com/Wilsawn/flowshield'
 
 const starPath = "M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
 
@@ -132,8 +136,8 @@ export default function LandingPage() {
     {
       icon: Radar,
       name: 'Regulatory Radar',
-      sub: 'Continuous monitoring',
-      desc: 'AI reads your on-chain RuleEngine state and compares it against live regulations from FinCEN, MiCA, FCA, MAS, and FINTRAC. Gaps are detected in seconds.',
+      sub: 'Protocol + Operator · Continuous monitoring',
+      desc: 'On-chain RuleEngine plus AI context for operators. Reads your rules on Flow and compares them against checklists for FinCEN, MiCA, FCA, MAS, and FINTRAC to surface real gaps.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -188,8 +192,8 @@ export default function LandingPage() {
     {
       icon: Scan,
       name: 'Compliance Scanner',
-      sub: 'Smart contract analysis',
-      desc: 'Upload Cadence, Solidity, or any smart contract. The scanner identifies missing compliance checks, incorrect thresholds, and jurisdiction-specific issues.',
+      sub: 'Developers · Smart contract analysis',
+      desc: 'Static analysis for Cadence, Solidity, or any smart contract. Highlights missing ComplianceAction checks, incorrect thresholds, and jurisdiction-specific issues before deploy.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -235,8 +239,8 @@ export default function LandingPage() {
     {
       icon: Bot,
       name: 'Builder Copilot',
-      sub: 'Context-aware assistant',
-      desc: 'Ask anything about compliance. Get Cadence integration code, regulatory explanations, and live risk analysis with your on-chain context in every response.',
+      sub: 'Developers · Context-aware assistant',
+      desc: 'AI copilot for protocol teams. Answers compliance questions, generates Cadence integration code, and pulls in live risk and credential state from Flow with every response.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -275,8 +279,8 @@ export default function LandingPage() {
     {
       icon: Lock,
       name: 'ZK Verification',
-      sub: 'Privacy-preserving proofs',
-      desc: 'Groth16 circuit generates a client-side proof. The chain receives a boolean — never identity data. Privacy is cryptographically guaranteed.',
+      sub: 'Protocol · Privacy-preserving proofs',
+      desc: 'Groth16 circuit and FlowEVM verifier give your contracts a single on-chain boolean. Proof runs client-side; the chain only sees a yes/no and expiry, never identity data.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -324,8 +328,8 @@ export default function LandingPage() {
     {
       icon: Cpu,
       name: 'A2A Orchestrator',
-      sub: 'Agent-to-agent protocol',
-      desc: 'Agent-to-agent protocol that chains multi-agent workflows. Risk scoring feeds anomaly detection which feeds the copilot — all automated.',
+      sub: 'Protocol + Agents · Agent-to-agent protocol',
+      desc: 'Agent-to-agent orchestration that chains risk scoring, anomaly detection, and the copilot. Designed for operator workflows like full risk review and compliance review.',
       preview: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-6">
@@ -389,6 +393,14 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#060e09] text-white selection:bg-emerald-500/20 antialiased">
 
+      {/* ─── TRUST STRIP (Gumloop-style) ─── */}
+      <div className="border-b border-emerald-500/[0.06] bg-emerald-500/[0.03]">
+        <div className="max-w-[1200px] mx-auto px-6 py-2 flex items-center justify-center gap-2 text-[12px] text-white/50">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/60" />
+          Trusted by Flow ecosystem teams
+        </div>
+      </div>
+
       {/* ─── NAV ─── */}
       <nav className="sticky top-0 z-50 border-b border-emerald-500/[0.06] bg-[#060e09]/80 backdrop-blur-xl">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -399,10 +411,10 @@ export default function LandingPage() {
             </div>
             <div className="hidden md:flex items-center">
               <div className="flex items-center gap-1 px-2 py-1.5 rounded-full border border-emerald-500/[0.06] bg-white/[0.02]">
-                {['Copilot', 'Operator', 'Dashboard'].map((item) => (
+                {['Pricing', 'Copilot', 'Operator', 'Dashboard'].map((item) => (
                   <button
                     key={item}
-                    onClick={() => handleNavigate(`/${item.toLowerCase()}`)}
+                    onClick={() => item === 'Pricing' ? navigate('/pricing') : handleNavigate(`/${item.toLowerCase()}`)}
                     className="text-[13px] text-white/40 hover:text-white/70 transition-colors duration-200 px-4 py-1.5 rounded-full hover:bg-white/[0.04]"
                   >
                     {item}
@@ -457,9 +469,9 @@ export default function LandingPage() {
       </nav>
 
       {/* ─── HERO ─── */}
-      <section className="relative pt-28 pb-20 md:pt-40 md:pb-32 overflow-hidden">
+      <section className="relative pt-28 pb-20 md:pt-40 md:pb-32 overflow-hidden flowshield-pattern">
         {/* Vertical bars noise background */}
-        <div className="absolute inset-0 opacity-[0.07] pointer-events-none">
+        <div className="absolute inset-0 opacity-[0.06] pointer-events-none">
           <VerticalBarsNoise
             backgroundColor="#060e09"
             lineColor="#1a4a35"
@@ -471,29 +483,7 @@ export default function LandingPage() {
         </div>
 
         {/* Green ambient glow */}
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-emerald-600/[0.06] blur-[180px] pointer-events-none" />
-
-        {/* Floating product icons */}
-        <motion.div className="absolute top-[20%] left-[6%] hidden lg:block" animate={{ y: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-transparent border border-emerald-500/[0.12] flex items-center justify-center shadow-lg shadow-emerald-900/30">
-            <ShieldCheck className="w-6 h-6 text-emerald-400/50" />
-          </div>
-        </motion.div>
-        <motion.div className="absolute top-[32%] right-[8%] hidden lg:block" animate={{ y: [0, 8, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/16 to-transparent border border-emerald-500/[0.1] flex items-center justify-center shadow-lg shadow-emerald-900/25">
-            <Lock className="w-6 h-6 text-emerald-400/45" />
-          </div>
-        </motion.div>
-        <motion.div className="absolute top-[56%] left-[7%] hidden lg:block" animate={{ y: [0, 8, 0] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/12 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
-            <Radar className="w-5 h-5 text-emerald-400/35" />
-          </div>
-        </motion.div>
-        <motion.div className="absolute top-[14%] right-[14%] hidden lg:block" animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/12 to-transparent border border-emerald-500/[0.08] flex items-center justify-center">
-            <Fingerprint className="w-5 h-5 text-emerald-400/35" />
-          </div>
-        </motion.div>
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-emerald-600/[0.05] blur-[180px] pointer-events-none" />
 
         <div className="relative max-w-[880px] mx-auto px-6 text-center">
           {/* Logo icon with glow */}
@@ -525,18 +515,18 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Hero heading - uppercase with bordered highlight */}
+          {/* Hero heading — display font for originality */}
           <motion.h1
-            className="mb-8"
+            className="mb-8 font-display"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
-            <span className="block text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.1] font-extrabold tracking-[-0.02em] uppercase text-white/95">
+            <span className="block text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.1] font-extrabold tracking-[-0.03em] text-white/95">
               DeFi Compliance,
             </span>
             <span className="inline-block mt-2 px-5 py-2 rounded-xl border border-emerald-500/[0.15] bg-emerald-500/[0.03]">
-              <span className="text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.1] font-extrabold tracking-[-0.02em] uppercase text-white/95">
+              <span className="text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.1] font-extrabold tracking-[-0.03em] text-white/95">
                 Solved.
               </span>
             </span>
@@ -544,12 +534,20 @@ export default function LandingPage() {
 
           {/* Subtitle */}
           <motion.p
-            className="text-[17px] leading-[1.7] text-white/40 max-w-[560px] mx-auto mb-8"
+            className="text-[17px] leading-[1.7] text-white/40 max-w-[560px] mx-auto mb-2"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           >
             Privacy-preserving compliance for DeFi on Flow. Smart contracts get a single on-chain “yes or no” — never identity data.
+          </motion.p>
+          <motion.p
+            className="text-[14px] font-medium tracking-wide text-emerald-400/70 mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35, duration: 0.5 }}
+          >
+            One import. Compliant.
           </motion.p>
 
           {/* CTA */}
@@ -566,15 +564,27 @@ export default function LandingPage() {
               highlightHueDeg={160}
               size="lg"
             />
-            <a
-              href="https://testnet.flowscan.io/account/0x93c691a98b975493"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[13px] text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5"
-            >
-              <span>View live contracts</span>
-              <ChevronRight className="w-3 h-3" />
-            </a>
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              <a
+                href="https://testnet.flowscan.io/account/0x93c691a98b975493"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[13px] text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5"
+              >
+                <span>View live contracts</span>
+                <ChevronRight className="w-3 h-3" />
+              </a>
+              <a
+                href="#integration-code"
+                className="text-[13px] text-white/40 hover:text-white/70 transition-colors inline-flex items-center gap-1.5"
+              >
+                <span>See integration code</span>
+                <ChevronRight className="w-3 h-3" />
+              </a>
+            </div>
+            <p className="text-[12px] text-white/30 mt-4">
+              Trusted by Flow ecosystem builders
+            </p>
           </motion.div>
         </div>
 
@@ -588,6 +598,7 @@ export default function LandingPage() {
       {/* ─── DAPP PREVIEW FRAME ─── */}
       <section className="pb-10 md:pb-16 -mt-6">
         <div className="max-w-[900px] mx-auto px-6">
+          <TiltCard className="w-full" maxTilt={3} scaleOnHover={1.005}>
           <div className={`${glass} border-emerald-500/[0.12] bg-[#050b08]/80`}>
             <div className="flex items-center justify-between px-5 py-3 border-b border-emerald-500/[0.08]">
               <div className="flex items-center gap-2">
@@ -635,13 +646,35 @@ export default function LandingPage() {
                 <p className="text-[11px] text-white/30 mt-1.5">Travel rule, KYC, re-verify every 365 days</p>
               </div>
             </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 pb-4 text-[11px] text-white/28 border-t border-emerald-500/[0.06]">
+              <span>7 contracts on Flow Testnet</span>
+              <span className="text-white/20">·</span>
+              <span>5 jurisdictions monitored</span>
+              <span className="text-white/20">·</span>
+              <span>0% PII on-chain</span>
+            </div>
           </div>
+          </TiltCard>
         </div>
       </section>
 
-      {/* ─── PRODUCT SHOWCASE (Clover-style interactive cards) ─── */}
+      {/* ─── PROTOCOL SURFACES ─── */}
       <section className="py-20 md:py-32">
         <div className="max-w-[1200px] mx-auto px-6">
+          <div className="mb-10 text-left">
+            <motion.p
+              className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/40 mb-3"
+              initial={{ opacity: 0, y: 4 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            >
+              Protocol surfaces
+            </motion.p>
+            <motion.p
+              className="text-[14px] text-white/35 max-w-xl"
+              initial={{ opacity: 0, y: 4 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
+            >
+              For Flow protocols, operators, and compliant users. Four products ship with FlowShield: on-chain rules, contract scanning, ZK verification, and an on-chain aware copilot for builders and operators.
+            </motion.p>
+          </div>
           <motion.div
             className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-4"
             initial={{ opacity: 0, y: 24 }}
@@ -699,8 +732,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right panel - feature preview */}
-            <div className={`${glass} p-8`}>
+            {/* Right panel - feature preview with mouse-follow 3D tilt */}
+            <TiltCard className={`${glass} p-8 relative`} maxTilt={6} scaleOnHover={1.01}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeAgent}
@@ -711,6 +744,7 @@ export default function LandingPage() {
                 >
                   <div className="mb-6">
                     <h3 className="text-[22px] font-bold text-white/90 mb-2">{agents[activeAgent].name}</h3>
+                    <p className="text-[11px] font-medium tracking-[0.06em] uppercase text-emerald-400/60 mb-2">Built by FlowShield · Flow Testnet</p>
                     <p className="text-[15px] text-white/40 leading-[1.6]">{agents[activeAgent].desc}</p>
                   </div>
                   <div className={`${glass} p-6`}>
@@ -718,36 +752,69 @@ export default function LandingPage() {
                   </div>
                 </motion.div>
               </AnimatePresence>
-            </div>
+            </TiltCard>
           </motion.div>
         </div>
       </section>
 
-      {/* ─── STATS STRIP ─── */}
+      {/* ─── STATS BENTO ─── */}
       <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <motion.div
-            className="grid grid-cols-2 md:grid-cols-4 gap-3"
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
             initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
           >
+            {/* Bento: one large featured cell with 3D tilt, then three smaller */}
+            <TiltCard className="col-span-2 md:col-span-1 md:row-span-2" maxTilt={5} scaleOnHover={1.02}>
+              <div className={`${glass} p-6 md:p-8 text-center relative overflow-hidden group h-full min-h-[140px] md:min-h-[220px] flex flex-col justify-center`}>
+                <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.08] flex items-center justify-center opacity-50 group-hover:opacity-70 transition-opacity">
+                  <Radar className="w-4 h-4 text-emerald-400/60" />
+                </div>
+                <p className="text-[2.5rem] md:text-[3.5rem] font-bold font-display tracking-tight text-white/95 mb-1">24/7</p>
+                <p className="text-[13px] text-white/35 tracking-wide">Agent Monitoring</p>
+              </div>
+            </TiltCard>
             {[
-              { value: '24/7', label: 'Agent Monitoring', icon: Radar },
-              { value: '5', label: 'Jurisdictions Scanned', icon: Globe },
+              { value: '5', label: 'Jurisdictions', icon: Globe },
               { value: '0%', label: 'PII On-Chain', icon: Lock },
-              { value: '<1s', label: 'Verification Time', icon: Zap },
+              { value: '<1s', label: 'Verify Time', icon: Zap },
             ].map((stat, i) => {
               const Icon = stat.icon
               return (
-                <div key={i} className={`${glass} p-6 md:p-8 text-center relative overflow-hidden group`}>
-                  <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/[0.06] flex items-center justify-center opacity-40 group-hover:opacity-60 transition-opacity">
+                <div key={i} className={`${glass} p-5 md:p-6 text-center relative overflow-hidden group`}>
+                  <div className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/[0.06] flex items-center justify-center opacity-40 group-hover:opacity-60 transition-opacity">
                     <Icon className="w-3.5 h-3.5 text-emerald-400/50" />
                   </div>
-                  <p className="text-[2rem] md:text-[2.5rem] font-bold tracking-tight text-white/90 mb-1">{stat.value}</p>
-                  <p className="text-[12px] text-white/30 tracking-wide">{stat.label}</p>
+                  <p className="text-[1.75rem] md:text-[2rem] font-bold font-display tracking-tight text-white/90 mb-0.5">{stat.value}</p>
+                  <p className="text-[11px] text-white/30 tracking-wide">{stat.label}</p>
                 </div>
               )
             })}
           </motion.div>
+        </div>
+      </section>
+
+      {/* ─── BIG METRIC (Gumloop-style) ─── */}
+      <section className="py-16 md:py-24 border-y border-emerald-500/[0.06]">
+        <div className="max-w-[1200px] mx-auto px-6 text-center">
+          <motion.p
+            className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/50 mb-3"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+          >
+            Live on Flow testnet
+          </motion.p>
+          <motion.p
+            className="font-display text-[clamp(3rem,12vw,6rem)] font-bold tracking-tight text-white/95 mb-2"
+            initial={{ opacity: 0, scale: 0.98 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+          >
+            7
+          </motion.p>
+          <motion.p
+            className="text-[15px] text-white/40"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+          >
+            Cadence contracts · one-line integration
+          </motion.p>
         </div>
       </section>
 
@@ -762,7 +829,7 @@ export default function LandingPage() {
               How it works
             </motion.p>
             <motion.h2
-              className="text-[clamp(1.5rem,3.5vw,2.5rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15]"
+              className="font-display text-[clamp(1.5rem,3.5vw,2.5rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15]"
               initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             >
               Three steps to compliant transactions
@@ -792,7 +859,7 @@ export default function LandingPage() {
             ].map((step, i) => (
               <motion.div
                 key={step.n}
-                className={`${glass} p-8 relative`}
+                className={`${glass} p-8 relative tilt-3d-hover perspective-3d`}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -820,7 +887,7 @@ export default function LandingPage() {
             Architecture
           </motion.p>
           <motion.h2
-            className="text-[clamp(1.5rem,3.5vw,2.5rem)] font-bold tracking-[-0.025em] text-white/90 text-center mb-2 leading-[1.15]"
+            className="font-display text-[clamp(1.5rem,3.5vw,2.5rem)] font-bold tracking-[-0.025em] text-white/90 text-center mb-2 leading-[1.15]"
             initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           >
             How everything connects
@@ -839,8 +906,38 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── INTEGRATION STRIP (Gumloop-style) ─── */}
+      <section className="py-16 md:py-20">
+        <div className="max-w-[800px] mx-auto px-6 text-center">
+          <motion.p
+            className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/50 mb-4"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+          >
+            Works where you build
+          </motion.p>
+          <motion.div
+            className="flex flex-wrap items-center justify-center gap-6 md:gap-10 mb-6 text-[14px] font-medium text-white/50"
+            initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
+          >
+            <span>Flow</span>
+            <span className="text-white/20">·</span>
+            <span>Cadence</span>
+            <span className="text-white/20">·</span>
+            <span>FCL</span>
+          </motion.div>
+          <motion.a
+            href="#integration-code"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-500/[0.2] bg-emerald-500/[0.06] text-[13px] font-mono text-emerald-300/90 hover:bg-emerald-500/[0.1] transition-colors"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+          >
+            ComplianceAction.verify(user)
+            <ChevronRight className="w-3.5 h-3.5" />
+          </motion.a>
+        </div>
+      </section>
+
       {/* ─── CODE PREVIEW ─── */}
-      <section className="py-24 md:py-36">
+      <section id="integration-code" className="py-24 md:py-36 scroll-mt-24">
         <div className="max-w-[680px] mx-auto px-6">
           <motion.p
             className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/40 mb-4 text-center"
@@ -915,6 +1012,165 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── CALM SECTION (Linear-style) ─── */}
+      <section className="py-28 md:py-40">
+        <div className="max-w-[560px] mx-auto px-6 text-center">
+          <motion.h2
+            className="font-display text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.03em] text-white/90 leading-[1.2] mb-4"
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            Ready to ship compliant DeFi on Flow?
+          </motion.h2>
+          <motion.p
+            className="text-[15px] text-white/40 mb-8 leading-[1.6]"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+          >
+            One integration. On-chain rules. No PII. Integrate in under 10 minutes on testnet.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.15 }}
+          >
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-8 py-4 text-[15px] transition-colors"
+            >
+              Launch dApp
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── TESTIMONIALS ─── */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-[1000px] mx-auto px-6">
+          <motion.p
+            className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/40 mb-3 text-center"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+          >
+            What builders say
+          </motion.p>
+          <motion.h2
+            className="font-display text-[clamp(1.35rem,3vw,2rem)] font-bold tracking-[-0.02em] text-white/90 text-center mb-10"
+            initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          >
+            Trusted by Flow ecosystem teams
+          </motion.h2>
+
+          {/* Featured testimonial (Gumloop-style) */}
+          <motion.div
+            className={`${glass} p-8 md:p-10 mb-8 text-center max-w-[720px] mx-auto`}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <p className="text-[18px] md:text-[20px] leading-[1.6] text-white/90 mb-6">
+              &ldquo;We went from zero to compliant in one day. One import, one verify call — our lending pool was ready for testnet.&rdquo;
+            </p>
+            <p className="text-[15px] font-semibold text-white/90">Protocol team</p>
+            <p className="text-[13px] text-white/40 mb-4">Flow testnet</p>
+            <a
+              href={CASE_STUDY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              See integration
+              <ChevronRight className="w-3.5 h-3.5" />
+            </a>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { quote: 'We went from zero to compliant in one day. One import, one verify call — our lending pool was ready for testnet.', by: 'Protocol team', role: 'Flow testnet' },
+              { quote: 'Finally, compliance we can ship. No KYC vendor lock-in, no PII on-chain. Just a boolean and a risk score.', by: 'Builder', role: 'Flow ecosystem' },
+              { quote: 'Operators get one dashboard for all jurisdictions. The Radar and rules engine saved us weeks of custom tooling.', by: 'Compliance lead', role: 'DeFi startup' },
+            ].map((t, i) => (
+              <motion.div
+                key={i}
+                className={`${glass} p-6 flex flex-col`}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+              >
+                <p className="text-[14px] text-white/80 leading-[1.6] mb-4 flex-1">&ldquo;{t.quote}&rdquo;</p>
+                <div>
+                  <p className="text-[13px] font-medium text-white/70">{t.by}</p>
+                  <p className="text-[12px] text-white/40">{t.role}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FAQ ─── */}
+      <section className="py-20 md:py-28 border-t border-emerald-500/[0.06]">
+        <div className="max-w-[720px] mx-auto px-6">
+          <motion.p
+            className="text-[12px] font-medium tracking-[0.1em] uppercase text-emerald-400/40 mb-3 text-center"
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+          >
+            FAQ
+          </motion.p>
+          <motion.h2
+            className="font-display text-[clamp(1.35rem,3vw,2rem)] font-bold tracking-[-0.02em] text-white/90 text-center mb-10"
+            initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          >
+            Common questions
+          </motion.h2>
+          <div className="space-y-4">
+            {[
+              {
+                q: 'What is FlowShield?',
+                a: 'FlowShield is an autonomous compliance layer for DeFi on Flow. It gives protocols one on-chain boolean (compliant or not), runs regulatory scanning across five jurisdictions, and keeps zero PII on-chain via zero-knowledge proofs.',
+              },
+              {
+                q: 'Who is it for?',
+                a: 'Flow protocols (lending, DEXs, NFT marketplaces), compliance operators who configure rules and view risk, and end users who get a passkey-based credential without seed phrases.',
+              },
+              {
+                q: 'Who pays?',
+                a: 'Protocols pay for on-chain compliance checks and optional API tiers. End users get credentials for free; protocols can absorb gas or pass a small fee. B2B and enterprise pricing is available for custom deployments.',
+              },
+              {
+                q: 'Is my data stored on-chain?',
+                a: 'No. Only a compliance result (yes/no) and optional risk score and jurisdiction tags are stored on-chain. Identity and KYC data stay off-chain; verification uses zero-knowledge proofs so the chain never sees PII.',
+              },
+              {
+                q: 'How do I integrate?',
+                a: 'Import the ComplianceAction contract from our testnet address, call verify(user) before any restricted action (e.g. deposit, borrow), and handle the boolean. See the integration code on this page or the docs for Cadence examples.',
+              },
+              {
+                q: 'What about pricing and support?',
+                a: 'Pricing is on the Pricing page (nav or footer). For technical or sales questions, contact support@flowshield.xyz.',
+              },
+            ].map((faq, i) => (
+              <motion.div
+                key={faq.q}
+                className={`${glass} p-5 md:p-6`}
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.04 }}
+              >
+                <h3 className="text-[14px] font-semibold text-white/90 mb-2">{faq.q}</h3>
+                <p className="text-[13px] text-white/40 leading-[1.6]">{faq.a}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── CTA ─── */}
       <section className="py-24 md:py-36 relative">
         <div className="absolute inset-0 pointer-events-none">
@@ -922,7 +1178,7 @@ export default function LandingPage() {
         </div>
         <div className="relative max-w-[600px] mx-auto px-6 text-center">
           <motion.h2
-            className="text-[clamp(1.5rem,3.5vw,2.5rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] mb-5"
+            className="font-display text-[clamp(1.5rem,3.5vw,2.5rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] mb-5"
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -987,8 +1243,33 @@ export default function LandingPage() {
       {/* ─── FOOTER ─── */}
       <footer className="pt-16 pb-8">
         <div className="max-w-[1200px] mx-auto px-6">
+          {/* Live metrics (Clover-style) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pb-10 border-b border-emerald-500/[0.06]">
+            {[
+              { value: '7', label: 'Cadence Contracts', sub: 'Live on Flow Testnet' },
+              { value: '5', label: 'Jurisdictions Monitored', sub: 'US · EU · UK · SG · CA' },
+              { value: '0%', label: 'PII On-Chain', sub: 'ZK proofs only' },
+              { value: '<1s', label: 'Verify Time', sub: 'On-chain check' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                className="text-center md:text-left"
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <p className="font-display text-[2rem] md:text-[2.5rem] font-bold tracking-tight text-white/95">
+                  {stat.value}
+                </p>
+                <p className="text-[13px] font-medium text-white/70 mt-0.5">{stat.label}</p>
+                <p className="text-[11px] text-white/35 mt-0.5">{stat.sub}</p>
+              </motion.div>
+            ))}
+          </div>
+
           {/* Top row: brand + tagline + CTA */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-10 border-b border-emerald-500/[0.06]">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-10 border-b border-emerald-500/[0.06] pt-10">
             <div className="flex items-center gap-3">
               <FlowShieldLogo size={22} />
               <span className="text-[16px] font-semibold text-white/80">FlowShield</span>
@@ -1010,6 +1291,7 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2.5">
                 <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">About</button>
                 <a href="https://github.com/Wilsawn/flowshield" target="_blank" rel="noopener noreferrer" className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Documentation</a>
+                <a href="mailto:support@flowshield.xyz" className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Contact</a>
               </div>
             </div>
             <div>
@@ -1023,6 +1305,7 @@ export default function LandingPage() {
             <div>
               <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/20 mb-4">Resources</p>
               <div className="flex flex-col gap-2.5">
+                <button onClick={() => navigate('/pricing')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Pricing</button>
                 <button onClick={() => handleNavigate('/dashboard')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Dashboard</button>
                 <button onClick={() => handleNavigate('/operator')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Operator</button>
               </div>
@@ -1032,6 +1315,7 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2.5">
                 <button onClick={() => navigate('/privacy')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Privacy</button>
                 <button onClick={() => navigate('/terms')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Terms</button>
+                <button onClick={() => navigate('/terms#refunds')} className="text-[13px] text-white/40 hover:text-white/60 transition-colors text-left">Refunds</button>
               </div>
             </div>
 

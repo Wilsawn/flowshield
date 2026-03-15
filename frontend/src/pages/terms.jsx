@@ -120,29 +120,36 @@ export default function TermsOfService() {
             </p>
           </section>
 
+          <section id="refunds">
+            <h2 className="text-[17px] font-semibold text-white/80 mb-3">11. Refunds and Cancellation</h2>
+            <p>
+              Paid subscription tiers (e.g. Growth, Scale) may be cancelled at any time. Refund eligibility depends on your plan and the timing of the request. Contact <span className="text-emerald-400/70">support@flowshield.xyz</span> or use the billing portal for subscription changes. Refund requests are handled case-by-case and in line with our payment provider&apos;s terms.
+            </p>
+          </section>
+
           <section>
-            <h2 className="text-[17px] font-semibold text-white/80 mb-3">11. Termination</h2>
+            <h2 className="text-[17px] font-semibold text-white/80 mb-3">12. Termination</h2>
             <p>
               We reserve the right to suspend or terminate your access to FlowShield at any time if we reasonably believe you have violated these Terms or applicable law. Upon termination, your compliance credential may be revoked. On-chain records of prior compliance checks will persist on the blockchain.
             </p>
           </section>
 
           <section>
-            <h2 className="text-[17px] font-semibold text-white/80 mb-3">12. Modifications</h2>
+            <h2 className="text-[17px] font-semibold text-white/80 mb-3">13. Modifications</h2>
             <p>
               We may modify these Terms at any time. Material changes will be communicated via email or platform notification at least 14 days before taking effect. Continued use of the Platform after changes constitutes acceptance.
             </p>
           </section>
 
           <section>
-            <h2 className="text-[17px] font-semibold text-white/80 mb-3">13. Governing Law</h2>
+            <h2 className="text-[17px] font-semibold text-white/80 mb-3">14. Governing Law</h2>
             <p>
               These Terms are governed by applicable law. Any disputes shall be resolved through binding arbitration, except where prohibited by law.
             </p>
           </section>
 
           <section>
-            <h2 className="text-[17px] font-semibold text-white/80 mb-3">14. Contact</h2>
+            <h2 className="text-[17px] font-semibold text-white/80 mb-3">15. Contact</h2>
             <p>
               For questions about these Terms, contact us at <span className="text-emerald-400/70">legal@flowshield.xyz</span>
             </p>

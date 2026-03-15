@@ -101,8 +101,8 @@ export default function Layout() {
         </NavLink>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5">
+      {/* Nav — compact, no stretch */}
+      <nav className="p-3 space-y-0.5 shrink-0">
         {navItems.map(({ to, label, icon: Icon }, i) => (
           <motion.div
             key={to}
@@ -121,19 +121,22 @@ export default function Layout() {
                 }`
               }
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               {label}
             </NavLink>
           </motion.div>
         ))}
       </nav>
 
-      {/* Bottom — collapsible */}
-      <div className="border-t border-emerald-500/[0.06]">
+      {/* Spacer — pushes bottom block to bottom of sidebar */}
+      <div className="flex-1 min-h-0" aria-hidden="true" />
+
+      {/* Bottom — collapsible, compact */}
+      <div className="border-t border-emerald-500/[0.06] shrink-0">
         {/* Toggle button */}
         <button
           onClick={() => setBottomOpen(!bottomOpen)}
-          className="w-full flex items-center justify-between px-4 py-2.5 text-[11px] text-white/25 hover:text-white/40 transition-colors"
+          className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-white/25 hover:text-white/40 transition-colors"
         >
           <div className="flex items-center gap-2">
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
@@ -145,7 +148,7 @@ export default function Layout() {
         <AnimatePresence>
           {bottomOpen && (
             <motion.div
-              className="px-3 pb-3 space-y-1 overflow-hidden"
+              className="px-3 pb-2 pt-0.5 space-y-1 overflow-hidden"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -192,19 +195,28 @@ export default function Layout() {
                 </NavLink>
               )}
 
-              {/* Protocol Status */}
-              <a
-                href={backendStatus.address ? `https://testnet.flowscan.io/account/${backendStatus.address}` : '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-emerald-500/[0.03] transition-colors group"
-                title={backendStatus.address ? `View ${backendStatus.address} on Flowscan` : ''}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${backendStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-white/20'}`} />
-                <span className="text-[10px] text-white/25 group-hover:text-white/40 transition-colors truncate">
-                  {backendStatus.connected ? `Flow ${backendStatus.network}` : 'Connecting...'} {backendStatus.address ? `· ${backendStatus.address.slice(0, 6)}...${backendStatus.address.slice(-4)}` : ''}
-                </span>
-              </a>
+              {/* Protocol Status — only link when we have an address */}
+              {backendStatus.address ? (
+                <a
+                  href={`https://testnet.flowscan.io/account/${backendStatus.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-emerald-500/[0.03] transition-colors group"
+                  title={`View ${backendStatus.address} on Flowscan`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-white/25 group-hover:text-white/40 transition-colors truncate">
+                    Flow {backendStatus.network} · {backendStatus.address.slice(0, 6)}...{backendStatus.address.slice(-4)}
+                  </span>
+                </a>
+              ) : (
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg group" title="Backend not connected yet">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-white/20" />
+                  <span className="text-[10px] text-white/25 truncate">
+                    {backendStatus.connected ? `Flow ${backendStatus.network}` : 'Connecting...'}
+                  </span>
+                </div>
+              )}
 
               <NavLink
                 to="/"

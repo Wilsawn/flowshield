@@ -16,9 +16,10 @@ build/
 .next/
 out/
 
-# IDE
+# IDE / editor (product repo — keep local)
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *.code-workspace
@@ -44,6 +45,10 @@ yarn-error.log*
 # Testing
 coverage/
 .nyc_output/
+
+# Docs you want to keep local only (not pushed)
+docs/private/
+docs/*.local.md
 
 # Misc
 *.tgz

@@ -782,6 +782,9 @@ export default function BuilderCopilot() {
                   <p className="text-[11px] text-white/20">
                     {searchQuery ? 'No matches found' : 'No conversations yet'}
                   </p>
+                  {!searchQuery && (
+                    <p className="text-[10px] text-white/15 mt-0.5">Start one below or pick a suggestion.</p>
+                  )}
                 </div>
               ) : (
                 filteredConversations.map(convo => (
@@ -957,7 +960,7 @@ export default function BuilderCopilot() {
                 </motion.div>
               ))}
 
-              {/* Typing indicator */}
+              {/* Loading skeleton — message-style placeholder while response streams */}
               {isLoading && (
                 <motion.div
                   className="flex gap-3"
@@ -969,11 +972,18 @@ export default function BuilderCopilot() {
                       <FlowShieldLogo size={14} />
                     </div>
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="text-[10px] text-white/20 mb-1.5 font-medium">FlowShield Copilot</div>
-                    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.02] border border-emerald-500/[0.06]">
-                      <TypingIndicator />
-                      <span className="text-[11px] text-white/15">Thinking...</span>
+                    <div className="px-4 py-3 rounded-xl bg-white/[0.02] border border-emerald-500/[0.06] space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TypingIndicator />
+                        <span className="text-[11px] text-white/25">Thinking...</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="h-2.5 w-full max-w-[90%] rounded bg-white/[0.06] animate-pulse" />
+                        <div className="h-2.5 w-[75%] rounded bg-white/[0.05] animate-pulse" />
+                        <div className="h-2.5 w-[60%] rounded bg-white/[0.05] animate-pulse" />
+                      </div>
                     </div>
                   </div>
                 </motion.div>

@@ -279,9 +279,10 @@ export default function Dashboard() {
           {/* Row 1: Title + actions */}
           <div className="flex items-start justify-between gap-6 mb-3">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight truncate">
-                {(() => { try { const u = JSON.parse(localStorage.getItem('flowshield_user') || '{}'); return u.displayName ? `Welcome, ${u.displayName}` : 'Dashboard' } catch { return 'Dashboard' } })()}
+              <h1 className="font-display text-2xl font-bold tracking-tight truncate">
+                Dashboard
               </h1>
+              <p className="text-[13px] text-white/40 mt-0.5">Your compliance status and lending activity.</p>
             </div>
             <div className="flex items-center gap-2.5 shrink-0">
               {/* Jurisdiction picker */}
@@ -376,7 +377,13 @@ export default function Dashboard() {
               <Wallet className="w-6 h-6 text-white/30" />
             </div>
             <p className="text-[15px] font-semibold text-white/80 mb-1">Connect your wallet to get started</p>
-            <p className="text-[12px] text-white/30 max-w-sm mx-auto">Connect a Flow wallet (Lilico, Blocto, or any FCL-compatible wallet) to view your compliance status, deposit, borrow, and manage your credentials.</p>
+            <p className="text-[12px] text-white/30 max-w-sm mx-auto mb-4">Connect a Flow wallet (Lilico, Blocto, or any FCL-compatible wallet) or sign in with passkey to view compliance, deposit, borrow, and manage credentials.</p>
+            <button
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[13px] font-medium hover:bg-emerald-500/30 transition-colors"
+            >
+              Launch dApp (passkey sign-in)
+            </button>
           </div>
         )}
 
@@ -431,6 +438,7 @@ export default function Dashboard() {
           live={live}
           chain={chain}
           flowBalance={flowBalance}
+          loading={live.loading}
           onStatClick={setShowStatDetail}
           onRiskClick={() => setShowRiskDetail(true)}
         />
@@ -443,6 +451,15 @@ export default function Dashboard() {
           flowBalance={flowBalance}
           onNavigate={navigate}
         />
+
+        {/* First-time tip when no position yet */}
+        {walletAddr && !live.loading && (live.deposited ?? 0) === 0 && (live.borrowed ?? 0) === 0 && (
+          <div className="mb-4 p-4 rounded-xl border border-emerald-500/[0.12] bg-emerald-500/[0.04]">
+            <p className="text-[13px] text-white/80">
+              <span className="font-medium text-emerald-400/90">First time?</span> Deposit FLOW to earn yield — gas is sponsored. Try a small amount to see the full flow.
+            </p>
+          </div>
+        )}
 
         <ActionCards
           depositAmount={depositAmount} setDepositAmount={setDepositAmount} onDeposit={handleDeposit}
