@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search } from 'lucide-react'
+import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search, CornerDownLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { API } from '@/lib/api'
@@ -728,7 +728,7 @@ export default function BuilderCopilot() {
   }, [conversations, searchQuery])
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] max-w-[960px] mx-auto">
+    <div className="flex h-[calc(100dvh-6rem)] max-w-[960px] mx-auto">
 
       {/* ── Conversation History Sidebar ── */}
       <AnimatePresence>
@@ -775,7 +775,7 @@ export default function BuilderCopilot() {
             </div>
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+            <div className="flex-1 overflow-y-auto p-2 space-y-0.5 chat-scroll">
               {filteredConversations.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageSquare className="w-5 h-5 text-white/10 mx-auto mb-2" />
@@ -787,15 +787,43 @@ export default function BuilderCopilot() {
                   )}
                 </div>
               ) : (
-                filteredConversations.map(convo => (
-                  <ConversationItem
-                    key={convo.id}
-                    convo={convo}
-                    isActive={convo.id === activeId}
-                    onSelect={() => selectConversation(convo.id)}
-                    onDelete={() => deleteConversation(convo.id)}
-                  />
-                ))
+                (() => {
+                  const now = Date.now()
+                  const today = new Date(); today.setHours(0,0,0,0)
+                  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+                  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7)
+
+                  const groups = { today: [], yesterday: [], week: [], older: [] }
+                  filteredConversations.forEach(c => {
+                    const d = new Date(c.updatedAt)
+                    if (d >= today) groups.today.push(c)
+                    else if (d >= yesterday) groups.yesterday.push(c)
+                    else if (d >= weekAgo) groups.week.push(c)
+                    else groups.older.push(c)
+                  })
+
+                  const sections = [
+                    { label: 'Today', items: groups.today },
+                    { label: 'Yesterday', items: groups.yesterday },
+                    { label: 'Previous 7 days', items: groups.week },
+                    { label: 'Older', items: groups.older },
+                  ].filter(s => s.items.length > 0)
+
+                  return sections.map(section => (
+                    <div key={section.label}>
+                      <p className="text-[9px] text-white/15 uppercase tracking-wider px-3 pt-3 pb-1 font-medium">{section.label}</p>
+                      {section.items.map(convo => (
+                        <ConversationItem
+                          key={convo.id}
+                          convo={convo}
+                          isActive={convo.id === activeId}
+                          onSelect={() => selectConversation(convo.id)}
+                          onDelete={() => deleteConversation(convo.id)}
+                        />
+                      ))}
+                    </div>
+                  ))
+                })()
               )}
             </div>
 
@@ -846,7 +874,7 @@ export default function BuilderCopilot() {
         </div>
 
         {/* ── Messages area ── */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto relative chat-scroll">
           {/* Empty state */}
           <AnimatePresence>
             {isEmptyState && (
@@ -883,27 +911,30 @@ export default function BuilderCopilot() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full max-w-lg">
                   {SUGGESTION_CARDS.map((card, i) => {
                     const Icon = card.icon
+                    const isAmber = card.color === 'amber'
                     return (
                       <motion.button
                         key={card.label}
                         onClick={() => sendMessage(card.prompt)}
-                        className={`group relative flex flex-col items-start gap-2 p-3.5 rounded-xl border text-left transition-all duration-300 ${
-                          card.color === 'amber' ? 'border-amber-500/10 hover:border-amber-500/25 hover:bg-amber-500/[0.04]' :
-                          'border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04]'
+                        className={`group relative flex flex-col items-start gap-3 p-4 rounded-xl border text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
+                          isAmber
+                            ? 'border-amber-500/10 hover:border-amber-500/25 hover:bg-amber-500/[0.04] hover:shadow-amber-500/5'
+                            : 'border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04] hover:shadow-emerald-500/5'
                         } bg-white/[0.01]`}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 + i * 0.05 }}
                       >
-                        <Icon className={`w-4 h-4 ${
-                          card.color === 'amber' ? 'text-amber-400/60' :
-                          'text-emerald-400/60'
-                        }`} />
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isAmber ? 'bg-amber-500/[0.08]' : 'bg-emerald-500/[0.06]'
+                        }`}>
+                          <Icon className={`w-4 h-4 ${isAmber ? 'text-amber-400/60' : 'text-emerald-400/60'}`} />
+                        </div>
                         <div>
                           <p className="text-[12px] font-medium text-white/60 group-hover:text-white/80 transition-colors">{card.label}</p>
                           <p className="text-[10px] text-white/20 mt-0.5 line-clamp-2 leading-relaxed">{card.prompt}</p>
                         </div>
-                        <ChevronRight className="w-3 h-3 text-white/10 absolute top-3.5 right-3 group-hover:text-white/30 transition-colors" />
+                        <ChevronRight className="w-3 h-3 text-white/10 absolute top-4 right-3 group-hover:text-white/30 group-hover:translate-x-0.5 transition-all" />
                       </motion.button>
                     )
                   })}
@@ -928,62 +959,83 @@ export default function BuilderCopilot() {
 
           {/* Messages */}
           {!isEmptyState && (
-            <div className="space-y-6 py-6 px-1">
-              {messages.map((msg, i) => (
-                <motion.div
-                  key={`${activeId}-${i}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {msg.role === 'user' ? (
-                    <div className="flex justify-end">
-                      <div className="max-w-[75%] px-4 py-3 rounded-2xl rounded-br-md bg-gradient-to-br from-emerald-500/[0.12] to-emerald-500/[0.04] border border-emerald-500/15 text-[13px] text-white/75 leading-relaxed whitespace-pre-wrap">
-                        {msg.content}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-3">
-                      <div className="shrink-0 mt-1">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/20 flex items-center justify-center">
-                          <FlowShieldLogo size={14} />
+            <div className="space-y-5 py-6 px-1">
+              {messages.map((msg, i) => {
+                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+                return (
+                  <motion.div
+                    key={`${activeId}-${i}`}
+                    className="group/msg"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {msg.role === 'user' ? (
+                      <div className="flex justify-end items-end gap-2">
+                        {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/20 transition-colors mb-1 shrink-0">{timeStr}</span>}
+                        <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-sm bg-white/[0.04] border border-white/[0.06] text-[13px] text-white/70 leading-relaxed whitespace-pre-wrap">
+                          {msg.content}
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-white/20 mb-1.5 font-medium">FlowShield Copilot</div>
-                        <div className="text-[13px] leading-relaxed">
-                          <RichContent content={msg.content} />
+                    ) : (
+                      <div className="flex gap-3 group/ai">
+                        <div className="shrink-0 mt-0.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/12 to-emerald-500/4 border border-emerald-500/15 flex items-center justify-center">
+                            <FlowShieldLogo size={14} />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] text-white/25 font-medium">FlowShield Copilot</span>
+                            {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/15 transition-colors">{timeStr}</span>}
+                          </div>
+                          <div className="text-[13px] leading-relaxed">
+                            <RichContent content={msg.content} />
+                          </div>
+                          {/* Follow-up suggestions after AI messages */}
+                          {i === messages.length - 1 && !isLoading && messages.length < 6 && (
+                            <div className="flex flex-wrap gap-1.5 mt-4">
+                              {SUGGESTION_CARDS.filter((_, si) => si < 3).map((card) => (
+                                <button
+                                  key={card.label}
+                                  onClick={() => sendMessage(card.prompt)}
+                                  className="text-[10px] px-3 py-1.5 rounded-lg border border-emerald-500/[0.06] bg-emerald-500/[0.02] text-white/25 hover:text-white/50 hover:border-emerald-500/15 hover:bg-emerald-500/[0.04] transition-all"
+                                >
+                                  {card.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                    )}
+                  </motion.div>
+                )
+              })}
 
               {/* Loading skeleton — message-style placeholder while response streams */}
               {isLoading && (
                 <motion.div
                   className="flex gap-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="shrink-0 mt-1">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/20 flex items-center justify-center">
+                  <div className="shrink-0 mt-0.5">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/12 to-emerald-500/4 border border-emerald-500/15 flex items-center justify-center">
                       <FlowShieldLogo size={14} />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-white/20 mb-1.5 font-medium">FlowShield Copilot</div>
-                    <div className="px-4 py-3 rounded-xl bg-white/[0.02] border border-emerald-500/[0.06] space-y-2">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TypingIndicator />
-                        <span className="text-[11px] text-white/25">Thinking...</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="h-2.5 w-full max-w-[90%] rounded bg-white/[0.06] animate-pulse" />
-                        <div className="h-2.5 w-[75%] rounded bg-white/[0.05] animate-pulse" />
-                        <div className="h-2.5 w-[60%] rounded bg-white/[0.05] animate-pulse" />
-                      </div>
+                    <div className="text-[10px] text-white/25 mb-1.5 font-medium">FlowShield Copilot</div>
+                    <div className="flex items-center gap-2">
+                      <TypingIndicator />
+                      <span className="text-[11px] text-white/20">Thinking...</span>
+                    </div>
+                    <div className="space-y-1.5 mt-3">
+                      <div className="h-2 w-full max-w-[85%] rounded-full bg-white/[0.04] animate-pulse" />
+                      <div className="h-2 w-[70%] rounded-full bg-white/[0.03] animate-pulse" style={{ animationDelay: '0.15s' }} />
+                      <div className="h-2 w-[55%] rounded-full bg-white/[0.03] animate-pulse" style={{ animationDelay: '0.3s' }} />
                     </div>
                   </div>
                 </motion.div>
@@ -1021,21 +1073,6 @@ export default function BuilderCopilot() {
                 {liveContext.demoMode && <span className="text-emerald-400/70"> · Demo active</span>}
                 {liveContext.riskFactors?.length > 0 && <span className="text-amber-400/50"> · {liveContext.riskFactors.length} risk factors</span>}
               </span>
-            </div>
-          )}
-
-          {/* Quick follow-up suggestions */}
-          {messages.length > 0 && messages.length < 4 && !isLoading && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {SUGGESTION_CARDS.filter((_, i) => i < 3).map((card) => (
-                <button
-                  key={card.label}
-                  onClick={() => sendMessage(card.prompt)}
-                  className="text-[10px] px-2.5 py-1.5 rounded-lg border border-emerald-500/[0.06] bg-white/[0.01] text-white/25 hover:text-white/50 hover:border-emerald-500/[0.12] transition-all duration-200"
-                >
-                  {card.label}
-                </button>
-              ))}
             </div>
           )}
 
@@ -1266,9 +1303,9 @@ export default function BuilderCopilot() {
             )}
           </AnimatePresence>
 
-          <div className="relative rounded-2xl border border-emerald-500/[0.08] bg-white/[0.015] backdrop-blur-sm overflow-hidden transition-all duration-300 focus-within:border-emerald-500/20 focus-within:shadow-[0_0_30px_rgba(52,211,153,0.04)]">
+          <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden transition-all duration-300 focus-within:border-emerald-500/20 focus-within:shadow-[0_0_30px_rgba(52,211,153,0.04)] focus-within:ring-1 focus-within:ring-emerald-500/[0.08]">
             {/* Gradient line at top */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent opacity-0 transition-opacity duration-300" style={{ opacity: input ? 1 : 0 }} />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent transition-opacity duration-300" style={{ opacity: input ? 1 : 0 }} />
 
             {/* Code attachment indicator */}
             {codeInput.trim() && !showCodeInput && (
@@ -1287,13 +1324,13 @@ export default function BuilderCopilot() {
               <div className="flex items-center gap-0.5 shrink-0">
                 <button
                   onClick={() => setShowCodeInput(!showCodeInput)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${showCodeInput ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/15 hover:text-white/40 hover:bg-emerald-500/[0.04]'}`}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${showCodeInput ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/15 hover:text-white/40 hover:bg-white/[0.04]'}`}
                   title="Import code"
                 >
-                  <Code className="w-4 h-4" />
+                  <Code className="w-3.5 h-3.5" />
                 </button>
-                <label className="w-8 h-8 rounded-lg flex items-center justify-center text-white/15 hover:text-white/40 hover:bg-emerald-500/[0.04] transition-all cursor-pointer" title="Upload file">
-                  <Upload className="w-4 h-4" />
+                <label className="w-7 h-7 rounded-lg flex items-center justify-center text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-all cursor-pointer" title="Upload file">
+                  <Upload className="w-3.5 h-3.5" />
                   <input type="file" className="hidden" accept=".cdc,.sol,.js,.ts,.rs,.py,.txt,.move" onChange={handleFileUpload} />
                 </label>
               </div>
@@ -1305,16 +1342,37 @@ export default function BuilderCopilot() {
                 onKeyDown={handleKeyDown}
                 placeholder={codeInput.trim() ? 'Ask about the attached code...' : 'Ask about compliance, risk scoring, Cadence code...'}
                 rows={1}
-                className="flex-1 bg-transparent resize-none border-0 outline-none text-[13px] text-white/80 px-2 py-2.5 placeholder:text-white/15 max-h-32 leading-relaxed"
-                style={{ minHeight: '42px' }}
+                className="flex-1 bg-transparent resize-none border-0 outline-none text-[13px] text-white/70 px-2 py-2.5 placeholder:text-white/20 max-h-32 leading-relaxed"
+                style={{ minHeight: '40px' }}
               />
-              <button
-                onClick={() => sendMessage()}
-                disabled={(!input.trim() && !codeInput.trim()) || isLoading}
-                className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 disabled:opacity-20 disabled:cursor-not-allowed bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 hover:from-emerald-500/30 hover:to-emerald-500/15 text-emerald-400 hover:shadow-[0_0_20px_rgba(52,211,153,0.1)]"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+
+              {/* Send button — animates in when input is non-empty */}
+              <AnimatePresence mode="wait">
+                {(input.trim() || codeInput.trim()) ? (
+                  <motion.button
+                    key="send"
+                    onClick={() => sendMessage()}
+                    disabled={isLoading}
+                    className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:shadow-[0_0_20px_rgba(52,211,153,0.1)]"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </motion.button>
+                ) : (
+                  <motion.div
+                    key="hint"
+                    className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-white/10"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <CornerDownLeft className="w-3.5 h-3.5" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
