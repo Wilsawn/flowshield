@@ -306,18 +306,19 @@ details[open] > p {
     100% { transform: translateX(-50%); }
   }
 
-  /* Seamless infinite marquee: 2 copies, translate -50% for perfect loop */
-  @keyframes marqueeFlowWrap {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-50%, 0, 0); }
-  }
-  .animate-marquee-flow-wrap {
-    animation: marqueeFlowWrap 25s linear infinite;
-    will-change: transform;
-  }
-  .marquee-flow:hover .animate-marquee-flow-wrap {
-    animation-play-state: paused;
-  }
+}
+
+/* Seamless infinite marquee: 2 copies, translate -50% for perfect loop */
+@keyframes marqueeFlowWrap {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.animate-marquee-flow-wrap {
+  animation: marqueeFlowWrap 25s linear infinite;
+  will-change: transform;
+}
+.marquee-flow:hover .animate-marquee-flow-wrap {
+  animation-play-state: paused;
 }
 
 /* React Flow dark theme overrides */

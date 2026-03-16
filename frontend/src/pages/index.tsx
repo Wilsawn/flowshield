@@ -566,18 +566,18 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       {/* ─── Everything below swoops over the sticky hero ─── */}
       <main className="relative z-10 rounded-t-[40px] bg-[#070c09] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] landing-grid-bg">
 
-      {/* ─── POWERED BY FLOW (seamless infinite marquee: 2 identical copies, -50% translate) ─── */}
+      {/* ─── POWERED BY FLOW (seamless infinite marquee) ─── */}
       <div className="py-8 border-b border-white/[0.04] overflow-hidden">
         <p className="text-center text-[11px] font-medium tracking-[0.12em] uppercase text-white/25 mb-5">
           Powered by Flow
         </p>
         <div className="marquee-flow overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-          <div className="flex w-max shrink-0 animate-marquee-flow-wrap">
+          <div className="animate-marquee-flow-wrap" style={{ display: 'flex', width: 'max-content' }}>
             {[1, 2].map((copy) => (
-              <div key={copy} className="flex shrink-0 items-center">
-                {['Flow', 'Cadence', '7 contracts', '5 jurisdictions', '0% PII', 'FlowEVM', 'ZK proofs', 'US · EU · UK · SG · CA'].map((item) => (
-                  <span key={`${copy}-${item}`} className="inline-flex shrink-0 items-center whitespace-nowrap text-[13px] text-white/30">
-                    <span className="px-3">{item}</span>
+              <div key={copy} className="flex shrink-0 items-center" style={{ gap: 0 }}>
+                {['Flow', 'Cadence', '7 contracts', '5 jurisdictions', '0% PII', 'FlowEVM', 'ZK proofs', 'US · EU · UK · SG · CA', 'Flow', 'Cadence', '7 contracts', '5 jurisdictions', '0% PII', 'FlowEVM', 'ZK proofs', 'US · EU · UK · SG · CA'].map((item, idx) => (
+                  <span key={`${copy}-${idx}`} className="inline-flex shrink-0 items-center whitespace-nowrap text-[13px] text-white/30">
+                    <span className="px-4">{item}</span>
                     <span className="text-white/15">·</span>
                   </span>
                 ))}
