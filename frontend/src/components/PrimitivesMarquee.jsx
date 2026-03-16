@@ -10,10 +10,21 @@ const primitives = [
   { icon: CreditCard, label: 'Sponsored Transactions', desc: 'Zero-gas user experience' },
 ]
 
-export default function PrimitivesMarquee() {
-  // Duplicate for seamless infinite scroll
-  const items = [...primitives, ...primitives]
+function PrimitiveCard({ icon: Icon, label, desc }) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-3 rounded-xl glass hover:glow-green transition-all shrink-0 group cursor-default">
+      <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+        <Icon className="h-4 w-4 text-emerald-400" />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </div>
+    </div>
+  )
+}
 
+export default function PrimitivesMarquee() {
   return (
     <div className="relative overflow-hidden py-6">
       {/* Fade edges */}
@@ -21,7 +32,7 @@ export default function PrimitivesMarquee() {
       <div className="absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
 
       <motion.div
-        className="flex gap-6 w-max"
+        className="flex w-max"
         animate={{ x: ['0%', '-50%'] }}
         transition={{
           x: {
@@ -31,20 +42,18 @@ export default function PrimitivesMarquee() {
           },
         }}
       >
-        {items.map(({ icon: Icon, label, desc }, i) => (
-          <div
-            key={`${label}-${i}`}
-            className="flex items-center gap-3 px-5 py-3 rounded-xl glass hover:glow-green transition-all shrink-0 group cursor-default"
-          >
-            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-              <Icon className="h-4 w-4 text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{label}</p>
-              <p className="text-xs text-muted-foreground">{desc}</p>
-            </div>
-          </div>
-        ))}
+        {/* Copy 1 */}
+        <div className="flex gap-6 shrink-0">
+          {primitives.map(({ icon, label, desc }) => (
+            <PrimitiveCard key={label} icon={icon} label={label} desc={desc} />
+          ))}
+        </div>
+        {/* Copy 2 */}
+        <div className="flex gap-6 shrink-0 ml-6">
+          {primitives.map(({ icon, label, desc }) => (
+            <PrimitiveCard key={`dup-${label}`} icon={icon} label={label} desc={desc} />
+          ))}
+        </div>
       </motion.div>
     </div>
   )

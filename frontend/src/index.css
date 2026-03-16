@@ -428,13 +428,16 @@
     50% { transform: translate(20%, -15%) scale(1.15); }
   }
 
-  .marquee-scroll {
-    animation: marqueeScroll 120s linear infinite;
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marqueeScroll 40s linear infinite;
+    will-change: transform;
   }
 
   @keyframes marqueeScroll {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-50%, 0, 0); }
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
   }
 
   @keyframes typewriter {
