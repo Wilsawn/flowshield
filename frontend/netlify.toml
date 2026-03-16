@@ -1,9 +1,10 @@
 [build]
-  command = "rm -rf node_modules package-lock.json && npm install && npm run build"
+  command = "npm install && npm run build"
   publish = "dist"
 
 [build.environment]
   VITE_API_URL = "https://flowshield-production.up.railway.app"
+  NODE_VERSION = "20"
 
 [[redirects]]
   from = "/*"
