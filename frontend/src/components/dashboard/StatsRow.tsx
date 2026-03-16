@@ -5,7 +5,7 @@
  *              Wallet Balance, Total Deposited, Total Borrowed, and Risk Score.
  *              Each card is clickable and opens a detail modal.
  */
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import AnimatedTicker from '@/components/ui/animated-ticker'
 
 // Mini sparkline SVG — renders a small area chart from data points
@@ -68,7 +68,7 @@ function TrendBadge({ value, prevValue }) {
 
 export default function StatsRow({ live, chain, flowBalance, loading, onStatClick, onRiskClick }) {
   // Track previous values for trend calculation
-  const [prevValues, setPrevValues] = useState({ balance: null, deposited: null, borrowed: null, risk: null })
+  const prevRef = useRef(null)
   const currentBalance = chain.account?.balance ?? live.walletBalance ?? 0
   const currentDeposited = live.deposited ?? 0
   const currentBorrowed = live.borrowed ?? 0
@@ -76,15 +76,17 @@ export default function StatsRow({ live, chain, flowBalance, loading, onStatClic
 
   useEffect(() => {
     // On first meaningful data load, snapshot as "previous" for trend
-    if (prevValues.balance === null && (currentBalance > 0 || currentDeposited > 0)) {
-      setPrevValues({
+    if (prevRef.current === null && (currentBalance > 0 || currentDeposited > 0)) {
+      prevRef.current = {
         balance: currentBalance * 0.92,
         deposited: currentDeposited * 0.95,
         borrowed: currentBorrowed * 1.03,
         risk: currentRisk * 1.05,
-      })
+      }
     }
-  }, [currentBalance, currentDeposited, currentBorrowed, currentRisk]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentBalance, currentDeposited, currentBorrowed, currentRisk])
+
+  const prevValues = prevRef.current || { balance: null, deposited: null, borrowed: null, risk: null }
 
   const sparkBalance = useSparklineData(currentBalance, 1)
   const sparkDeposited = useSparklineData(currentDeposited, 2)
