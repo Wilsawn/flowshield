@@ -19,7 +19,7 @@ export default function StatsRow({ live, chain, flowBalance, loading, onStatClic
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="p-5 rounded-xl border border-white/[0.04] bg-white/[0.01]">
+          <div key={i} className="p-5 rounded-xl border border-emerald-500/[0.06] bg-[#0a0f0c]/60">
             <div className="h-3 w-24 rounded bg-white/[0.04] animate-pulse mb-4" />
             <div className="h-7 w-20 rounded bg-white/[0.06] animate-pulse mb-2" />
             <div className="h-2.5 w-16 rounded bg-white/[0.03] animate-pulse" />
@@ -35,7 +35,7 @@ export default function StatsRow({ live, chain, flowBalance, loading, onStatClic
         <button
           key={i}
           onClick={stat.onClick}
-          className="p-5 rounded-xl border border-white/[0.04] bg-white/[0.01] text-left hover:border-white/[0.08] transition-colors"
+          className="p-5 rounded-xl border border-emerald-500/[0.08] bg-[#0a0f0c]/80 text-left hover:border-emerald-500/[0.15] transition-colors"
         >
           <span className="text-xs text-white/35 block mb-3">{stat.label}</span>
           <p className="text-[1.6rem] font-bold tracking-tight text-white">

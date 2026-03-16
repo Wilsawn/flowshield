@@ -84,7 +84,7 @@ export default function Layout() {
 
   const sidebarContent = (
     <>
-      <div className="p-5 border-b border-white/[0.06]">
+      <div className="p-5 border-b border-emerald-500/[0.06]">
         <NavLink to="/" className="flex items-center gap-2.5 group" onClick={() => setSidebarOpen(false)}>
           <FlowShieldLogo size={24} />
           <div>
@@ -103,7 +103,7 @@ export default function Layout() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
                 isActive
-                  ? 'bg-white/[0.06] text-white'
+                  ? 'bg-emerald-500/[0.08] text-emerald-50 border-l-2 border-emerald-500/50 -ml-[2px] pl-[14px]'
                   : 'text-white/35 hover:text-white/60 hover:bg-white/[0.03]'
               }`
             }
@@ -116,7 +116,7 @@ export default function Layout() {
 
       <div className="flex-1 min-h-0" aria-hidden="true" />
 
-      <div className="border-t border-white/[0.06] shrink-0">
+      <div className="border-t border-emerald-500/[0.06] shrink-0">
         <button
           onClick={() => setBottomOpen(!bottomOpen)}
           className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] text-white/25 hover:text-white/40 transition-colors duration-150"
@@ -138,7 +138,7 @@ export default function Layout() {
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
               {user ? (
-                <div className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                <div className="px-3 py-2.5 rounded-xl border border-white/[0.08] bg-[#0a0f0c]/95">
                   <div className="flex items-center gap-2.5">
                     <div className="h-7 w-7 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
                       <Fingerprint className="w-3.5 h-3.5 text-white/40" />
@@ -214,14 +214,14 @@ export default function Layout() {
   )
 
   return (
-    <div className="flex h-screen relative bg-[#0a0a0a] text-white">
+    <div className="flex h-screen relative bg-[#060e09] text-white">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-56 border-r border-white/[0.06] bg-[#0a0a0a] flex-col relative z-10">
+      <aside className="hidden md:flex w-56 border-r border-emerald-500/[0.06] bg-[#060e09] flex-col relative z-10">
         {sidebarContent}
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-sm flex items-center justify-between px-4">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 border-b border-emerald-500/[0.06] bg-[#060e09]/95 backdrop-blur-sm flex items-center justify-between px-4">
         <NavLink to="/" className="flex items-center gap-2">
           <FlowShieldLogo size={20} />
           <span className="text-[14px] font-semibold text-white">FlowShield</span>
@@ -246,7 +246,7 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
             />
             <motion.aside
-              className="md:hidden fixed top-14 left-0 bottom-0 w-56 z-50 border-r border-white/[0.06] bg-[#0a0a0a] flex flex-col"
+              className="md:hidden fixed top-14 left-0 bottom-0 w-56 z-50 border-r border-emerald-500/[0.06] bg-[#060e09] flex flex-col"
               initial={{ x: -224 }}
               animate={{ x: 0 }}
               exit={{ x: -224 }}
@@ -269,7 +269,7 @@ export default function Layout() {
       <AnimatePresence>
         {showColdStartToast && !backendStatus.connected && (
           <motion.div
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-xl border border-white/[0.08] bg-[#0a0a0a]/95 backdrop-blur-sm shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-xl border border-white/[0.08] bg-[#0a0f0c]/95 backdrop-blur-sm shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}

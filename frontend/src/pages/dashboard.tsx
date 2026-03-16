@@ -434,6 +434,8 @@ export default function Dashboard() {
           )}
         </AnimatePresence>
 
+        <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">ON-CHAIN DATA</p>
+
         <StatsRow
           live={live}
           chain={chain}
