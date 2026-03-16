@@ -314,7 +314,7 @@ details[open] > p {
   to { transform: translate3d(-50%, 0, 0); }
 }
 .animate-marquee-flow-wrap {
-  animation: marqueeFlowWrap 25s linear infinite;
+  animation: marqueeFlowWrap 45s linear infinite;
   will-change: transform;
 }
 .marquee-flow:hover .animate-marquee-flow-wrap {
