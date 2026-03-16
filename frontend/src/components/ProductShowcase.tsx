@@ -1,4 +1,5 @@
-import { useCallback, useMemo } from 'react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ReactFlow,
   Background,
@@ -107,9 +108,9 @@ function CopilotNode() {
             <p className="text-[12px] text-white/50 leading-relaxed">Your contract checks <code className="text-[11px] px-1 py-0.5 rounded bg-white/[0.06] text-emerald-400/80 font-mono">isCompliant()</code> but doesn't enforce the <span className="text-amber-400/80 font-medium">MiCA travel rule threshold</span> of 1,000.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 ml-1">
-          <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-medium text-emerald-400">Apply Fix</span>
-          <span className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-emerald-500/[0.06] text-[10px] font-medium text-white/35">View Code</span>
+        <div className="flex items-center gap-2 ml-1 nodrag">
+          <motion.span whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-medium text-emerald-400 cursor-pointer hover:bg-emerald-500/15 transition-colors">Apply Fix</motion.span>
+          <motion.span whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-emerald-500/[0.06] text-[10px] font-medium text-white/35 cursor-pointer hover:bg-white/[0.06] transition-colors">View Code</motion.span>
           <span className="ml-auto text-[9px] text-white/25 italic">Conversations synced</span>
         </div>
       </div>
@@ -117,8 +118,20 @@ function CopilotNode() {
   )
 }
 
-/* ─── Custom Node: A2A Orchestrator ─── */
+/* ─── Custom Node: A2A Orchestrator (each tab shows different content) ─── */
+const orchTabs = [
+  { label: 'Risk Scoring', status: 'done' },
+  { label: 'Anomaly Monitor', status: 'working' },
+  { label: 'Copilot Summary', status: 'pending' },
+]
+const orchTabContent = [
+  { title: 'full-risk-review chain', desc: '3 agents chained · anomaly monitor active', tag: 'A2', actions: ['View Chain', 'Logs'] },
+  { title: 'Anomaly scan running', desc: 'Checking 12 wallets for unusual patterns · 2 flagged', tag: '…', actions: ['View flagged', 'Pause'] },
+  { title: 'AI summary pending', desc: 'Copilot will generate compliance report after chains complete', tag: 'AI', actions: ['Request now', 'Schedule'] },
+]
 function OrchestratorNode() {
+  const [activeTab, setActiveTab] = useState(1)
+  const content = orchTabContent[activeTab]
   return (
     <NodeShell delay={0.24} glowColor="rgba(139,92,246,0.08)" hoverBorder="hover:border-violet-500/20" className="w-[360px] border border-violet-500/[0.12]">
       <Handle type="target" position={Position.Left} id="orch-left" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
@@ -132,39 +145,59 @@ function OrchestratorNode() {
         <span className="ml-3 text-[11px] text-white/30 font-medium">A2A Orchestrator</span>
       </div>
       <div className="p-4 space-y-3">
-        <div className="flex items-center gap-1">
-          {[
-            { label: 'Risk Scoring', status: 'done' },
-            { label: 'Anomaly Monitor', status: 'working' },
-            { label: 'Copilot Summary', status: 'pending' },
-          ].map((step, i) => (
+        <div className="flex items-center gap-1 nodrag">
+          {orchTabs.map((step, i) => (
             <div key={i} className="flex items-center flex-1">
-              <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg flex-1 text-[9px] font-medium border ${
-                step.status === 'done' ? 'bg-violet-500/[0.08] border-violet-500/20 text-violet-400/70' :
-                step.status === 'working' ? 'bg-violet-500/15 border-violet-500/30 text-violet-300' :
-                'bg-white/[0.02] border-white/[0.06] text-white/30'
-              }`}>
+              <button
+                type="button"
+                onClick={() => setActiveTab(i)}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg flex-1 text-[9px] font-medium border w-full text-left transition-all duration-200 active:scale-[0.98] ${
+                  step.status === 'done' ? 'bg-violet-500/[0.08] border-violet-500/20 text-violet-400/70 hover:bg-violet-500/[0.12]' :
+                  activeTab === i ? 'bg-violet-500/15 border-violet-500/30 text-violet-300' :
+                  'bg-white/[0.02] border-white/[0.06] text-white/30 hover:bg-white/[0.04]'
+                }`}
+              >
                 {step.status === 'done' && <span className="text-violet-400">&#10003;</span>}
-                {step.status === 'working' && <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" />}
+                {activeTab === i && step.status === 'working' && <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" />}
                 <span className="truncate">{step.label}</span>
-              </div>
+              </button>
               {i < 2 && <span className="text-white/15 mx-0.5 shrink-0">&#8250;</span>}
             </div>
           ))}
         </div>
-        <div className="rounded-xl bg-violet-500/[0.04] border border-violet-500/15 p-3 flex items-start gap-3">
-          <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
-            <span className="text-violet-400 text-[11px] font-bold">A2</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-white/70">full-risk-review chain</p>
-            <p className="text-[10px] text-white/35 mt-0.5">3 agents chained &middot; anomaly monitor active</p>
-            <div className="flex gap-2 mt-2">
-              <span className="px-2 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-[9px] font-medium text-violet-400">View Chain</span>
-              <span className="px-2 py-1 rounded bg-white/[0.03] border border-white/[0.06] text-[9px] font-medium text-white/30">Logs</span>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
+            className="rounded-xl bg-violet-500/[0.04] border border-violet-500/15 p-3 flex items-start gap-3 nodrag"
+          >
+            <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-violet-400 text-[11px] font-bold">{content.tag}</span>
             </div>
-          </div>
-        </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-white/70">{content.title}</p>
+              <p className="text-[10px] text-white/35 mt-0.5">{content.desc}</p>
+              <div className="flex gap-2 mt-2">
+                {content.actions.map((a, j) => (
+                  <motion.span
+                    key={j}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`px-2 py-1 rounded text-[9px] font-medium cursor-pointer transition-colors ${
+                      j === 0 ? 'bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/15' :
+                      'bg-white/[0.03] border border-white/[0.06] text-white/30 hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    {a}
+                  </motion.span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
         <div className="flex items-center gap-3 px-1">
           <span className="text-[9px] text-violet-400/50 font-medium">4 Agents</span>
           <span className="text-white/15">&#183;</span>
@@ -175,8 +208,22 @@ function OrchestratorNode() {
   )
 }
 
-/* ─── Custom Node: Regulatory Radar ─── */
+/* ─── Custom Node: Regulatory Radar (each tab shows different content) ─── */
+const radarTabs = [
+  { label: 'AI Scans', done: true },
+  { label: 'Finds Gaps', done: true },
+  { label: 'Human Reviews', done: false },
+  { label: 'Push On-Chain', done: false },
+]
+const radarTabContent = [
+  { title: 'Scan complete', desc: '5 jurisdictions scanned · FinCEN, MiCA, FCA, MAS, FINTRAC', icon: '✓', status: 'emerald', actions: ['View report', 'Re-scan'] },
+  { title: 'EU — MiCA Travel Rule Gap', desc: 'Threshold should be 1,000 but is set to $3,000', icon: '!', status: 'amber', actions: ['Approve Fix', 'Reject'] },
+  { title: '2 items awaiting review', desc: 'MiCA threshold fix and FCA promotion rules need sign-off', icon: '2', status: 'cyan', actions: ['Review now', 'Defer'] },
+  { title: '3 updates ready to push', desc: 'Approved fixes queued for on-chain deployment', icon: '→', status: 'emerald', actions: ['Push to chain', 'Preview'] },
+]
 function RadarNode() {
+  const [activeTab, setActiveTab] = useState(2)
+  const content = radarTabContent[activeTab]
   return (
     <NodeShell delay={0.16} glowColor="rgba(251,191,36,0.06)" hoverBorder="hover:border-amber-500/20" className="w-[400px] border border-emerald-500/[0.08]">
       <Handle type="target" position={Position.Top} id="radar-in" className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-amber-400/30" />
@@ -189,41 +236,72 @@ function RadarNode() {
         <span className="ml-3 text-[11px] text-white/30 font-medium">Regulatory Radar</span>
         <span className="ml-auto text-[8px] text-white/20 italic">Sample data</span>
       </div>
-      <div className="p-4">
-        <div className="flex items-center gap-1 mb-4">
-          {[
-            { label: 'AI Scans', done: true },
-            { label: 'Finds Gaps', done: true },
-            { label: 'Human Reviews', active: true },
-            { label: 'Push On-Chain', done: false },
-          ].map((s, i) => (
+      <div className="p-4 overflow-x-auto overflow-y-hidden">
+        <div className="relative flex items-center gap-1 mb-4 min-w-max nodrag">
+          {radarTabs.map((s, i) => (
             <div key={i} className="flex items-center flex-1">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg flex-1 text-[9px] font-medium border ${
-                s.done ? 'bg-emerald-500/[0.06] border-emerald-500/15 text-emerald-400/60' :
-                s.active ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
-                'bg-white/[0.01] border-emerald-500/[0.06] text-white/25'
-              }`}>
+              <button
+                type="button"
+                onClick={() => setActiveTab(i)}
+                className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg flex-1 text-[9px] font-medium border w-full text-left transition-all duration-200 active:scale-[0.98] ${
+                  s.done ? 'bg-emerald-500/[0.06] border-emerald-500/15 text-emerald-400/60 hover:bg-emerald-500/[0.08]' :
+                  activeTab === i ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
+                  'bg-white/[0.01] border-emerald-500/[0.06] text-white/25 hover:bg-white/[0.03]'
+                }`}
+              >
                 {s.done && <span className="text-emerald-400">&#10003;</span>}
-                {s.active && <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />}
+                {activeTab === i && !s.done && <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />}
                 <span className="truncate">{s.label}</span>
-              </div>
+              </button>
               {i < 3 && <span className="text-white/15 mx-0.5 shrink-0">&#8250;</span>}
             </div>
           ))}
         </div>
-        <div className="rounded-xl bg-amber-500/[0.04] border border-amber-500/15 p-3 flex items-start gap-3">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-            <span className="text-amber-400 text-[11px]">!</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-white/70">EU — MiCA Travel Rule Gap</p>
-            <p className="text-[10px] text-white/35 mt-0.5">Threshold should be 1,000 but is set to $3,000</p>
-            <div className="flex gap-2 mt-2">
-              <span className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-medium text-emerald-400">Approve Fix</span>
-              <span className="px-2 py-1 rounded bg-white/[0.03] border border-emerald-500/[0.06] text-[9px] font-medium text-white/30">Reject</span>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
+            className={`rounded-xl p-3 flex items-start gap-3 nodrag border ${
+              content.status === 'amber' ? 'bg-amber-500/[0.04] border-amber-500/15' :
+              content.status === 'cyan' ? 'bg-cyan-500/[0.04] border-cyan-500/15' :
+              'bg-emerald-500/[0.04] border-emerald-500/15'
+            }`}
+          >
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+              content.status === 'amber' ? 'bg-amber-500/10 border border-amber-500/20' :
+              content.status === 'cyan' ? 'bg-cyan-500/10 border border-cyan-500/20' :
+              'bg-emerald-500/10 border border-emerald-500/20'
+            }`}>
+              <span className={`text-[11px] font-semibold ${
+                content.status === 'amber' ? 'text-amber-400' :
+                content.status === 'cyan' ? 'text-cyan-400' :
+                'text-emerald-400'
+              }`}>{content.icon}</span>
             </div>
-          </div>
-        </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold text-white/70">{content.title}</p>
+              <p className="text-[10px] text-white/35 mt-0.5">{content.desc}</p>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {content.actions.map((a, j) => (
+                  <motion.span
+                    key={j}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`px-2 py-1 rounded text-[9px] font-medium cursor-pointer transition-colors ${
+                      j === 0 ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15' :
+                      'bg-white/[0.03] border border-emerald-500/[0.06] text-white/30 hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    {a}
+                  </motion.span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </NodeShell>
   )
@@ -299,88 +377,90 @@ const initialNodes = [
   },
 ]
 
-/* ─── Edges with enhanced particle styling ─── */
+/* ─── Edges: smoothstep for fluid paths, no looping ─── */
+const edgeDefaults = { animated: true, type: 'smoothstep', pathOptions: { borderRadius: 16, offset: 12 } }
 const initialEdges = [
   {
+    ...edgeDefaults,
     id: 'dash-to-copilot',
     source: 'dashboard',
     target: 'copilot',
     sourceHandle: 'dash-out',
     targetHandle: 'cop-in',
-    animated: true,
-    style: { stroke: 'rgba(52,211,153,0.3)', strokeWidth: 1.5 },
+    style: { stroke: 'rgba(52,211,153,0.35)', strokeWidth: 1.5 },
     markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.5)', width: 16, height: 16 },
     className: 'edge-delayed',
   },
   {
+    ...edgeDefaults,
     id: 'copilot-to-orchestrator',
     source: 'copilot',
     target: 'orchestrator',
     sourceHandle: 'cop-out',
     targetHandle: 'orch-top',
-    animated: true,
-    style: { stroke: 'rgba(139,92,246,0.3)', strokeWidth: 1.5 },
+    style: { stroke: 'rgba(139,92,246,0.35)', strokeWidth: 1.5 },
     markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.5)', width: 16, height: 16 },
     className: 'edge-delayed',
   },
   {
-    id: 'orchestrator-to-radar',
-    source: 'orchestrator',
-    target: 'radar',
-    sourceHandle: 'orch-left',
-    targetHandle: 'radar-in',
-    animated: true,
-    style: { stroke: 'rgba(139,92,246,0.25)', strokeWidth: 1.5 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.4)', width: 16, height: 16 },
+    ...edgeDefaults,
+    id: 'radar-to-orchestrator',
+    source: 'radar',
+    target: 'orchestrator',
+    sourceHandle: 'radar-right',
+    targetHandle: 'orch-left',
+    style: { stroke: 'rgba(251,191,36,0.3)', strokeWidth: 1.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(251,191,36,0.45)', width: 16, height: 16 },
     className: 'edge-delayed',
   },
   {
+    ...edgeDefaults,
     id: 'dash-to-compliance',
     source: 'dashboard',
     target: 'status-compliance',
     sourceHandle: 'dash-bottom',
-    animated: true,
-    style: { stroke: 'rgba(52,211,153,0.2)', strokeWidth: 1 },
+    style: { stroke: 'rgba(52,211,153,0.25)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.4)', width: 14, height: 14 },
     className: 'edge-delayed',
   },
   {
+    ...edgeDefaults,
     id: 'compliance-to-radar',
     source: 'status-compliance',
     target: 'radar',
     targetHandle: 'radar-left',
-    animated: true,
-    style: { stroke: 'rgba(251,191,36,0.2)', strokeWidth: 1 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(251,191,36,0.35)', width: 14, height: 14 },
+    style: { stroke: 'rgba(251,191,36,0.25)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(251,191,36,0.4)', width: 14, height: 14 },
     className: 'edge-delayed',
   },
   {
+    ...edgeDefaults,
     id: 'radar-to-flow',
     source: 'radar',
     target: 'status-flow',
     sourceHandle: 'radar-right',
-    animated: true,
-    style: { stroke: 'rgba(52,211,153,0.22)', strokeWidth: 1 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.35)', width: 14, height: 14 },
+    style: { stroke: 'rgba(52,211,153,0.25)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.4)', width: 14, height: 14 },
     className: 'edge-delayed',
   },
   {
+    ...edgeDefaults,
     id: 'guard-to-copilot',
     source: 'status-guard',
     target: 'copilot',
     targetHandle: 'cop-in',
-    animated: true,
-    style: { stroke: 'rgba(34,211,238,0.25)', strokeWidth: 1 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(34,211,238,0.4)', width: 14, height: 14 },
+    style: { stroke: 'rgba(34,211,238,0.3)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(34,211,238,0.45)', width: 14, height: 14 },
     className: 'edge-delayed',
   },
   {
+    ...edgeDefaults,
     id: 'orchestrator-to-flow',
     source: 'orchestrator',
     target: 'status-flow',
     sourceHandle: 'orch-bottom',
-    animated: true,
-    style: { stroke: 'rgba(139,92,246,0.2)', strokeWidth: 1 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.35)', width: 14, height: 14 },
+    style: { stroke: 'rgba(139,92,246,0.25)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(139,92,246,0.4)', width: 14, height: 14 },
     className: 'edge-delayed',
   },
 ]
@@ -393,7 +473,7 @@ export default function ProductShowcase() {
 
   return (
     <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a1410] overflow-hidden relative">
-      <ReactFlow
+        <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -404,6 +484,10 @@ export default function ProductShowcase() {
         fitView
         fitViewOptions={fitViewOptions}
         proOptions={{ hideAttribution: true }}
+        nodesDraggable
+        nodesConnectable={false}
+        elementsSelectable={false}
+        noDragClassName="nodrag"
         className="product-showcase-flow"
       >
         <Background variant="dots" color="rgba(52,211,153,0.18)" gap={22} size={1.2} />
