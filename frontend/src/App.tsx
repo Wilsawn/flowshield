@@ -9,6 +9,7 @@ import OperatorPage from './pages/operator'
 import PricingPage from './pages/pricing'
 import PrivacyPolicy from './pages/privacy'
 import TermsOfService from './pages/terms'
+import DocsPage from './pages/docs'
 import NotFound from './pages/NotFound'
 
 function RequireAuth({ children }) {
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/copilot" element={<RequireAuth><CopilotPage /></RequireAuth>} />
           <Route path="/operator" element={<RequireAuth><OperatorPage /></RequireAuth>} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/docs" element={<DocsPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

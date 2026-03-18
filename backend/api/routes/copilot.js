@@ -13,7 +13,77 @@ import { logAudit, storeScanResult, fireWebhooks, getSupabase } from '../../lib/
 import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps } from '../../lib/demo-state.js'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { safeError, rateLimit } from '../../lib/middleware.js'
-import { sanitizeMessage, sanitizeHistory, detectInjectionAttempt, logInjectionAttempt } from '../../lib/prompt-guard.js'
+import { sanitizeMessage, sanitizeHistory, sanitizeContext, detectInjectionAttempt, logInjectionAttempt, getBlockedResponse } from '../../lib/prompt-guard.js'
+
+// ── Daily prompt limits per tier ──
+// Free users get limited prompts to control Claude API costs.
+const DAILY_PROMPT_LIMITS = {
+  starter: 15,   // Free tier — enough to try it, not enough to abuse
+  growth: 200,   // Paid tier — generous daily allowance
+  scale: -1,     // Unlimited
+}
+const promptUsageStore = new Map() // key: `${email}:${YYYY-MM-DD}` → count
+
+function getPromptUsage(email) {
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const key = `${email.toLowerCase()}:${today}`
+  return { key, today, count: promptUsageStore.get(key) || 0 }
+}
+
+function incrementPromptUsage(email) {
+  const { key, count } = getPromptUsage(email)
+  promptUsageStore.set(key, count + 1)
+  return count + 1
+}
+
+// Cache tier lookups for 5 minutes to avoid hitting Supabase on every prompt
+const tierCache = new Map() // key: email → { tier, expiresAt }
+const TIER_CACHE_TTL = 5 * 60 * 1000 // 5 min
+
+async function getUserTier(email) {
+  const cacheKey = email.toLowerCase()
+  const cached = tierCache.get(cacheKey)
+  if (cached && Date.now() < cached.expiresAt) return cached.tier
+
+  // Look up user's subscription from Supabase
+  const sb = getSupabase()
+  if (sb) {
+    try {
+      // Check if user has an active subscription in api_keys table
+      const { data } = await sb
+        .from('api_keys')
+        .select('tier, enabled')
+        .eq('operator_email', cacheKey)
+        .eq('enabled', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (data?.tier) {
+        tierCache.set(cacheKey, { tier: data.tier, expiresAt: Date.now() + TIER_CACHE_TTL })
+        return data.tier
+      }
+    } catch { /* fall through to default */ }
+  }
+
+  // Default: free tier (starter)
+  tierCache.set(cacheKey, { tier: 'starter', expiresAt: Date.now() + TIER_CACHE_TTL })
+  return 'starter'
+}
+
+function getDailyLimit(tier) {
+  return DAILY_PROMPT_LIMITS[tier] ?? DAILY_PROMPT_LIMITS.starter
+}
+
+// Clean up old prompt usage entries daily (entries older than 2 days)
+setInterval(() => {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 2)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+  for (const [key] of promptUsageStore) {
+    const dateStr = key.split(':').pop()
+    if (dateStr < cutoffStr) promptUsageStore.delete(key)
+  }
+}, 3600000) // every hour
 
 const PRIVATE_KEY = hasPrivateKey()
 
@@ -176,12 +246,44 @@ router.delete('/conversations/:id', async (req, res) => {
   }
 })
 
+// ── GET /api/copilot/usage — Check current prompt usage for the day ──
+router.get('/usage', async (req, res) => {
+  const userEmail = req.userEmail || 'anonymous'
+  const tier = await getUserTier(userEmail)
+  const limit = getDailyLimit(tier)
+  const { count } = getPromptUsage(userEmail)
+  res.json({
+    used: count,
+    limit: limit === -1 ? null : limit,
+    remaining: limit === -1 ? null : Math.max(0, limit - count),
+    tier,
+    unlimited: limit === -1,
+  })
+})
+
 // ── POST /api/copilot/chat — Send message to Builder Copilot ──
-// Rate limited to 20 req/min, with prompt injection detection.
+// Rate limited to 20 req/min, with prompt injection detection and daily prompt limits.
 router.post('/chat', copilotRateLimit, async (req, res) => {
   const { message, sessionId = 'default', context = null } = req.body
   if (!message) {
     return res.status(400).json({ error: 'message is required' })
+  }
+
+  // Check daily prompt limit
+  const userEmail = req.userEmail || 'anonymous'
+  const tier = await getUserTier(userEmail)
+  const limit = getDailyLimit(tier)
+  const { count } = getPromptUsage(userEmail)
+
+  if (limit !== -1 && count >= limit) {
+    return res.status(429).json({
+      error: 'Daily prompt limit reached',
+      message: `You've used all ${limit} prompts for today. Limits reset at midnight UTC.`,
+      used: count,
+      limit,
+      tier,
+      upgradeHint: tier === 'starter' ? 'Upgrade to Growth for 200 prompts/day' : null,
+    })
   }
 
   // Sanitize input
@@ -190,23 +292,37 @@ router.post('/chat', copilotRateLimit, async (req, res) => {
     return res.status(400).json({ error: 'message is empty after sanitization' })
   }
 
-  // Detect injection attempts (flag, don't block)
+  // Detect injection attempts — block high-confidence attacks
   const injection = detectInjectionAttempt(cleanMessage)
   if (injection.detected) {
     logInjectionAttempt(req.userEmail, injection.patterns, cleanMessage)
   }
+  if (injection.blocked) {
+    return res.status(400).json({
+      response: getBlockedResponse(),
+      sessionId,
+      blocked: true,
+      injectionWarning: true,
+    })
+  }
+
+  // Sanitize context — only allow known safe keys with expected types
+  const safeContext = sanitizeContext(context)
 
   try {
     // Load conversation history from store
-    const userEmail = req.userEmail || 'anonymous'
     const convo = await getConversation(userEmail, sessionId)
     const rawHistory = convo?.messages?.map(m => ({ role: m.role, content: m.content })) || []
     const history = sanitizeHistory(rawHistory)
 
-    const result = await chat(cleanMessage, history, context, {
+    const result = await chat(cleanMessage, history, safeContext, {
       fcl: req.app.locals.fcl,
       contractAddress: req.app.locals.contractAddress,
     })
+
+    // Increment usage after successful response
+    const newCount = incrementPromptUsage(userEmail)
+    const remaining = limit === -1 ? null : Math.max(0, limit - newCount)
 
     // Generate title from first message
     const isFirst = history.length === 0
@@ -225,6 +341,13 @@ router.post('/chat', copilotRateLimit, async (req, res) => {
       response: result.response,
       sessionId,
       messageCount: storedMessages.length,
+      usage: {
+        used: newCount,
+        limit: limit === -1 ? null : limit,
+        remaining,
+        tier,
+        unlimited: limit === -1,
+      },
       ...(truncated ? { warning: 'Message was truncated to 10,000 characters' } : {}),
       ...(injection.detected ? { injectionWarning: true } : {}),
     })
@@ -334,7 +457,11 @@ router.post('/radar/parse', async (req, res) => {
 // POST /api/radar/approve — Approve drafted rules and push on-chain (REAL transaction)
 // Demo gaps are resolved IN-MEMORY only (no on-chain push) to avoid creating real compliance issues.
 // Real gaps (from actual scans) push to RuleEngine.setRule() on-chain as before.
+// Requires authentication — pushing rules on-chain is a privileged operation.
 router.post('/radar/approve', async (req, res) => {
+  if (!req.userEmail) {
+    return res.status(401).json({ error: 'Authentication required to approve rules' })
+  }
   const { jurisdiction, rules } = req.body
   if (!jurisdiction || !rules) {
     return res.status(400).json({ error: 'jurisdiction and rules are required' })
@@ -441,6 +568,9 @@ router.post('/radar/approve', async (req, res) => {
 // POST /api/radar/approve-all — Resolve ALL remaining demo gaps at once (in-memory only)
 // Demo gaps are never pushed on-chain — they only exist in the demo simulation state.
 router.post('/radar/approve-all', async (req, res) => {
+  if (!req.userEmail) {
+    return res.status(401).json({ error: 'Authentication required to approve rules' })
+  }
   const demoGaps = getDemoRadarGaps()
   if (!demoGaps || demoGaps.length === 0) {
     return res.json({ success: true, message: 'No demo gaps to resolve', resolvedGaps: 0, resolvedThreats: 0 })

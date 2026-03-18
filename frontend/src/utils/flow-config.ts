@@ -42,7 +42,7 @@ export function configureFCL(fcl) {
 
   fcl.config()
     .put('app.detail.title', 'FlowShield')
-    .put('app.detail.icon', 'https://flowshield.xyz/logo.png')
+    .put('app.detail.icon', 'https://flowshield.netlify.app/logo.png')
     .put('accessNode.api', config.accessNode)
     .put('discovery.wallet', config.discoveryWallet)
     .put('flow.network', NETWORK)

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search, CornerDownLeft } from 'lucide-react'
+import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search, CornerDownLeft, Mic, MicOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { API } from '@/lib/api'
@@ -67,6 +67,15 @@ function migrateOldFormat() {
       localStorage.removeItem('flowshield_copilot_session')
     }
   } catch { /* ignore */ }
+}
+
+// Prune conversations older than 30 days to prevent unbounded localStorage growth
+function pruneExpiredConversations() {
+  const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+  const convos = loadConversations()
+  const now = Date.now()
+  const fresh = convos.filter(c => now - (c.updatedAt || c.createdAt || 0) < MAX_AGE_MS)
+  if (fresh.length < convos.length) saveConversations(fresh)
 }
 
 function isAuthenticated() {
@@ -137,6 +146,7 @@ function TypingIndicator() {
 function CodeBlock({ lang, code }) {
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
+    if (copied) return
     navigator.clipboard.writeText(code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -179,7 +189,10 @@ function InlineMarkdown({ text }) {
         }
         const linkMatch = part.match(/\[(.*?)\]\((.*?)\)/)
         if (linkMatch) {
-          return <a key={i} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 underline underline-offset-2 decoration-emerald-400/20">{linkMatch[1]}</a>
+          const href = linkMatch[2]
+          // Only allow http/https links — block javascript:, data:, vbscript: etc.
+          const safeHref = /^https?:\/\//i.test(href) ? href : '#'
+          return <a key={i} href={safeHref} target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 underline underline-offset-2 decoration-emerald-400/20">{linkMatch[1]}</a>
         }
         return <span key={i}>{part}</span>
       })}
@@ -373,7 +386,7 @@ function ConversationItem({ convo, isActive, onSelect, onDelete }) {
 // ── Main Component ──
 export default function BuilderCopilot() {
   // Migrate old format on first load
-  useEffect(() => { migrateOldFormat() }, [])
+  useEffect(() => { migrateOldFormat(); pruneExpiredConversations() }, [])
 
   const [conversations, setConversations] = useState(loadConversations)
   const [activeId, setActiveId] = useState(loadActiveId)
@@ -393,9 +406,66 @@ export default function BuilderCopilot() {
   const [isScanning, setIsScanning] = useState(false)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [codeCopied, setCodeCopied] = useState(false)
+  const [codeFileName, setCodeFileName] = useState('')
   const codeTextareaRef = useRef(null)
   const codeScrollRef = useRef(null)
   const gutterRef = useRef(null)
+
+  // Voice-to-text
+  const [isRecording, setIsRecording] = useState(false)
+  const [voiceSupported] = useState(() => typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window))
+  const recognitionRef = useRef(null)
+
+  const toggleVoice = useCallback(() => {
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsRecording(false)
+      return
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) return
+
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    let finalTranscript = ''
+
+    recognition.onresult = (event) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' '
+        } else {
+          interim = transcript
+        }
+      }
+      setInput(prev => {
+        const base = prev.replace(/\u200B.*$/, '').trimEnd()
+        const spoken = (finalTranscript + interim).trim()
+        return base ? `${base} ${spoken}` : spoken
+      })
+    }
+
+    recognition.onerror = () => setIsRecording(false)
+    recognition.onend = () => setIsRecording(false)
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsRecording(true)
+  }, [isRecording])
+
+  // Cleanup recognition on unmount
+  useEffect(() => {
+    return () => { recognitionRef.current?.stop() }
+  }, [])
+
+  // Prompt usage tracking
+  const [promptUsage, setPromptUsage] = useState({ used: 0, limit: null, remaining: null, tier: 'starter', unlimited: false })
+  const [limitReached, setLimitReached] = useState(false)
 
   // Live context from user's on-chain state
   const [liveContext, setLiveContext] = useState(null)
@@ -407,6 +477,22 @@ export default function BuilderCopilot() {
   }, [conversations, activeId])
 
   const messages = activeConvo?.messages || []
+
+  // Fetch prompt usage on mount
+  useEffect(() => {
+    if (!isAuthenticated()) return
+    const fetchUsage = async () => {
+      try {
+        const res = await authFetch(`${API}/api/copilot/usage`)
+        if (res.ok) {
+          const data = await res.json()
+          setPromptUsage(data)
+          setLimitReached(!data.unlimited && data.remaining !== null && data.remaining <= 0)
+        }
+      } catch { /* backend unavailable */ }
+    }
+    fetchUsage()
+  }, [])
 
   // Sync conversations from backend on mount (if authenticated)
   const [backendSynced, setBackendSynced] = useState(false)
@@ -561,10 +647,20 @@ export default function BuilderCopilot() {
     const userMessage = text || input.trim()
     if (!userMessage || isLoading) return
 
+    // Block if daily limit reached
+    if (limitReached) return
+
+    // Stop voice recording if active
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsRecording(false)
+    }
+
     let fullMessage = userMessage
     if (codeInput.trim()) {
       fullMessage = `${userMessage}\n\nHere's my code (${codeLanguage}):\n\`\`\`${codeLanguage}\n${codeInput.trim()}\n\`\`\``
       setCodeInput('')
+      setCodeFileName('')
       setShowCodeInput(false)
     }
 
@@ -608,9 +704,23 @@ export default function BuilderCopilot() {
 
       if (res.ok) {
         const data = await res.json()
+        // Update prompt usage from response
+        if (data.usage) {
+          setPromptUsage(data.usage)
+          setLimitReached(!data.usage.unlimited && data.usage.remaining !== null && data.usage.remaining <= 0)
+        }
         updateConversation(convoId, c => ({
           ...c,
           messages: [...c.messages, { role: 'assistant', content: data.response, timestamp: Date.now() }],
+        }))
+      } else if (res.status === 429) {
+        // Daily limit reached
+        const errData = await res.json().catch(() => ({}))
+        setLimitReached(true)
+        if (errData.used) setPromptUsage(prev => ({ ...prev, used: errData.used, remaining: 0 }))
+        updateConversation(convoId, c => ({
+          ...c,
+          messages: [...c.messages, { role: 'assistant', content: `**Daily prompt limit reached.** You've used all ${errData.limit || 15} prompts for today. Limits reset at midnight UTC.\n\nUpgrade to Growth for 200 prompts/day.`, timestamp: Date.now() }],
         }))
       } else {
         const offlineNotice = '**Copilot is connecting...** Here\'s what I know:\n\n'
@@ -683,6 +793,7 @@ export default function BuilderCopilot() {
     }
 
     setCodeInput('')
+    setCodeFileName('')
     setShowCodeInput(false)
     setIsScanning(false)
     setIsLoading(false)
@@ -690,19 +801,23 @@ export default function BuilderCopilot() {
   }
 
   // ── File upload ──
+  const MAX_FILE_SIZE = 512 * 1024 // 512KB
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > MAX_FILE_SIZE) {
+      setInput('File too large (max 512KB). Paste the relevant code instead.')
+      e.target.value = ''
+      return
+    }
     const reader = new FileReader()
     reader.onload = (ev) => {
       setCodeInput(ev.target.result)
       setShowCodeInput(true)
+      setCodeFileName(file.name)
       const ext = file.name.split('.').pop()?.toLowerCase()
-      if (ext === 'cdc') setCodeLanguage('cadence')
-      else if (ext === 'sol') setCodeLanguage('solidity')
-      else if (ext === 'rs') setCodeLanguage('rust')
-      else if (ext === 'js' || ext === 'ts') setCodeLanguage('javascript')
-      else if (ext === 'py') setCodeLanguage('python')
+      const langMap = { cdc: 'cadence', sol: 'solidity', rs: 'rust', js: 'javascript', ts: 'typescript', py: 'python', go: 'go', rb: 'ruby', java: 'java', swift: 'swift', kt: 'kotlin', c: 'c', cpp: 'c++', h: 'c', hpp: 'c++', cs: 'c#', php: 'php', sh: 'shell', bash: 'shell', zsh: 'shell', yaml: 'yaml', yml: 'yaml', json: 'json', toml: 'toml', xml: 'xml', html: 'html', css: 'css', scss: 'scss', sql: 'sql', md: 'markdown', move: 'move', vy: 'vyper' }
+      setCodeLanguage(langMap[ext] || ext || 'text')
     }
     reader.readAsText(file)
     e.target.value = ''
@@ -728,7 +843,7 @@ export default function BuilderCopilot() {
   }, [conversations, searchQuery])
 
   return (
-    <div className="flex h-[calc(100dvh-6rem)] max-w-[960px] mx-auto">
+    <div className="flex h-[calc(100dvh-4rem)] max-w-[960px] mx-auto">
 
       {/* ── Conversation History Sidebar ── */}
       <AnimatePresence>
@@ -848,15 +963,15 @@ export default function BuilderCopilot() {
             <button
               onClick={() => setShowHistory(!showHistory)}
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                showHistory ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/20 hover:text-white/40 hover:bg-emerald-500/[0.04]'
+                showHistory ? 'bg-white/[0.06] text-white/60' : 'text-white/20 hover:text-white/40 hover:bg-white/[0.04]'
               }`}
               title="Conversation history"
             >
               <Clock className="w-4 h-4" />
             </button>
-            {activeConvo && (
+            {activeConvo && messages.length > 0 && (
               <motion.p
-                className="text-[12px] text-white/30 truncate max-w-[200px]"
+                className="text-[12px] text-white/25 truncate max-w-[200px]"
                 initial={{ opacity: 0, x: -4 }}
                 animate={{ opacity: 1, x: 0 }}
               >
@@ -866,10 +981,10 @@ export default function BuilderCopilot() {
           </div>
           <button
             onClick={createNewConversation}
-            className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-3 py-1.5 rounded-lg border border-emerald-500/[0.08] hover:border-emerald-500/[0.15] transition-all"
+            className="flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/50 px-3 py-1.5 rounded-full hover:bg-white/[0.04] transition-all"
           >
-            <Plus className="w-3 h-3" />
-            New Chat
+            <Plus className="w-3.5 h-3.5" />
+            New chat
           </button>
         </div>
 
@@ -885,72 +1000,50 @@ export default function BuilderCopilot() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
               >
-                {/* Logo orb */}
-                <div className="relative mb-8">
-                  <motion.div
-                    className="absolute inset-0 w-20 h-20 rounded-full bg-emerald-500/20 blur-xl"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.5, 0.3] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/[0.08] flex items-center justify-center backdrop-blur-sm">
-                    <FlowShieldLogo size={36} />
-                  </div>
-                </div>
+                {/* Minimal logo */}
+                <motion.div
+                  className="mb-6"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <FlowShieldLogo size={32} />
+                </motion.div>
 
-                <h2 className="text-[22px] font-bold text-white mb-2 text-center">
-                  Builder Copilot
+                <h2 className="text-[28px] font-semibold text-white/90 mb-2 text-center tracking-tight">
+                  What can I help with?
                 </h2>
-                <p className="text-[13px] text-white/30 mb-1 text-center max-w-md">
-                  AI-powered compliance assistant for Flow developers and DeFi users
-                </p>
-                <p className="text-[11px] text-white/15 mb-10 text-center">
-                  Powered by Claude &middot; Flow Testnet &middot; Conversations saved automatically
+                <p className="text-[13px] text-white/25 mb-12 text-center max-w-sm">
+                  Compliance, risk scoring, Cadence code, and DeFi regulations
                 </p>
 
-                {/* Suggestion cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full max-w-lg">
-                  {SUGGESTION_CARDS.map((card, i) => {
-                    const Icon = card.icon
-                    const isAmber = card.color === 'amber'
-                    return (
-                      <motion.button
-                        key={card.label}
-                        onClick={() => sendMessage(card.prompt)}
-                        className={`group relative flex flex-col items-start gap-3 p-4 rounded-xl border text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
-                          isAmber
-                            ? 'border-amber-500/10 hover:border-amber-500/25 hover:bg-amber-500/[0.04] hover:shadow-amber-500/5'
-                            : 'border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04] hover:shadow-emerald-500/5'
-                        } bg-white/[0.01]`}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 + i * 0.05 }}
-                      >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          isAmber ? 'bg-amber-500/[0.08]' : 'bg-emerald-500/[0.06]'
-                        }`}>
-                          <Icon className={`w-4 h-4 ${isAmber ? 'text-amber-400/60' : 'text-emerald-400/60'}`} />
-                        </div>
-                        <div>
-                          <p className="text-[12px] font-medium text-white/60 group-hover:text-white/80 transition-colors">{card.label}</p>
-                          <p className="text-[10px] text-white/20 mt-0.5 line-clamp-2 leading-relaxed">{card.prompt}</p>
-                        </div>
-                        <ChevronRight className="w-3 h-3 text-white/10 absolute top-4 right-3 group-hover:text-white/30 group-hover:translate-x-0.5 transition-all" />
-                      </motion.button>
-                    )
-                  })}
+                {/* Suggestion pills — clean, minimal */}
+                <div className="flex flex-wrap justify-center gap-2 max-w-xl">
+                  {SUGGESTION_CARDS.map((card, i) => (
+                    <motion.button
+                      key={card.label}
+                      onClick={() => sendMessage(card.prompt)}
+                      className="text-[12px] text-white/40 hover:text-white/70 px-4 py-2 rounded-full border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-200"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 + i * 0.04 }}
+                    >
+                      {card.label}
+                    </motion.button>
+                  ))}
                 </div>
 
                 {/* Saved conversations hint */}
                 {conversations.length > 0 && (
                   <motion.button
                     onClick={() => setShowHistory(true)}
-                    className="mt-8 flex items-center gap-2 text-[11px] text-white/20 hover:text-white/40 transition-colors"
+                    className="mt-10 flex items-center gap-2 text-[11px] text-white/15 hover:text-white/30 transition-colors"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                   >
                     <Clock className="w-3 h-3" />
-                    {conversations.length} saved conversation{conversations.length !== 1 ? 's' : ''} — click to view history
+                    {conversations.length} saved conversation{conversations.length !== 1 ? 's' : ''}
                   </motion.button>
                 )}
               </motion.div>
@@ -1062,30 +1155,16 @@ export default function BuilderCopilot() {
         </div>
 
         {/* ── Input area ── */}
-        <div className="pt-3 pb-1 shrink-0">
-          {/* Live context banner */}
-          {liveContext && !contextLoading && (
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-[10px] text-white/25">
-                Context: Risk {liveContext.riskScore ?? '—'}/100
-                {liveContext.anomalyCount > 0 && <span className="text-amber-400/70"> · {liveContext.anomalyCount} anomalies</span>}
-                {liveContext.demoMode && <span className="text-emerald-400/70"> · Demo active</span>}
-                {liveContext.riskFactors?.length > 0 && <span className="text-amber-400/50"> · {liveContext.riskFactors.length} risk factors</span>}
-              </span>
-            </div>
-          )}
-
+        <div className="pt-3 pb-2 shrink-0 px-1">
           {/* Code import panel */}
           <AnimatePresence>
             {showCodeInput && (
               <motion.div
-                className={`mb-3 rounded-xl overflow-hidden transition-all duration-200 group/codepanel ${
+                className={`mb-3 rounded-2xl overflow-hidden transition-all duration-200 group/codepanel border ${
                   isDraggingOver
-                    ? 'ring-1 ring-emerald-400/30 shadow-[0_0_24px_rgba(52,211,153,0.06)]'
-                    : 'ring-1 ring-white/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.3)]'
+                    ? 'border-white/[0.15] bg-white/[0.04]'
+                    : 'border-white/[0.07] bg-white/[0.02]'
                 }`}
-                style={{ background: '#0d1117' }}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -1097,136 +1176,95 @@ export default function BuilderCopilot() {
                   setIsDraggingOver(false)
                   const file = e.dataTransfer.files?.[0]
                   if (!file) return
+                  if (file.size > 512 * 1024) return // 512KB max
                   const reader = new FileReader()
                   reader.onload = (ev) => {
                     setCodeInput(ev.target.result)
                     const ext = file.name.split('.').pop()?.toLowerCase()
-                    if (ext === 'cdc') setCodeLanguage('cadence')
-                    else if (ext === 'sol') setCodeLanguage('solidity')
-                    else if (ext === 'rs') setCodeLanguage('rust')
-                    else if (ext === 'js' || ext === 'ts') setCodeLanguage('javascript')
-                    else if (ext === 'py') setCodeLanguage('python')
+                    const langMap = { cdc: 'cadence', sol: 'solidity', rs: 'rust', js: 'javascript', ts: 'typescript', py: 'python', go: 'go', rb: 'ruby', java: 'java', swift: 'swift', kt: 'kotlin', c: 'c', cpp: 'c++', h: 'c', hpp: 'c++', cs: 'c#', php: 'php', sh: 'shell', bash: 'shell', zsh: 'shell', yaml: 'yaml', yml: 'yaml', json: 'json', toml: 'toml', xml: 'xml', html: 'html', css: 'css', scss: 'scss', sql: 'sql', md: 'markdown', move: 'move', vy: 'vyper' }
+                    setCodeLanguage(langMap[ext] || ext || 'text')
+                    setCodeFileName(file.name)
                   }
                   reader.readAsText(file)
                 }}
               >
-                {/* Title bar — macOS window chrome style */}
-                <div className="flex items-center justify-between px-3 h-9" style={{ background: '#161b22' }}>
-                  <div className="flex items-center gap-3">
-                    {/* Traffic light dots */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => { setShowCodeInput(false); setCodeInput('') }}
-                        className="w-[11px] h-[11px] rounded-full bg-[#f85149]/80 hover:bg-[#f85149] transition-colors group/close flex items-center justify-center"
-                        title="Close"
-                      >
-                        <X className="w-[7px] h-[7px] text-[#300] opacity-0 group-hover/close:opacity-100 transition-opacity" strokeWidth={3} />
-                      </button>
-                      <div className="w-[11px] h-[11px] rounded-full bg-[#d29922]/60" />
-                      <div className="w-[11px] h-[11px] rounded-full bg-[#3fb950]/60" />
-                    </div>
-
-                    {/* Language pills */}
-                    <div className="flex items-center gap-0.5">
-                      {[
-                        { id: 'cadence', label: 'Cadence', ext: '.cdc' },
-                        { id: 'solidity', label: 'Solidity', ext: '.sol' },
-                        { id: 'javascript', label: 'JS', ext: '.js' },
-                        { id: 'rust', label: 'Rust', ext: '.rs' },
-                        { id: 'python', label: 'Python', ext: '.py' },
-                      ].map(lang => (
-                        <button
-                          key={lang.id}
-                          onClick={() => setCodeLanguage(lang.id)}
-                          className={`text-[10px] px-2.5 py-1 rounded-md transition-all ${
-                            codeLanguage === lang.id
-                              ? 'bg-white/[0.08] text-white/70 font-medium'
-                              : 'text-white/25 hover:text-white/45 hover:bg-white/[0.03]'
-                          }`}
-                        >
-                          {lang.label}
-                        </button>
-                      ))}
-                    </div>
+                {/* Header — file info + actions */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="w-3.5 h-3.5 text-white/20" />
+                    {codeFileName ? (
+                      <span className="text-[11px] text-white/40 font-medium">{codeFileName}</span>
+                    ) : (
+                      <span className="text-[11px] text-white/25">Code</span>
+                    )}
+                    {codeInput.trim() && (
+                      <span className="text-[10px] text-white/15">{codeLanguage}</span>
+                    )}
                   </div>
-
-                  {/* Right actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover/codepanel:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
                     {codeInput.trim() && (
                       <button
                         onClick={() => {
+                          if (codeCopied) return
                           navigator.clipboard.writeText(codeInput)
                           setCodeCopied(true)
                           setTimeout(() => setCodeCopied(false), 2000)
                         }}
-                        className="flex items-center justify-center w-7 h-7 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+                        className="flex items-center justify-center w-7 h-7 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-all"
                         title="Copy code"
                       >
                         {codeCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                       </button>
                     )}
+                    <button
+                      onClick={() => { setShowCodeInput(false); setCodeInput(''); setCodeFileName('') }}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-all"
+                      title="Close"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
-                {/* Code editor area */}
+                {/* Code area */}
                 <div
                   className="relative"
-                  style={{
-                    minHeight: codeInput.trim() ? undefined : '160px',
-                    maxHeight: '400px',
-                  }}
+                  style={{ minHeight: codeInput.trim() ? undefined : '140px', maxHeight: '400px' }}
                 >
-                  {/* Empty state overlay */}
                   {!codeInput.trim() && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
                       {isDraggingOver ? (
-                        <motion.div
-                          className="flex flex-col items-center gap-2"
-                          initial={{ scale: 0.95, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-dashed border-emerald-400/30 flex items-center justify-center">
-                            <Upload className="w-4.5 h-4.5 text-emerald-400/80" />
-                          </div>
-                          <p className="text-[12px] text-emerald-400/60 font-medium">Drop to import</p>
+                        <motion.div className="flex flex-col items-center gap-2" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                          <Upload className="w-5 h-5 text-white/30" />
+                          <p className="text-[12px] text-white/40 font-medium">Drop to import</p>
                         </motion.div>
                       ) : (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex items-center gap-1.5 text-white/10 font-mono text-[13px]">
-                            <span>{'// '}</span>
-                            <span className="text-white/20">paste your code here</span>
-                            <span className="w-[2px] h-[15px] bg-emerald-400/50 animate-pulse" />
-                          </div>
-                          <div className="flex items-center gap-3 text-[10px] text-white/15">
-                            <span className="flex items-center gap-1"><Upload className="w-3 h-3" /> drag file</span>
-                            <span className="text-white/8">|</span>
-                            <span className="font-mono">Cmd+V</span>
-                            <span className="text-white/8">|</span>
-                            <span>.cdc .sol .js .rs .py</span>
+                        <div className="flex flex-col items-center gap-2.5">
+                          <p className="text-[13px] text-white/20">Paste or drop any file</p>
+                          <div className="flex items-center gap-2 text-[10px] text-white/12">
+                            <span className="px-1.5 py-0.5 rounded border border-white/[0.06] font-mono">Cmd+V</span>
+                            <span>or drag and drop</span>
                           </div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Scrollable code area */}
                   <div
                     ref={codeScrollRef}
-                    className="flex overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:#383838_transparent] [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-[#383838] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                    className="flex overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.08)_transparent] [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-white/[0.08] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
                     style={{ maxHeight: '400px' }}
                     onScroll={() => {
-                      // Sync gutter scroll with code scroll
                       if (gutterRef.current && codeScrollRef.current) {
                         gutterRef.current.scrollTop = codeScrollRef.current.scrollTop
                       }
                     }}
                   >
-                    {/* Line numbers gutter — seamless, no border */}
                     {codeInput.trim() && (
                       <div
                         ref={gutterRef}
-                        className="select-none text-right shrink-0 py-4 pr-3 pl-4 font-mono leading-[1.55] text-[13px] overflow-hidden"
-                        style={{ color: '#484f58', minWidth: '44px' }}
+                        className="select-none text-right shrink-0 py-4 pr-3 pl-4 font-mono leading-[1.55] text-[13px] text-white/10 overflow-hidden"
+                        style={{ minWidth: '44px' }}
                         aria-hidden="true"
                       >
                         {codeInput.split('\n').map((_, i) => (
@@ -1234,20 +1272,14 @@ export default function BuilderCopilot() {
                         ))}
                       </div>
                     )}
-
-                    {/* Textarea */}
                     <textarea
                       ref={codeTextareaRef}
                       value={codeInput}
                       onChange={(e) => setCodeInput(e.target.value)}
                       placeholder=""
                       rows={codeInput.trim() ? Math.min(Math.max(codeInput.split('\n').length, 6), 20) : 6}
-                      className="w-full bg-transparent resize-none border-0 outline-none font-mono leading-[1.55] text-[13px] py-4 pr-4 placeholder:text-transparent [tab-size:2]"
-                      style={{
-                        color: '#c9d1d9',
-                        caretColor: '#58a6ff',
-                        paddingLeft: codeInput.trim() ? '0' : '44px',
-                      }}
+                      className="w-full bg-transparent resize-none border-0 outline-none font-mono leading-[1.55] text-[13px] text-white/60 py-4 pr-4 placeholder:text-transparent [tab-size:2]"
+                      style={{ caretColor: 'rgba(255,255,255,0.5)', paddingLeft: codeInput.trim() ? '0' : '44px' }}
                       spellCheck={false}
                       autoCorrect="off"
                       autoCapitalize="off"
@@ -1255,47 +1287,31 @@ export default function BuilderCopilot() {
                   </div>
                 </div>
 
-                {/* Status bar */}
-                <div className="flex items-center justify-between px-3 h-8" style={{ background: '#161b22', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  <div className="flex items-center gap-3">
+                {/* Footer */}
+                <div className="flex items-center justify-between px-3 py-2 border-t border-white/[0.06]">
+                  <div className="flex items-center gap-3 text-[10px] text-white/15">
                     {codeInput.trim() ? (
                       <>
-                        <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>
-                          Ln {codeInput.substring(0, codeTextareaRef.current?.selectionStart || 0).split('\n').length}
-                        </span>
-                        <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>
-                          {codeInput.split('\n').length} lines
-                        </span>
-                        <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>
-                          {codeInput.length.toLocaleString()} chars
-                        </span>
+                        <span>{codeInput.split('\n').length} lines</span>
+                        <span className="text-white/8">·</span>
+                        <span>{codeInput.length.toLocaleString()} chars</span>
                       </>
-                    ) : (
-                      <span className="text-[10px]" style={{ color: '#484f58' }}>Ready</span>
-                    )}
-                    <span className="text-[10px] font-medium" style={{ color: '#58a6ff' }}>{codeLanguage}</span>
+                    ) : null}
+                    <span className="text-white/30 font-medium">{codeLanguage}</span>
                   </div>
-
                   <button
                     onClick={handleScanCode}
                     disabled={!codeInput.trim() || isScanning}
-                    className="flex items-center gap-1.5 text-[11px] font-medium h-6 px-3 rounded-md transition-all disabled:opacity-20"
-                    style={{
-                      background: codeInput.trim() && !isScanning ? 'rgba(52,211,153,0.12)' : 'transparent',
-                      color: codeInput.trim() ? '#34d399' : '#484f58',
-                      border: codeInput.trim() ? '1px solid rgba(52,211,153,0.2)' : '1px solid transparent',
-                    }}
+                    className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-20 ${
+                      codeInput.trim() && !isScanning
+                        ? 'bg-white/90 text-[#060e09] hover:bg-white'
+                        : 'text-white/20'
+                    }`}
                   >
                     {isScanning ? (
-                      <>
-                        <div className="w-3 h-3 border-[1.5px] border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
-                        Scanning...
-                      </>
+                      <><div className="w-3 h-3 border-[1.5px] border-current/30 border-t-current rounded-full animate-spin" />Scanning...</>
                     ) : (
-                      <>
-                        <Scan className="w-3 h-3" />
-                        Scan
-                      </>
+                      <><Scan className="w-3 h-3" />Scan</>
                     )}
                   </button>
                 </div>
@@ -1303,57 +1319,133 @@ export default function BuilderCopilot() {
             )}
           </AnimatePresence>
 
-          <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden transition-all duration-300 focus-within:border-emerald-500/20 focus-within:shadow-[0_0_30px_rgba(52,211,153,0.04)] focus-within:ring-1 focus-within:ring-emerald-500/[0.08]">
-            {/* Gradient line at top */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent transition-opacity duration-300" style={{ opacity: input ? 1 : 0 }} />
+          {/* Recording indicator */}
+          <AnimatePresence>
+            {isRecording && (
+              <motion.div
+                className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-red-500/[0.06] border border-red-500/15"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                <span className="text-[11px] text-red-400/70 font-medium">Listening...</span>
+                <button
+                  onClick={toggleVoice}
+                  className="ml-auto text-[10px] text-red-400/50 hover:text-red-400 transition-colors"
+                >
+                  Stop
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          {/* Prompt usage indicator */}
+          {!promptUsage.unlimited && promptUsage.limit && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    promptUsage.remaining === 0 ? 'bg-red-400' :
+                    promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'bg-amber-400' :
+                    'bg-emerald-500/50'
+                  }`}
+                  style={{ width: `${Math.min(100, (promptUsage.used / promptUsage.limit) * 100)}%` }}
+                />
+              </div>
+              <span className={`text-[10px] font-medium shrink-0 ${
+                promptUsage.remaining === 0 ? 'text-red-400/70' :
+                promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'text-amber-400/70' :
+                'text-white/20'
+              }`}>
+                {promptUsage.used}/{promptUsage.limit}
+              </span>
+            </div>
+          )}
+
+          {/* Limit reached banner */}
+          {limitReached && (
+            <div className="flex items-center gap-2 px-3 py-2.5 mb-2 rounded-xl bg-red-500/[0.06] border border-red-500/15">
+              <span className="text-[11px] text-red-400/80 font-medium">Daily limit reached</span>
+              <span className="text-[10px] text-white/20">Resets at midnight UTC</span>
+              <a href="/pricing" className="ml-auto text-[10px] font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors">Upgrade</a>
+            </div>
+          )}
+
+          {/* Approaching limit warning */}
+          {!limitReached && promptUsage.remaining !== null && promptUsage.remaining > 0 && promptUsage.remaining <= 3 && (
+            <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-amber-500/[0.04] border border-amber-500/10">
+              <span className="text-[10px] text-amber-400/70 font-medium">{promptUsage.remaining} prompt{promptUsage.remaining !== 1 ? 's' : ''} remaining today</span>
+            </div>
+          )}
+
+          {/* Main input container */}
+          <div className={`relative rounded-2xl bg-white/[0.03] border border-white/[0.07] overflow-hidden transition-all duration-200 focus-within:border-white/[0.12] focus-within:bg-white/[0.04] ${limitReached ? 'opacity-50 pointer-events-none' : ''}`}>
             {/* Code attachment indicator */}
             {codeInput.trim() && !showCodeInput && (
-              <div className="flex items-center gap-2 px-3 pt-2">
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/15 text-emerald-400/70">
-                  <FileCode className="w-2.5 h-2.5" />
-                  {codeLanguage} · {codeInput.split('\n').length} lines attached
+              <div className="flex items-center gap-2 px-4 pt-3">
+                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40">
+                  <FileCode className="w-3 h-3" />
+                  {codeLanguage} · {codeInput.split('\n').length} lines
                 </span>
-                <button onClick={() => setShowCodeInput(true)} className="text-[9px] text-white/20 hover:text-white/40">edit</button>
-                <button onClick={() => setCodeInput('')} className="text-[9px] text-white/20 hover:text-red-400/60">remove</button>
+                <button onClick={() => setShowCodeInput(true)} className="text-[10px] text-white/20 hover:text-white/40">edit</button>
+                <button onClick={() => setCodeInput('')} className="text-[10px] text-white/20 hover:text-red-400/60">remove</button>
               </div>
             )}
 
-            <div className="flex items-end gap-2 p-2">
-              {/* Toolbar */}
-              <div className="flex items-center gap-0.5 shrink-0">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={codeInput.trim() ? 'Ask about the attached code...' : 'Ask about compliance, risk scoring, Cadence code...'}
+              rows={1}
+              className="w-full bg-transparent resize-none border-0 outline-none text-[13px] text-white/70 px-4 pt-4 pb-2 placeholder:text-white/20 max-h-36 leading-relaxed"
+              style={{ minHeight: '44px' }}
+            />
+
+            {/* Bottom toolbar row */}
+            <div className="flex items-center justify-between px-3 pb-3">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowCodeInput(!showCodeInput)}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${showCodeInput ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/15 hover:text-white/40 hover:bg-white/[0.04]'}`}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${showCodeInput ? 'bg-white/[0.06] text-white/50' : 'text-white/15 hover:text-white/35 hover:bg-white/[0.04]'}`}
                   title="Import code"
                 >
-                  <Code className="w-3.5 h-3.5" />
+                  <Code className="w-4 h-4" />
                 </button>
-                <label className="w-7 h-7 rounded-lg flex items-center justify-center text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-all cursor-pointer" title="Upload file">
-                  <Upload className="w-3.5 h-3.5" />
-                  <input type="file" className="hidden" accept=".cdc,.sol,.js,.ts,.rs,.py,.txt,.move" onChange={handleFileUpload} />
+                <label className="w-8 h-8 rounded-lg flex items-center justify-center text-white/15 hover:text-white/35 hover:bg-white/[0.04] transition-all cursor-pointer" title="Upload file">
+                  <Upload className="w-4 h-4" />
+                  <input type="file" className="hidden" onChange={handleFileUpload} />
                 </label>
+                {voiceSupported && (
+                  <button
+                    onClick={toggleVoice}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                      isRecording
+                        ? 'bg-red-500/15 text-red-400 animate-pulse'
+                        : 'text-white/15 hover:text-white/35 hover:bg-white/[0.04]'
+                    }`}
+                    title={isRecording ? 'Stop recording' : 'Voice input'}
+                  >
+                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
+                )}
+                {liveContext && !contextLoading && (
+                  <span className="text-[10px] text-white/15 ml-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
+                    Risk {liveContext.riskScore ?? '—'}/100
+                  </span>
+                )}
               </div>
 
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={codeInput.trim() ? 'Ask about the attached code...' : 'Ask about compliance, risk scoring, Cadence code...'}
-                rows={1}
-                className="flex-1 bg-transparent resize-none border-0 outline-none text-[13px] text-white/70 px-2 py-2.5 placeholder:text-white/20 max-h-32 leading-relaxed"
-                style={{ minHeight: '40px' }}
-              />
-
-              {/* Send button — animates in when input is non-empty */}
               <AnimatePresence mode="wait">
                 {(input.trim() || codeInput.trim()) ? (
                   <motion.button
                     key="send"
                     onClick={() => sendMessage()}
                     disabled={isLoading}
-                    className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:shadow-[0_0_20px_rgba(52,211,153,0.1)]"
+                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white/90 text-[#060e09] hover:bg-white"
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.8, opacity: 0 }}
@@ -1364,7 +1456,7 @@ export default function BuilderCopilot() {
                 ) : (
                   <motion.div
                     key="hint"
-                    className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-white/10"
+                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-white/10"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -1376,14 +1468,9 @@ export default function BuilderCopilot() {
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <span className="text-[9px] text-white/10">Powered by Claude AI</span>
-            <span className="text-[9px] text-white/[0.06]">&middot;</span>
-            <span className="text-[9px] text-white/10">Flow Testnet</span>
-            {liveContext && <><span className="text-[9px] text-white/[0.06]">&middot;</span><span className="text-[9px] text-emerald-400/20">Context-aware</span></>}
-            <span className="text-[9px] text-white/[0.06]">&middot;</span>
-            <span className="text-[9px] text-white/10">Auto-saved</span>
-          </div>
+          <p className="text-[10px] text-white/10 text-center mt-2.5">
+            FlowShield may make mistakes. Verify compliance advice independently.
+          </p>
         </div>
       </div>
     </div>

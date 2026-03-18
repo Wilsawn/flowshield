@@ -2,6 +2,30 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, Fingerprint, Bot, Lock, Cpu, Radar, ArrowRight, Scan, ChevronRight, Check, AlertTriangle, User, Copy, CheckCheck, Globe, FileCode, KeyRound, MessageSquare, Workflow } from 'lucide-react'
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'framer-motion'
+
+/* ── CSS-based scroll reveal (no compositing layer conflicts) ── */
+function Reveal({ children, className = '', delay = 0, stagger = false, as: Tag = 'div' }: {
+  children: React.ReactNode; className?: string; delay?: number; stagger?: boolean; as?: any
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } }, { threshold: 0.15 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return (
+    <Tag
+      ref={ref}
+      className={`${className} ${visible ? 'reveal-visible' : 'reveal-hidden'} ${stagger ? 'reveal-stagger' : ''}`}
+      style={delay ? { '--reveal-delay': `${delay}s` } as React.CSSProperties : undefined}
+    >
+      {children}
+    </Tag>
+  )
+}
 import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
@@ -23,6 +47,7 @@ export default function LandingPage() {
   const [redirectTarget, setRedirectTarget] = useState('/dashboard')
   const [activeAgent, setActiveAgent] = useState(0)
   const [integrationCopied, setIntegrationCopied] = useState(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
   const [googleEmail, setGoogleEmail] = useState(null)
   const navigate = useNavigate()
 
@@ -113,7 +138,8 @@ access(all) fun deposit(user: Address, amount: UFix64) {
     try {
       await navigator.clipboard.writeText(INTEGRATION_CODE)
       setIntegrationCopied(true)
-      setTimeout(() => setIntegrationCopied(false), 2000)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setIntegrationCopied(false), 2000)
     } catch { /* fallback */ }
   }
 
@@ -417,9 +443,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
     <div className="min-h-screen bg-[#070c09] text-white selection:bg-emerald-500/20 antialiased">
 
       {/* ─── HERO ─── */}
-      <FloatingNav onLaunch={handleLaunch} />
-
-      <section className="sticky top-0 z-0 h-screen overflow-hidden">
+      <section className="sticky top-0 h-screen overflow-hidden" style={{ zIndex: 0 }}>
         <DataGridHero
           rows={25}
           cols={35}
@@ -440,13 +464,21 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_50%_50%,rgba(10,10,10,0.6),rgba(10,10,10,0.25)_50%,transparent_85%)] pointer-events-none" />
             <div className="relative max-w-6xl mx-auto px-6 w-full py-32 md:py-40">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-start">
-                {/* Left: headline + CTA */}
-                <div>
+                {/* Left: headline + CTA — single stagger controller */}
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: {},
+                    visible: { transition: { staggerChildren: 0.2, delayChildren: 0.15 } },
+                  }}
+                >
                   <motion.div
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.1] bg-[#0a0a0a]/85 backdrop-blur-md mb-8"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    variants={{
+                      hidden: { opacity: 0, y: -10 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
+                    }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     <span className="text-[12px] text-white/60">Live on Flow Testnet</span>
@@ -454,9 +486,10 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
                   <motion.h1
                     className="font-display text-hero mb-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    variants={{
+                      hidden: { opacity: 0, y: -10 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
+                    }}
                   >
                     <span className="block text-white/95">DeFi compliance.</span>
                     <span className="block text-emerald-400">One import.</span>
@@ -464,37 +497,37 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
                   <motion.p
                     className="text-[18px] md:text-[20px] leading-[1.6] text-white/50 max-w-[480px] mb-10"
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    variants={{
+                      hidden: { opacity: 0, y: -10 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
+                    }}
                   >
                     Identity-based compliance for Flow smart contracts. Deploys in minutes. Zero PII on-chain.
                   </motion.p>
 
                   <motion.div
                     className="flex flex-wrap items-center gap-3"
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    variants={{
+                      hidden: { opacity: 0, y: -10 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
+                    }}
                   >
                     <Button size="lg" onClick={handleLaunch} className="text-base px-6">
                       Try FlowShield
                     </Button>
                     <Button variant="outline" size="lg" asChild className="!bg-transparent !border-white/[0.2] !text-white/70 hover:!bg-white/[0.06] hover:!text-white text-base px-6">
-                      <a href="mailto:hello@flowshield.io?subject=FlowShield%20Demo%20Request" target="_blank" rel="noopener noreferrer">
-                        Request a Demo
+                      <a href="https://github.com/Wilsawn/flowshield/issues" target="_blank" rel="noopener noreferrer">
+                        View on GitHub
                         <ChevronRight className="w-4 h-4" />
                       </a>
                     </Button>
                   </motion.div>
-                </div>
+                </motion.div>
 
                 {/* Right: product preview — Runway-style, shows what protocols get */}
-                <motion.div
+                <div
                   className="hidden lg:block mt-10"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ animation: 'heroCardIn 1.2s ease 0.8s both' }}
                 >
                   <div className="rounded-xl border border-white/[0.12] bg-[#0a0a0a] overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.5),0_8px_32px_rgba(0,0,0,0.4)]">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
@@ -556,12 +589,15 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
             </div>
           </motion.div>
         </DataGridHero>
       </section>
+
+      {/* Nav rendered AFTER hero in DOM so it always paints on top */}
+      <FloatingNav onLaunch={handleLaunch} />
 
       {/* ─── Everything below swoops over the sticky hero ─── */}
       <main className="relative z-10 rounded-t-[40px] bg-[#070c09] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] landing-grid-bg">
@@ -590,20 +626,14 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       {/* ─── PROTOCOL SURFACES (Dovetail-style: card changes on scroll) ─── */}
       <section ref={protocolSurfacesRef} id="protocol-surfaces" className="scroll-mt-20">
         <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
-          <div className="mb-12">
-            <motion.h2
-              className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15]"
-              initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            >
+          <Reveal className="mb-12">
+            <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15]">
               Built for every compliance surface
-            </motion.h2>
-            <motion.p
-              className="mt-3 text-[14px] text-white/40 leading-[1.6] max-w-xl"
-              initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
-            >
+            </h2>
+            <p className="mt-3 text-[14px] text-white/40 leading-[1.6] max-w-xl">
               Five tools for regulatory monitoring, static analysis, ZK verification, and AI-assisted development.
-            </motion.p>
-          </div>
+            </p>
+          </Reveal>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             {/* Left: stacked blocks — scroll through these to change the card */}
@@ -620,7 +650,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   >
                     <span className="flex items-center gap-2 text-[11px] font-medium text-white/25 uppercase tracking-wider mb-2">
                       <Icon className="w-3.5 h-3.5" />
-                      [{String(i + 1).padStart(2, '0')}] {agent.name.replace(/\s+/g, '_').toUpperCase()}
+                      {agent.name}
                     </span>
                     <h3 className={`font-display text-xl md:text-2xl font-semibold tracking-[-0.02em] mb-3 transition-colors ${isActive ? 'text-white/95' : 'text-white/60'}`}>
                       {agent.sub}
@@ -663,13 +693,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
             {/* Right: sticky card — updates based on scroll position */}
             <div className="lg:sticky lg:top-24">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="rounded-xl border border-white/[0.1] bg-[#0a0f0c]/98 overflow-hidden relative shadow-[0_0_0_1px_rgba(52,211,153,0.08),0_0_24px_rgba(52,211,153,0.04)]"
-              >
+              <Reveal className="rounded-xl border border-white/[0.1] bg-[#0a0f0c]/98 overflow-hidden relative shadow-[0_0_0_1px_rgba(52,211,153,0.08),0_0_24px_rgba(52,211,153,0.04)]">
                 <div className="scan-line" />
                 <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.08] bg-[#0a0f0c]/95">
                   <div className="flex items-center gap-3">
@@ -694,7 +718,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                 >
                   <div key={displayedAgent}>{agents[displayedAgent].preview}</div>
                 </div>
-              </motion.div>
+              </Reveal>
               <div className="flex items-center justify-between mt-5">
                 <p className="text-[13px] text-white/50">{agents[displayedAgent].sub}</p>
                 <Button variant="secondary" onClick={handleLaunch}>
@@ -709,34 +733,22 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       {/* ─── HOW IT WORKS ─── */}
       <section id="how-it-works" className="py-16 md:py-24 scroll-mt-20">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-10 max-w-xl">
-            <motion.h2
-              className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] sm:whitespace-nowrap"
-              initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            >
+          <Reveal className="mb-10 max-w-xl">
+            <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] sm:whitespace-nowrap">
               From fingerprint to compliant transaction
-            </motion.h2>
-            <motion.p
-              className="mt-3 text-[14px] text-white/40 leading-[1.6]"
-              initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
-            >
+            </h2>
+            <p className="mt-3 text-[14px] text-white/40 leading-[1.6]">
               Three steps: passkey sign-up, ZK proof on device, on-chain compliance check.
-            </motion.p>
-          </div>
+            </p>
+          </Reveal>
 
           <div className="space-y-20 md:space-y-28">
             {/* Step 1: Passkey Sign-Up */}
-            <motion.div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
+            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
               <div>
                 <span className="text-[11px] font-mono text-white/20 block mb-4">01</span>
                 <h3 className="text-[20px] font-semibold text-white/90 mb-3 tracking-[-0.01em]">Passkey Sign-Up</h3>
-                <p className="text-[14px] text-white/35 leading-[1.7] mb-6">
+                <p className="text-[14px] text-white/40 leading-[1.7] mb-6">
                   Users tap their fingerprint. WebAuthn creates a Flow account instantly. No seed phrases, no browser extensions, no wallet setup.
                 </p>
                 <div className="flex items-center gap-4 text-[13px]">
@@ -797,22 +809,15 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                         ) : (
                           <span className={`text-[12px] ${row.mono ? 'font-mono text-white/60' : 'text-white/60'}`}>{row.value}</span>
                         )}
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-400/50 origin-left scale-x-0 group-hover/row:scale-x-100 transition-transform duration-200" />
                       </motion.div>
                     ))}
                   </div>
                 </div>
               </motion.div>
-            </motion.div>
+            </Reveal>
 
             {/* Step 2: ZK Verification */}
-            <motion.div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
+            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
               <motion.div
                 className="order-2 lg:order-1 rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden"
                 whileHover={{ borderColor: 'rgba(255,255,255,0.1)' }}
@@ -853,7 +858,6 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                           <p className="text-[11px] text-white/20">{item.value}</p>
                         </div>
                         {item.done && <Check className="w-3.5 h-3.5 text-emerald-400/60 shrink-0" />}
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-400/50 origin-left scale-x-0 group-hover/zk:scale-x-100 transition-transform duration-200 rounded-b-lg" />
                       </motion.div>
                     )
                   })}
@@ -866,7 +870,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
               <div className="order-1 lg:order-2">
                 <span className="text-[11px] font-mono text-white/20 block mb-4">02</span>
                 <h3 className="text-[20px] font-semibold text-white/90 mb-3 tracking-[-0.01em]">Identity Verified Privately</h3>
-                <p className="text-[14px] text-white/35 leading-[1.7] mb-6">
+                <p className="text-[14px] text-white/40 leading-[1.7] mb-6">
                   A zero-knowledge proof runs entirely on the user's device. The chain only receives a boolean. Never names, documents, or addresses.
                 </p>
                 <div className="flex items-center gap-4 text-[13px]">
@@ -875,20 +879,14 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   <span className="text-white/60">Client-side proving</span>
                 </div>
               </div>
-            </motion.div>
+            </Reveal>
 
             {/* Step 3: Compliance Check */}
-            <motion.div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
+            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
               <div>
                 <span className="text-[11px] font-mono text-white/20 block mb-4">03</span>
                 <h3 className="text-[20px] font-semibold text-white/90 mb-3 tracking-[-0.01em]">Agents Enforce Compliance</h3>
-                <p className="text-[14px] text-white/35 leading-[1.7] mb-6">
+                <p className="text-[14px] text-white/40 leading-[1.7] mb-6">
                   Every transaction is compliance-checked on-chain in under a second. Agents continuously update rules from live regulatory feeds across five jurisdictions.
                 </p>
                 <Button variant="secondary" onClick={handleLaunch}>
@@ -934,7 +932,6 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-400/60" />
                           )}
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-400/50 origin-left scale-x-0 group-hover/tx:scale-x-100 transition-transform duration-200" />
                       </motion.div>
                     ))}
                   </div>
@@ -944,7 +941,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   </div>
                 </div>
               </motion.div>
-            </motion.div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -952,23 +949,17 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       {/* ─── ARCHITECTURE ─── */}
       <section id="architecture" className="py-20 md:py-28 scroll-mt-20">
         <div className="max-w-6xl mx-auto px-6">
-          <motion.h2
-            className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 text-center mb-2 leading-[1.15]"
-            initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          >
-            How everything connects
-          </motion.h2>
-          <motion.p
-            className="text-[14px] text-white/40 text-center mb-10 max-w-lg mx-auto"
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
-          >
-            Interactive diagram of the FlowShield stack. Drag to explore, scroll to zoom.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-          >
+          <Reveal className="text-center mb-10">
+            <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 mb-2 leading-[1.15]">
+              How everything connects
+            </h2>
+            <p className="text-[14px] text-white/40 max-w-lg mx-auto">
+              Interactive diagram of the FlowShield stack. Drag to explore, scroll to zoom.
+            </p>
+          </Reveal>
+          <Reveal>
             <ProductShowcase />
-          </motion.div>
+          </Reveal>
         </div>
       </section>
 
@@ -976,34 +967,17 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       <section id="integration-code" className="pt-12 pb-20 md:pt-16 md:pb-24 scroll-mt-24">
         <div className="max-w-6xl mx-auto px-6">
           {/* Copy block: centered, compact */}
-          <div className="text-center max-w-2xl mx-auto mb-6">
-            <motion.h2
-              className="font-display text-[clamp(1.75rem,4vw,2.5rem)] font-bold tracking-[-0.03em] text-white leading-[1.15] mb-3"
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
+          <Reveal className="text-center max-w-2xl mx-auto mb-6">
+            <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] mb-3">
               One import. That&apos;s it.
-            </motion.h2>
-            <motion.p
-              className="text-[14px] text-white/35 leading-[1.65]"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-            >
+            </h2>
+            <p className="text-[14px] text-white/40 leading-[1.65]">
               Add compliance to any Cadence contract with a single import. The highlighted line is the only change to your existing code.
-            </motion.p>
-          </div>
+            </p>
+          </Reveal>
 
           {/* Code block: opaque for readability */}
-          <motion.div
-            className="max-w-3xl mx-auto rounded-xl border border-white/[0.08] bg-[#0a0f0c]/95 overflow-hidden"
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
+          <Reveal className="max-w-3xl mx-auto rounded-xl border border-white/[0.08] bg-[#0a0f0c]/95 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
                 <div className="flex items-center gap-2">
                   <span className="text-[12px] font-medium text-white/70">LendingPool.cdc</span>
@@ -1065,51 +1039,38 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   </div>
                 </div>
               </div>
-            </motion.div>
-          <motion.div
-            className="mt-10 flex justify-center"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
+            </Reveal>
+          <Reveal className="mt-10 flex justify-center">
             <Button variant="outline" size="lg" onClick={handleLaunch} className="!border-white/[0.15] !text-white/80">
               Add to your protocol <ArrowRight className="w-3.5 h-3.5" />
             </Button>
-          </motion.div>
+          </Reveal>
         </div>
       </section>
 
       {/* ─── FAQs ─── */}
       <section id="faq" className="py-20 md:py-28 border-t border-white/[0.06] scroll-mt-20">
         <div className="max-w-6xl mx-auto px-6">
-          <motion.h2
-            className="font-display text-[clamp(1.5rem,3.5vw,2rem)] font-bold tracking-[-0.025em] text-white/90 text-center mb-2"
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          >
-            FAQs
-          </motion.h2>
-          <motion.p
-            className="text-[14px] text-white/40 text-center mb-12 max-w-md mx-auto"
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
-          >
-            Common questions about FlowShield, integration, and compliance.
-          </motion.p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Reveal className="text-center mb-12">
+            <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 mb-2">
+              FAQs
+            </h2>
+            <p className="text-[14px] text-white/40 max-w-md mx-auto">
+              Common questions about FlowShield, integration, and compliance.
+            </p>
+          </Reveal>
+          <Reveal className="grid grid-cols-1 md:grid-cols-2 gap-4" stagger>
             {[
               { q: 'What is FlowShield?', a: 'An autonomous compliance layer for DeFi on Flow. One on-chain boolean per user, regulatory scanning across five jurisdictions, zero PII on-chain via zero-knowledge proofs.' },
               { q: 'Who is it for?', a: 'Flow protocols (lending, DEXs, NFT marketplaces), compliance operators, and end users who get a passkey-based credential without seed phrases.' },
               { q: 'Who pays?', a: 'Protocols pay for on-chain compliance checks. End users get credentials free. B2B and enterprise pricing available for custom deployments.' },
               { q: 'Is my data stored on-chain?', a: 'No. Only a boolean result and optional risk score are on-chain. Identity data stays off-chain. Verification uses zero-knowledge proofs.' },
               { q: 'How do I integrate?', a: 'Import ComplianceAction, call verify(user) before any restricted action, handle the boolean. One line of code.' },
-              { q: 'Pricing and support?', a: 'Start with a free trial. No credit card required. For custom deployments or technical questions, reach out to support@flowshield.xyz.' },
-            ].map((faq, i) => (
-              <motion.details
+              { q: 'Pricing and support?', a: 'Start with a free trial. No credit card required. For questions or feedback, open an issue on our GitHub repository.' },
+            ].map((faq) => (
+              <details
                 key={faq.q}
                 className="group rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition-all duration-200 hover:border-white/[0.08] hover:bg-white/[0.04] cursor-pointer"
-                initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
               >
                 <summary className="flex items-center justify-between gap-4 px-5 py-4 list-none select-none">
                   <span className="text-[14px] font-medium text-white/70 group-open:text-white/90 transition-colors">
@@ -1120,9 +1081,9 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                 <p className="text-[13px] text-white/40 leading-[1.75] px-5 pb-5 pt-0">
                   {faq.a}
                 </p>
-              </motion.details>
+              </details>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -1131,10 +1092,10 @@ access(all) fun deposit(user: Address, amount: UFix64) {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col items-center gap-8 text-center">
             <div>
-              <h2 className="font-display text-[clamp(1.5rem,3.5vw,2rem)] font-bold tracking-[-0.025em] text-white/90 mb-3">
+              <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 mb-3">
                 Ready to add compliance to your protocol?
               </h2>
-              <p className="text-[14px] text-white/45 max-w-md mx-auto">
+              <p className="text-[14px] text-white/40 max-w-md mx-auto">
                 Launch the app to create credentials, integrate ComplianceAction, or explore the dashboard.
               </p>
             </div>
@@ -1175,7 +1136,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
               <div className="flex flex-col gap-2.5">
                 <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-[13px] text-white/35 hover:text-white/60 transition-colors text-left">About</button>
                 <a href="https://github.com/Wilsawn/flowshield" target="_blank" rel="noopener noreferrer" className="text-[13px] text-white/35 hover:text-white/60 transition-colors text-left">Documentation</a>
-                <a href="mailto:support@flowshield.xyz" className="text-[13px] text-white/35 hover:text-white/60 transition-colors text-left">Contact</a>
+                <a href="https://github.com/Wilsawn/flowshield/issues" target="_blank" rel="noopener noreferrer" className="text-[13px] text-white/35 hover:text-white/60 transition-colors text-left">Contact</a>
               </div>
             </div>
             <div>

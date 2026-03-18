@@ -73,10 +73,15 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         const walletData = (() => {
           try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} }
         })()
-        const userAddress = walletData.addr || '0x93c691a98b975493'
+        const userAddress = walletData.addr
+        if (!userAddress) {
+          addStep('No wallet connected', 'Connect a wallet before making transactions', 'error')
+          setError('No wallet connected. Please connect your Flow wallet first.')
+          return
+        }
         const walletEmail = walletData.email || null
 
-        const credRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
+        const credRes = await authFetch(`${API}/api/compliance/status/${encodeURIComponent(userAddress)}`)
         const credData = await credRes.json()
 
         if (!credData.hasCredential || !credData.isValid) {
@@ -88,7 +93,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
             updateLastStep('No credential — will auto-mint during transaction', 'Skipping standalone mint (no email for custodial lookup)')
           } else {
             updateLastStep('No credential found — issuing...', 'Verifying identity and issuing credential', 'active')
-            const mintRes = await fetch(`${API}/api/accounts/mint-credential`, {
+            const mintRes = await authFetch(`${API}/api/accounts/mint-credential`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: walletEmail, jurisdiction: credData.jurisdiction || 'US', riskScore: 15 }),
@@ -110,7 +115,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         // Step 2: Real on-chain compliance check — re-read after any mint above
         addStep('On-chain compliance check', 'Verifying credential on Flow testnet', 'active')
         await new Promise(r => setTimeout(r, 400))
-        const verifyRes = await fetch(`${API}/api/compliance/status/${userAddress}`)
+        const verifyRes = await authFetch(`${API}/api/compliance/status/${encodeURIComponent(userAddress)}`)
         const verifyData = await verifyRes.json()
         if (!verifyData.hasCredential || !verifyData.isValid) {
           updateLastStep('Compliance check failed', 'No valid credential on this address — transaction blocked', 'error')

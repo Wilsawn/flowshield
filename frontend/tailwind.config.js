@@ -42,6 +42,24 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Claude-style chat input tokens
+        'claude-bg': {
+          0: 'var(--claude-bg-0)',
+          100: 'var(--claude-bg-100)',
+          200: 'var(--claude-bg-200)',
+          300: 'var(--claude-bg-300)',
+        },
+        'claude-text': {
+          100: 'var(--claude-text-100)',
+          200: 'var(--claude-text-200)',
+          300: 'var(--claude-text-300)',
+          400: 'var(--claude-text-400)',
+          500: 'var(--claude-text-500)',
+        },
+        'claude-accent': {
+          DEFAULT: 'var(--claude-accent)',
+          hover: 'var(--claude-accent-hover)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

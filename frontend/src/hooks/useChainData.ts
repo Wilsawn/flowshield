@@ -21,13 +21,15 @@ export default function useChainData(address) {
   })
 
   const fetchAll = useCallback(async () => {
-    const addr = address || '0x93c691a98b975493'
+    if (!address) { setData(prev => ({ ...prev, loading: false })); return }
+    const addr = address
     try {
+      const safeAddr = encodeURIComponent(addr)
       const [accountRes, contractsRes, blockRes, complianceRes] = await Promise.allSettled([
-        fetch(`${API}/api/chain/account/${addr}`).then(r => r.json()),
-        fetch(`${API}/api/chain/contracts/${addr}`).then(r => r.json()),
+        fetch(`${API}/api/chain/account/${safeAddr}`).then(r => r.json()),
+        fetch(`${API}/api/chain/contracts/${safeAddr}`).then(r => r.json()),
         fetch(`${API}/api/chain/blocks/latest`).then(r => r.json()),
-        fetch(`${API}/api/compliance/status/${addr}`).then(r => r.json()),
+        fetch(`${API}/api/compliance/status/${safeAddr}`).then(r => r.json()),
       ])
 
       setData({
@@ -45,7 +47,7 @@ export default function useChainData(address) {
 
   const fetchRules = useCallback(async (jurisdictionCode) => {
     try {
-      const res = await fetch(`${API}/api/compliance/rules/${jurisdictionCode}`)
+      const res = await fetch(`${API}/api/compliance/rules/${encodeURIComponent(jurisdictionCode)}`)
       if (res.ok) {
         const data = await res.json()
         setData(prev => ({ ...prev, jurisdictionRules: data }))

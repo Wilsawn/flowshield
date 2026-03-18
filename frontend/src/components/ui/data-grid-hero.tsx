@@ -45,6 +45,9 @@ export default function DataGridHero({
     const centerRow = Math.floor(rows / 2)
     const centerCol = Math.floor(cols / 2)
 
+    // Batch all cells into a fragment → single DOM insertion instead of 875 reflows
+    const fragment = document.createDocumentFragment()
+
     for (let i = 0; i < total; i++) {
       const cell = document.createElement('div')
       cell.className = 'grid-cell'
@@ -71,8 +74,10 @@ export default function DataGridHero({
         cell.style.animationDelay = `${delay.toFixed(3)}s`
       }
 
-      container.appendChild(cell)
+      fragment.appendChild(cell)
     }
+
+    container.appendChild(fragment)
   }, [rows, cols, spacing, color, animationType, pulseEffect, duration, opacityMin, opacityMax, mouseGlow])
 
   useEffect(() => {

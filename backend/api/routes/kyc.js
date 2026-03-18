@@ -108,7 +108,7 @@ router.post('/start', async (req, res) => {
       const frontendUrl = process.env.FRONTEND_URL || ''
       const callbackUrl = process.env.VERIFF_CALLBACK_URL
         || (frontendUrl.startsWith('https') ? frontendUrl : null)
-        || 'https://flowshield.xyz/onboarding'
+        || 'https://flowshield.netlify.app/onboarding'
 
       const sessionRes = await fetch(`${VERIFF_API}/sessions`, {
         method: 'POST',

@@ -292,23 +292,16 @@ export default function FlowAutomation({ onAuditEntry }) {
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-[11px] text-white/30">
-            {enabledCount} of {automations.length} active
+      <div className="flex items-center gap-3">
+        <span className="text-[11px] text-white/30">
+          {enabledCount} of {automations.length} active
+        </span>
+        {enabledCount > 0 && (
+          <span className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">
+            <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+            Running
           </span>
-          {enabledCount > 0 && (
-            <span className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-              Running
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {['Scheduled Transactions', 'Flow Agents', 'Flow Actions'].map(p => (
-            <span key={p} className="text-[8px] px-1.5 py-0.5 rounded bg-white/[0.03] text-white/15 font-medium">{p}</span>
-          ))}
-        </div>
+        )}
       </div>
 
       {/* Automation cards */}

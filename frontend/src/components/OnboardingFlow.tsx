@@ -5,6 +5,7 @@ import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 import { signInWithGoogle } from '@/lib/supabase'
 import isEmail from 'validator/lib/isEmail'
 import Mailcheck from 'mailcheck'
@@ -125,7 +126,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
       await signInWithGoogle()
       // Redirect happens automatically — user returns via index.jsx callback
     } catch (err) {
-      console.error('[FlowShield] Google sign-in error:', err)
+      // Google sign-in failed
       setError(`Google sign-in failed: ${err.message}`)
       setGoogleLoading(false)
     }
@@ -182,7 +183,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
         return
       }
     } catch (err) {
-      console.warn('[FlowShield] WebAuthn:', err.name)
+      // WebAuthn error handled below by name
 
       if (err.name === 'InvalidStateError') {
         passkeySuccess = true
@@ -195,7 +196,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
           : 'Too many failed attempts. Please go back and try again.')
         return
       } else {
-        console.warn('[FlowShield] WebAuthn error:', err.name)
+        // WebAuthn unexpected error
         setScanPulse(false)
         setPasskeyAttempts(prev => prev + 1)
         setError('Passkey verification failed. Please try again.')
@@ -239,10 +240,10 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
           }))
           window.dispatchEvent(new Event('storage'))
         } else if (acctData.error) {
-          console.error('[FlowShield] Account creation failed:', acctData.error)
+          // Account creation returned error — will retry
         }
       } catch (err) {
-        console.warn('[FlowShield] Account creation attempt:', err.message)
+        // Account creation network error — will retry
       }
       if (!userFlowAddress && retries > 0) {
         await new Promise(r => setTimeout(r, 1500))
@@ -267,7 +268,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
       })
       kycSession = await res.json()
     } catch (err) {
-      console.warn('[FlowShield] KYC start:', err.message)
+      // KYC start failed — non-fatal, continue
     }
 
     if (kycSession?.mode === 'veriff' && kycSession.verificationUrl) {
@@ -286,7 +287,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
         expiryTimestamp,
       })
     } catch (err) {
-      console.warn('[FlowShield] ZK proof generation:', err.message)
+      // ZK proof generation failed — non-fatal
     }
 
     setCurrentVerifyStep(3)
@@ -303,13 +304,9 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
 
     let mintResult = null
     try {
-      const token = localStorage.getItem('flowshield_token')
-      const mintRes = await fetch(`${API}/api/accounts/mint-credential`, {
+      const mintRes = await authFetch(`${API}/api/accounts/mint-credential`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           jurisdiction: jurisdiction || 'US',
@@ -325,7 +322,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
         return
       }
 
-      console.log('[FlowShield] Credential minted on-chain:', mintResult.txId)
+      // Credential minted successfully
     } catch (err) {
       setScanPulse(false)
       setError(`Credential issuance failed: ${err.message}`)
@@ -402,7 +399,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
           <span className="text-[11px] font-mono text-emerald-400/50 tracking-wider uppercase">
             Step {stepIndex[step] + 1} of 5
           </span>
-          <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/20 to-transparent" />
+          <div className="flex-1 h-px bg-white/[0.06]" />
         </motion.div>
 
         {/* Progress bar */}

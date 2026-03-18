@@ -563,7 +563,7 @@ async function cmdLogin(email) {
   } catch (err) {
     stop()
     if (err.message.includes('No account found')) {
-      error(`No account found for ${email}. Create one at https://flowshield.xyz`)
+      error(`No account found for ${email}. Create one at https://flowshield.netlify.app`)
     } else {
       error(`Login failed: ${err.message}`)
     }
@@ -600,7 +600,7 @@ function cmdHelp() {
   log(`  ${c.dim}$${c.reset} FLOWSHIELD_API=http://localhost:3001 flowshield status`)
   log(``)
   log(`${c.bold}Contract Address:${c.reset} ${c.cyan}${CONTRACT_ADDRESS}${c.reset} (Flow Testnet)`)
-  log(`${c.bold}Documentation:${c.reset}    ${c.cyan}https://flowshield.xyz/docs${c.reset}`)
+  log(`${c.bold}Documentation:${c.reset}    ${c.cyan}https://github.com/Wilsawn/flowshield${c.reset}`)
   log(``)
 }
 

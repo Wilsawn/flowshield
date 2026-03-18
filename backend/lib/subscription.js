@@ -184,7 +184,7 @@ function requireTier(minimumTier) {
       return res.status(403).json({
         error: `This endpoint requires ${minimumTier} tier or above`,
         currentTier: protocol.tier,
-        upgrade: `Contact sales@flowshield.xyz to upgrade to ${minimumTier}`,
+        upgrade: `Upgrade to ${minimumTier} tier via the billing portal`,
       })
     }
 
@@ -222,8 +222,8 @@ function getPricing() {
 // Seed demo protocols (dev only — never in production)
 if (process.env.NODE_ENV !== 'production') {
   registerProtocol('demo-starter-key', { name: 'Demo DeFi Protocol', tier: 'starter', contactEmail: 'demo@example.com' })
-  registerProtocol('demo-growth-key', { name: 'FlowShield Growth Demo', tier: 'growth', contactEmail: 'growth@flowshield.xyz' })
-  registerProtocol('demo-scale-key', { name: 'FlowShield Scale', tier: 'scale', contactEmail: 'scale@flowshield.xyz' })
+  registerProtocol('demo-growth-key', { name: 'FlowShield Growth Demo', tier: 'growth', contactEmail: 'demo@example.com' })
+  registerProtocol('demo-scale-key', { name: 'FlowShield Scale', tier: 'scale', contactEmail: 'demo@example.com' })
 }
 
 export {

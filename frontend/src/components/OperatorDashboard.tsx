@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ShieldCheck, ShieldAlert, ShieldX, RefreshCw, AlertTriangle, Clock, Globe, Loader2, Radio, Zap, TrendingDown, Scan, Wallet, Calendar } from 'lucide-react'
+import { ShieldCheck, RefreshCw, AlertTriangle, Clock, Globe, Loader2, Radio, Zap, TrendingDown, Scan, Wallet, Calendar } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import SpotlightCard from '@/components/ui/spotlight-card'
@@ -156,31 +156,32 @@ export default function OperatorDashboard() {
   }
 
 
+  const actionItems = [
+    ...(live.anomalyCount > 0 ? [`${live.anomalyCount} anomal${live.anomalyCount === 1 ? 'y' : 'ies'} detected`] : []),
+    ...(live.riskFactors?.length > 0 ? [`${live.riskFactors.length} risk factor${live.riskFactors.length === 1 ? '' : 's'}`] : []),
+    ...(!live.hasCredential ? ['No compliance credential'] : []),
+  ]
+
   return (
     <div className="space-y-6">
-      {/* Demo data banner */}
-      {demoActive && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.06]">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-          <p className="text-[12px] text-amber-200/90">
-            Demo mode active — simulated threats are shown below. Live Flow Testnet metrics still apply. Use <strong>Clear Threat</strong> to reset.
-          </p>
-        </div>
-      )}
+      {/* ─── Status bar: connection + demo ─── */}
+      <div className="flex items-center gap-4">
+        {live.isLive && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] text-emerald-400/70 font-medium">Flow Testnet</span>
+          </div>
+        )}
+        {demoActive && (
+          <div className="flex items-center gap-1.5 text-[11px] text-amber-400/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
+            <span>Demo mode</span>
+          </div>
+        )}
+        {live.lastUpdated && <span className="text-[10px] text-white/15">{live.lastUpdated.toLocaleTimeString()}</span>}
+      </div>
 
-      {/* Live indicator */}
-      {live.isLive && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[11px] font-medium text-emerald-400/70">Connected to Flow Testnet</span>
-          {live.lastUpdated && <span className="text-[10px] text-white/20">· Updated {live.lastUpdated.toLocaleTimeString()}</span>}
-        </div>
-      )}
-
-      {/* ─── OVERVIEW ─── */}
-      <div>
-        <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/25 mb-3">Overview</p>
-        {/* Stats Overview — Real from Flow testnet */}
+      {/* ─── Stat cards ─── */}
       {live.loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((i) => (
@@ -199,8 +200,8 @@ export default function OperatorDashboard() {
           {[
             { label: 'Wallet Balance', value: live.walletData?.balance ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: live.isLive ? `${live.address?.slice(0,6)}...${live.address?.slice(-4)} · FLOW` : 'Loading...', decimals: 2 },
             { label: 'Risk Score', value: live.riskScore ?? 0, icon: <ShieldCheck className="w-4 h-4" />, color: live.riskTier === 'compliant' ? 'text-emerald-400' : 'text-amber-400', sub: `Tier: ${live.riskTier || '—'} · ${live.riskFactors?.length || 0} factors` },
-            { label: 'Compliance', value: live.hasCredential ? 'Active' : 'Inactive', icon: <ShieldAlert className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-red-400', sub: live.hasCredential ? `${live.credentialTier || 'compliant'} · credential valid` : 'No credential issued', noTicker: true, dot: live.hasCredential ? 'bg-emerald-400' : 'bg-red-400' },
-            { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <ShieldX className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
+            { label: 'Compliance', value: live.hasCredential ? 'Active' : 'Inactive', icon: <ShieldCheck className="w-4 h-4" />, color: live.hasCredential ? 'text-emerald-400' : 'text-red-400', sub: live.hasCredential ? `${live.credentialTier || 'compliant'} · credential valid` : 'No credential issued', noTicker: true, dot: live.hasCredential ? 'bg-emerald-400' : 'bg-red-400' },
+            { label: 'Transactions (24h)', value: live.walletData?.txCount24h ?? 0, icon: <Wallet className="w-4 h-4" />, color: 'text-white/80', sub: `Account age: ${live.walletData?.accountAgeDays ?? '—'} days` },
           ].map((stat, i) => (
             <SpotlightCard key={i} className="p-5">
               <div className="flex items-center justify-between mb-4">
@@ -209,7 +210,7 @@ export default function OperatorDashboard() {
               </div>
               <p className={`text-[1.75rem] font-bold tracking-tight ${stat.color} flex items-center gap-2.5`}>
                 {stat.dot && <span className={`w-2.5 h-2.5 rounded-full ${stat.dot} shrink-0 shadow-[0_0_8px_currentColor]`} />}
-                {stat.noTicker ? stat.value : <><AnimatedTicker value={stat.value} decimals={stat.decimals || 0} />{stat.suffix || ''}</>}
+                {stat.noTicker ? stat.value : <><AnimatedTicker value={stat.value} decimals={stat.decimals || 0} className="" />{stat.suffix || ''}</>}
               </p>
               <p className="text-[11px] text-white/25 mt-1.5">{stat.sub}</p>
             </SpotlightCard>
@@ -217,7 +218,34 @@ export default function OperatorDashboard() {
         </div>
       )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      {/* ─── Action required banner ─── */}
+      {!live.loading && actionItems.length > 0 && (
+        <div className="flex items-center justify-between p-3.5 rounded-2xl border border-amber-500/15 bg-amber-500/[0.03]">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400/70" />
+            <span className="text-[12px] text-amber-400/70 font-medium">{actionItems.join(' · ')}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRunCycle}
+              disabled={isRunningCycle}
+              className="text-[11px] px-3 py-1.5 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/[0.1] transition-all disabled:opacity-40"
+            >
+              {isRunningCycle ? 'Running...' : 'Run Cycle'}
+            </button>
+            {demoActive && (
+              <button
+                onClick={handleClearThreat}
+                className="text-[11px] px-3 py-1.5 rounded-lg border border-emerald-500/15 text-emerald-400/60 hover:text-emerald-400 hover:border-emerald-500/25 transition-all"
+              >
+                Clear Threat
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Wallet Activity — Real from Flow testnet */}
           <SpotlightCard className="p-6">
             <div className="flex items-center justify-between mb-5">
@@ -243,7 +271,7 @@ export default function OperatorDashboard() {
                   <span className="text-white/40">{item.label}</span>
                   <span className="font-medium text-white/60">{item.value}{item.suffix || ''}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-emerald-500/[0.04] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
                   <motion.div
                     className={`h-full rounded-full ${item.color}`}
                     initial={{ width: 0 }}
@@ -270,7 +298,7 @@ export default function OperatorDashboard() {
             </div>
           <div className="space-y-3">
             {JURISDICTION_LIST.map((j) => (
-              <div key={j.code} className="p-3.5 rounded-xl border border-emerald-500/[0.06] bg-emerald-500/[0.01] space-y-2">
+              <div key={j.code} className="p-3.5 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-2">
                 <div className="flex items-center gap-2.5">
                   <span className="text-lg leading-none">{j.flag}</span>
                   <span className="text-[13px] font-medium text-white/70">{j.name}</span>
@@ -295,12 +323,8 @@ export default function OperatorDashboard() {
           </div>
         </SpotlightCard>
         </div>
-      </div>
 
-      {/* ─── RISK & ANOMALIES ─── */}
-      <div>
-        <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/25 mb-3">Risk & Anomalies</p>
-        <div className="space-y-4">
+      <div className="space-y-4">
       {/* Risk Analysis — Real from Flow testnet */}
       <SpotlightCard className="p-6">
         <div className="flex items-center justify-between mb-5">
@@ -439,12 +463,8 @@ export default function OperatorDashboard() {
         </div>
       </SpotlightCard>
         </div>
-      </div>
 
-      {/* ─── RULES & JURISDICTION ─── */}
-      <div>
-        <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/25 mb-3">Rules & Jurisdiction</p>
-        <SpotlightCard className="p-6">
+      <SpotlightCard className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
             <h3 className="text-[15px] font-semibold text-white/90">Regulatory Radar</h3>
@@ -453,11 +473,7 @@ export default function OperatorDashboard() {
           </div>
           <RegulatoryRadar onAuditEntry={addAuditEntry} onRefresh={handleRadarRefresh} />
         </SpotlightCard>
-      </div>
 
-      {/* ─── AUTOMATION & AGENTS ─── */}
-      <div>
-        <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/25 mb-3">Automation & Agents</p>
       {/* Controls + Agent Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SpotlightCard className="p-6">
@@ -469,7 +485,7 @@ export default function OperatorDashboard() {
             <button
               onClick={handleRunCycle}
               disabled={isRunningCycle}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/[0.08] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-emerald-500/[0.12] transition-all disabled:opacity-40"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] text-[12px] font-medium text-white/50 hover:text-white/70 hover:border-white/[0.1] transition-all disabled:opacity-40"
             >
               {isRunningCycle ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
               {isRunningCycle ? 'Running Cycle...' : 'Run Monitoring Cycle'}
@@ -558,7 +574,7 @@ export default function OperatorDashboard() {
       </div>
 
         {/* Flow Automation — Scheduled Transactions, Flow Agents, Flow Actions */}
-        <SpotlightCard className="p-6 mt-4">
+        <SpotlightCard className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <Calendar className="w-4 h-4 text-emerald-400" />
             <h3 className="text-[15px] font-semibold text-white/90">Flow Automation</h3>
@@ -566,17 +582,13 @@ export default function OperatorDashboard() {
           </div>
           <FlowAutomation onAuditEntry={addAuditEntry} />
         </SpotlightCard>
-      </div>
 
-      {/* ─── AUDIT & EXPORT ─── */}
-      <div>
-        <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/25 mb-3">Audit & Export</p>
       {/* Audit Log — Real-time from operator actions */}
       <SpotlightCard className="p-6">
         <div className="flex items-center gap-2 mb-5">
           <Clock className="w-4 h-4 text-white/30" />
           <h3 className="text-[15px] font-semibold text-white/90">Audit Log</h3>
-          {auditLog.length > 0 && <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/[0.04] text-white/30 font-medium">{auditLog.length} entries</span>}
+          {auditLog.length > 0 && <span className="text-[9px] px-2 py-0.5 rounded-md bg-white/[0.04] text-white/30 font-medium">{auditLog.length} entries</span>}
           <div className="ml-auto">
             <ComplianceReportExport />
           </div>
@@ -586,7 +598,7 @@ export default function OperatorDashboard() {
             {auditLog.map((event, i) => (
               <motion.div
                 key={`${event.time}-${i}`}
-                className="flex items-start gap-3 p-3 rounded-xl hover:bg-emerald-500/[0.02] transition-colors"
+                className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/[0.02] transition-colors"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
@@ -612,7 +624,6 @@ export default function OperatorDashboard() {
           </div>
         )}
       </SpotlightCard>
-      </div>
     </div>
   )
 }

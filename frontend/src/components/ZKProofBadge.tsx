@@ -17,11 +17,10 @@ export default function ZKProofBadge({ compact = false }) {
   } catch { /* ignore */ }
 
   const copyHash = () => {
-    if (zkData?.proofHash) {
-      navigator.clipboard.writeText(zkData.proofHash)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+    if (!zkData?.proofHash || copied) return
+    navigator.clipboard.writeText(zkData.proofHash)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (!zkData) return null

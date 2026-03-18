@@ -27,6 +27,19 @@
     --elevation-dropdown: 0 8px 32px rgba(0, 0, 0, 0.4);
     --elevation-modal: 0 12px 48px rgba(0, 0, 0, 0.5);
     --elevation-toast: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+    /* Claude-style chat input tokens (dark theme — matches FlowShield dark) */
+    --claude-bg-0: #212121;
+    --claude-bg-100: #262624;
+    --claude-bg-200: #30302E;
+    --claude-bg-300: #454540;
+    --claude-text-100: #ECECEC;
+    --claude-text-200: #E1E1E0;
+    --claude-text-300: #B4B4B4;
+    --claude-text-400: #8A8A88;
+    --claude-text-500: #6B6B65;
+    --claude-accent: #D2996E;
+    --claude-accent-hover: #E5AA7F;
   }
 
   * {
@@ -142,6 +155,48 @@
 @keyframes preview-stagger-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes heroCardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ─── Scroll-reveal system (pure CSS, no compositing conflicts) ─── */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.reveal-visible {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.8s ease var(--reveal-delay, 0s),
+              transform 0.8s ease var(--reveal-delay, 0s);
+}
+
+/* Stagger: container itself is visible, children animate in */
+.reveal-stagger.reveal-hidden {
+  opacity: 1;
+  transform: none;
+}
+.reveal-stagger.reveal-hidden > * {
+  opacity: 0;
+}
+.reveal-stagger.reveal-visible > * {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: revealChild 0.6s ease both;
+}
+.reveal-stagger.reveal-visible > *:nth-child(1) { animation-delay: calc(var(--reveal-delay, 0s) + 0.0s); }
+.reveal-stagger.reveal-visible > *:nth-child(2) { animation-delay: calc(var(--reveal-delay, 0s) + 0.07s); }
+.reveal-stagger.reveal-visible > *:nth-child(3) { animation-delay: calc(var(--reveal-delay, 0s) + 0.14s); }
+.reveal-stagger.reveal-visible > *:nth-child(4) { animation-delay: calc(var(--reveal-delay, 0s) + 0.21s); }
+.reveal-stagger.reveal-visible > *:nth-child(5) { animation-delay: calc(var(--reveal-delay, 0s) + 0.28s); }
+.reveal-stagger.reveal-visible > *:nth-child(6) { animation-delay: calc(var(--reveal-delay, 0s) + 0.35s); }
+
+@keyframes revealChild {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
 
 .preview-stagger > * {

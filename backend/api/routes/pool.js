@@ -95,6 +95,10 @@ router.post('/deposit', async (req, res) => {
     // Look up custodial user by email first (survives Railway redeploys), then by address
     let custodialUser = null
     if (req.body.email) {
+      // Enforce: authenticated user can only transact for their own email
+      if (req.userEmail && req.body.email.toLowerCase() !== req.userEmail.toLowerCase()) {
+        return res.status(403).json({ error: 'You can only transact for your own account', source: 'error' })
+      }
       custodialUser = await getUser(req.body.email)
     }
     if (!custodialUser && userAddress && userAddress !== contractAddress) {
@@ -108,6 +112,11 @@ router.post('/deposit', async (req, res) => {
         userAddress,
         source: 'error',
       })
+    }
+
+    // Enforce: authenticated user can only transact for their own custodial account
+    if (custodialUser && req.userEmail && custodialUser.email.toLowerCase() !== req.userEmail.toLowerCase()) {
+      return res.status(403).json({ error: 'You can only transact for your own account', source: 'error' })
     }
 
     const jurisdiction = req.body.jurisdiction
@@ -295,6 +304,10 @@ router.post('/borrow', async (req, res) => {
     // Look up custodial user by email first (survives Railway redeploys), then by address
     let custodialUser = null
     if (req.body.email) {
+      // Enforce: authenticated user can only transact for their own email
+      if (req.userEmail && req.body.email.toLowerCase() !== req.userEmail.toLowerCase()) {
+        return res.status(403).json({ error: 'You can only transact for your own account', source: 'error' })
+      }
       custodialUser = await getUser(req.body.email)
     }
     if (!custodialUser && userAddress && userAddress !== contractAddress) {
@@ -308,6 +321,11 @@ router.post('/borrow', async (req, res) => {
         userAddress,
         source: 'error',
       })
+    }
+
+    // Enforce: authenticated user can only transact for their own custodial account
+    if (custodialUser && req.userEmail && custodialUser.email.toLowerCase() !== req.userEmail.toLowerCase()) {
+      return res.status(403).json({ error: 'You can only transact for your own account', source: 'error' })
     }
 
     const jurisdiction = req.body.jurisdiction
@@ -490,6 +508,10 @@ router.post('/repay', async (req, res) => {
     // Look up custodial user by email first (survives Railway redeploys), then by address
     let custodialUser = null
     if (req.body.email) {
+      // Enforce: authenticated user can only transact for their own email
+      if (req.userEmail && req.body.email.toLowerCase() !== req.userEmail.toLowerCase()) {
+        return res.status(403).json({ error: 'You can only transact for your own account', source: 'error' })
+      }
       custodialUser = await getUser(req.body.email)
     }
     if (!custodialUser && userAddress && userAddress !== contractAddress) {
@@ -503,6 +525,11 @@ router.post('/repay', async (req, res) => {
         userAddress,
         source: 'error',
       })
+    }
+
+    // Enforce: authenticated user can only transact for their own custodial account
+    if (custodialUser && req.userEmail && custodialUser.email.toLowerCase() !== req.userEmail.toLowerCase()) {
+      return res.status(403).json({ error: 'You can only transact for your own account', source: 'error' })
     }
 
     let txId

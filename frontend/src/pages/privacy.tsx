@@ -138,7 +138,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-[17px] font-semibold text-white/80 mb-3">11. Contact</h2>
             <p>
-              For privacy-related inquiries, contact us at <span className="text-emerald-400/70">privacy@flowshield.xyz</span>
+              For privacy-related inquiries, open an issue on our <a href="https://github.com/Wilsawn/flowshield/issues" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">GitHub repository</a>.
             </p>
           </section>
         </div>

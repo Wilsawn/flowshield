@@ -123,7 +123,7 @@ export default function TermsOfService() {
           <section id="refunds">
             <h2 className="text-[17px] font-semibold text-white/80 mb-3">11. Refunds and Cancellation</h2>
             <p>
-              Paid subscription tiers (e.g. Growth, Scale) may be cancelled at any time. Refund eligibility depends on your plan and the timing of the request. Contact <span className="text-emerald-400/70">support@flowshield.xyz</span> or use the billing portal for subscription changes. Refund requests are handled case-by-case and in line with our payment provider&apos;s terms.
+              Paid subscription tiers (e.g. Growth, Scale) may be cancelled at any time. Refund eligibility depends on your plan and the timing of the request. Use the billing portal for subscription changes or open an issue on <a href="https://github.com/Wilsawn/flowshield/issues" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">GitHub</a>. Refund requests are handled case-by-case and in line with our payment provider&apos;s terms.
             </p>
           </section>
 
@@ -151,7 +151,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-[17px] font-semibold text-white/80 mb-3">15. Contact</h2>
             <p>
-              For questions about these Terms, contact us at <span className="text-emerald-400/70">legal@flowshield.xyz</span>
+              For questions about these Terms, open an issue on our <a href="https://github.com/Wilsawn/flowshield/issues" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">GitHub repository</a>.
             </p>
           </section>
         </div>

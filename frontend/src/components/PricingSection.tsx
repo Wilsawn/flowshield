@@ -5,10 +5,31 @@
  *              Includes scroll-triggered animations, Stripe checkout integration,
  *              contact sales modal, and API key generation for free tier.
  */
-import { useState, useRef } from 'react'
-import { motion, AnimatePresence, useInView } from 'framer-motion'
-import { Check, X, Zap, Building2, Rocket, Copy, CheckCircle2, Loader2, ArrowRight, Mail, Send } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Check, X, Sparkles, ArrowUpRight, Building, Copy, CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
 import { API } from '@/lib/api'
+
+/* CSS-based stagger reveal for pricing cards */
+function PricingGrid({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } }, { threshold: 0.15 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return (
+    <div
+      ref={ref}
+      className={`grid grid-cols-1 md:grid-cols-3 gap-5 ${visible ? 'reveal-stagger reveal-visible' : 'reveal-hidden'}`}
+    >
+      {children}
+    </div>
+  )
+}
 
 const TIERS = [
   {
@@ -16,17 +37,17 @@ const TIERS = [
     name: 'Starter',
     price: '$0',
     period: 'forever',
-    description: 'For indie builders exploring compliance on Flow.',
-    icon: Zap,
+    description: 'For builders exploring compliance on Flow.',
+    icon: Sparkles,
     color: 'emerald',
     cta: 'Get Free API Key',
     features: [
-      { label: '1,000 API calls / month', included: true },
-      { label: 'Basic verify() + verifyFull()', included: true },
+      { label: '10,000 API calls / month', included: true },
+      { label: 'verify() + verifyFull()', included: true },
       { label: 'US jurisdiction', included: true },
-      { label: 'Public documentation', included: true },
-      { label: 'Community support', included: true },
-      { label: 'Builder Copilot', included: false },
+      { label: 'Documentation + community support', included: true },
+      { label: 'Builder Copilot (limited)', included: true },
+      { label: 'Multi-jurisdiction', included: false },
       { label: 'Regulatory Radar', included: false },
       { label: 'Webhooks', included: false },
     ],
@@ -34,18 +55,18 @@ const TIERS = [
   {
     id: 'growth',
     name: 'Growth',
-    price: '$149',
+    price: '$79',
     period: '/mo',
-    description: 'For protocols going to market across jurisdictions.',
-    icon: Rocket,
+    description: 'For protocols launching across jurisdictions.',
+    icon: ArrowUpRight,
     color: 'emerald',
     popular: true,
     cta: 'Start Growth Plan',
     features: [
-      { label: '25,000 API calls / month', included: true },
+      { label: '100,000 API calls / month', included: true },
       { label: 'All verification methods', included: true },
       { label: 'US, EU, UK, SG, CA jurisdictions', included: true },
-      { label: 'Builder Copilot AI', included: true },
+      { label: 'Builder Copilot AI (full)', included: true },
       { label: 'Regulatory Radar scans', included: true },
       { label: 'Webhook alerts', included: true },
       { label: '99.9% uptime SLA', included: true },
@@ -55,15 +76,15 @@ const TIERS = [
   {
     id: 'scale',
     name: 'Scale',
-    price: '$499',
+    price: '$299',
     period: '/mo',
-    description: 'For production protocols with custom compliance needs.',
-    icon: Building2,
+    description: 'For production protocols with custom needs.',
+    icon: Building,
     color: 'emerald',
     cta: 'Contact Sales',
     features: [
       { label: 'Unlimited API calls', included: true },
-      { label: '10+ jurisdictions + custom', included: true },
+      { label: '10+ jurisdictions + custom rules', included: true },
       { label: 'Dedicated Copilot instance', included: true },
       { label: 'Regulatory Radar + auto-remediation', included: true },
       { label: 'Priority webhooks + Slack alerts', included: true },
@@ -161,91 +182,55 @@ export default function PricingSection() {
   }
 
   const copyKey = () => {
-    if (result?.key) {
-      navigator.clipboard.writeText(result.key)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+    if (!result?.key || copied) return
+    navigator.clipboard.writeText(result.key)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
-  const sectionRef = useRef(null)
-  const isInView = useInView(sectionRef, { once: true, margin: '-80px' })
-
   return (
-    <div className="space-y-8" ref={sectionRef}>
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={isInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.5 }}
-      >
-        <h2 className="text-2xl font-bold text-white">API Pricing</h2>
-        <p className="text-[13px] text-white/30 mt-1">
-          Compliance infrastructure for DeFi protocols on Flow. Usage-based on-chain fees + optional API subscription for advanced features.
-        </p>
-      </motion.div>
-
-      {/* On-chain fees callout */}
-      <motion.div
-        className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={isInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        <p className="text-[12px] font-semibold text-emerald-400 mb-2">On-Chain Fees (all tiers)</p>
-        <div className="flex flex-wrap gap-6">
-          <div>
-            <p className="text-[20px] font-bold text-white">0.001 <span className="text-[12px] text-white/30 font-normal">FLOW</span></p>
-            <p className="text-[10px] text-white/30">per verification check</p>
-          </div>
-          <div>
-            <p className="text-[20px] font-bold text-white">0.01 <span className="text-[12px] text-white/30 font-normal">FLOW</span></p>
-            <p className="text-[10px] text-white/30">per credential mint</p>
-          </div>
-          <div className="flex-1 flex items-center">
-            <p className="text-[11px] text-white/25 leading-relaxed">
-              Fees collected on-chain via <code className="text-emerald-400/50 bg-black/20 px-1.5 py-0.5 rounded text-[10px]">ComplianceAction.verifyWithFee()</code> into the FlowShield treasury vault. ~$0.0005 per check at current FLOW price.
-            </p>
-          </div>
-        </div>
-      </motion.div>
+    <div className="space-y-8">
+      {/* On-chain fees — compact inline */}
+      <div className="flex items-center gap-4 text-[12px] text-white/30">
+        <span className="text-white/50 font-medium">On-chain fees:</span>
+        <span>0.001 FLOW / verification</span>
+        <span className="text-white/10">·</span>
+        <span>0.01 FLOW / credential mint</span>
+        <span className="text-white/10">·</span>
+        <span>Gas sponsored</span>
+      </div>
 
       {/* Tier cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <PricingGrid>
         {TIERS.map((tier, i) => {
           const c = colorMap[tier.color]
           return (
-            <motion.div
+            <div
               key={tier.id}
-              className={`relative rounded-xl border ${c.border} ${c.bg} p-5 flex flex-col transition-shadow duration-300 hover:shadow-[0_0_40px_rgba(52,211,153,0.06)]`}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 + i * 0.12 }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className={`relative rounded-2xl p-5 flex flex-col transition-all duration-200 ${
+                tier.popular
+                  ? 'border border-emerald-500/25 bg-emerald-500/[0.04] shadow-[0_0_40px_rgba(52,211,153,0.06)] hover:border-emerald-500/35 hover:shadow-[0_0_50px_rgba(52,211,153,0.1)]'
+                  : 'border border-white/[0.08] bg-white/[0.03] hover:border-white/[0.12] hover:bg-white/[0.05]'
+              }`}
             >
               {tier.popular && (
-                <motion.div
-                  className="absolute -top-3 left-1/2 -translate-x-1/2"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                  transition={{ duration: 0.4, delay: 0.5 }}
-                >
-                  <span className="px-3 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-white uppercase tracking-wider shadow-[0_0_20px_rgba(52,211,153,0.3)]">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="px-3 py-1 rounded-full bg-emerald-400 text-[10px] font-bold text-[#060e09] uppercase tracking-wider shadow-[0_2px_12px_rgba(52,211,153,0.3)]">
                     Most Popular
                   </span>
-                </motion.div>
+                </div>
               )}
 
               <div className="flex items-center gap-3 mb-4">
-                <motion.div
-                  className={`w-9 h-9 rounded-lg ${c.icon} border flex items-center justify-center`}
-                  whileHover={{ rotate: 8, scale: 1.1 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <tier.icon className={`w-4.5 h-4.5 ${c.text}`} />
-                </motion.div>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                  tier.popular
+                    ? 'bg-emerald-500/10 border border-emerald-500/20'
+                    : 'bg-white/[0.05] border border-white/[0.08]'
+                }`}>
+                  <tier.icon className={`w-4.5 h-4.5 ${tier.popular ? 'text-emerald-400' : 'text-white/50'}`} />
+                </div>
                 <div>
-                  <h3 className={`text-[15px] font-bold ${c.text}`}>{tier.name}</h3>
+                  <h3 className="text-[15px] font-bold text-white/90">{tier.name}</h3>
                 </div>
               </div>
 
@@ -258,37 +243,31 @@ export default function PricingSection() {
                 )}
               </div>
 
-              <p className="text-[12px] text-white/30 mb-5 leading-relaxed">{tier.description}</p>
+              <p className="text-[12px] text-white/40 mb-5 leading-relaxed">{tier.description}</p>
 
               <div className="space-y-2 mb-6 flex-1">
                 {tier.features.map((f, j) => (
-                  <motion.div
-                    key={j}
-                    className="flex items-center gap-2"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={isInView ? { opacity: 1, x: 0 } : {}}
-                    transition={{ duration: 0.3, delay: 0.3 + i * 0.12 + j * 0.04 }}
-                  >
+                  <div key={j} className="flex items-center gap-2">
                     {f.included ? (
-                      <Check className={`w-3.5 h-3.5 ${c.check} shrink-0`} />
+                      <Check className="w-3.5 h-3.5 text-emerald-400/60 shrink-0" />
                     ) : (
                       <X className="w-3.5 h-3.5 text-white/10 shrink-0" />
                     )}
                     <span className={`text-[12px] ${f.included ? 'text-white/50' : 'text-white/15'}`}>
                       {f.label}
                     </span>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
 
-              <motion.button
+              <button
                 onClick={() => handleTierAction(tier.id)}
                 disabled={loading === tier.id}
-                className={`w-full py-2.5 rounded-lg border text-[13px] font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                  tier.popular ? c.button : `${c.button} border`
-                } disabled:opacity-50`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className={`w-full py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 ${
+                  tier.popular
+                    ? 'bg-white/90 text-[#060e09] hover:bg-white'
+                    : 'border border-white/[0.08] text-white/50 hover:text-white/70 hover:border-white/[0.12] hover:bg-white/[0.03]'
+                }`}
               >
                 {loading === tier.id ? (
                   <>
@@ -299,11 +278,11 @@ export default function PricingSection() {
                     {tier.cta} <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
-              </motion.button>
-            </motion.div>
+              </button>
+            </div>
           )
         })}
-      </div>
+      </PricingGrid>
 
       {/* API Key result */}
       <AnimatePresence>
@@ -358,85 +337,121 @@ export default function PricingSection() {
             onClick={() => { setShowContactModal(false); setContactSent(false) }}
           >
             <motion.div
-              className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
+              className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.08] bg-[#0c1210] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6">
-                {contactSent ? (
-                  <div className="text-center py-4">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-                    <h3 className="text-[16px] font-bold text-white mb-1">We'll be in touch!</h3>
-                    <p className="text-[12px] text-white/30">Our team will reach out within 24 hours to discuss your Scale plan.</p>
-                    <button
-                      onClick={() => { setShowContactModal(false); setContactSent(false) }}
-                      className="mt-4 px-6 py-2 rounded-lg border border-emerald-500/[0.08] text-[12px] text-white/50 hover:text-white/70 transition-colors"
-                    >
-                      Close
-                    </button>
+              {contactSent ? (
+                <div className="p-10 text-center">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                   </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 mb-5">
-                      <Building2 className="w-5 h-5 text-emerald-400" />
-                      <h3 className="text-[16px] font-bold text-white">Contact Sales — Scale Plan</h3>
+                  <h3 className="text-[18px] font-bold text-white mb-2">Request received</h3>
+                  <p className="text-[13px] text-white/40 max-w-xs mx-auto leading-relaxed">
+                    A solutions engineer will reach out within one business day to scope your deployment.
+                  </p>
+                  <button
+                    onClick={() => { setShowContactModal(false); setContactSent(false) }}
+                    className="mt-6 px-8 py-2.5 rounded-xl border border-white/[0.08] text-[13px] text-white/50 hover:text-white/80 hover:border-white/[0.15] transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Header with plan context */}
+                  <div className="px-7 pt-7 pb-5 border-b border-white/[0.06]">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-[17px] font-bold text-white tracking-tight">Talk to our team</h3>
+                        <p className="text-[13px] text-white/35 mt-1">We'll scope your integration and get you live in days, not months.</p>
+                      </div>
+                      <button
+                        onClick={() => { setShowContactModal(false); setContactSent(false) }}
+                        className="text-white/20 hover:text-white/50 transition-colors p-1 -mr-1 -mt-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <p className="text-[12px] text-white/30 mb-5">
-                      $499/mo · Unlimited API calls · 10+ jurisdictions · 99.99% SLA · Dedicated support
-                    </p>
-                    <div className="space-y-3">
-                      <input
-                        type="email"
-                        placeholder="Work email"
-                        value={contactForm.email}
-                        onChange={(e) => setContactForm(p => ({ ...p, email: e.target.value }))}
-                        className="w-full h-10 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Protocol / Company name"
-                        value={contactForm.protocolName}
-                        onChange={(e) => setContactForm(p => ({ ...p, protocolName: e.target.value }))}
-                        className="w-full h-10 px-3 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30"
-                      />
+                    <div className="flex items-center gap-3 text-[11px] text-white/30">
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06]">
+                        <Building className="w-3 h-3" /> Scale Plan
+                      </span>
+                      <span>Unlimited calls</span>
+                      <span className="text-white/10">·</span>
+                      <span>99.99% SLA</span>
+                      <span className="text-white/10">·</span>
+                      <span>Dedicated support</span>
+                    </div>
+                  </div>
+
+                  {/* Form */}
+                  <div className="px-7 py-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] text-white/30 font-medium mb-1.5 uppercase tracking-wider">Work email</label>
+                        <input
+                          type="email"
+                          placeholder="you@protocol.xyz"
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm(p => ({ ...p, email: e.target.value }))}
+                          className="w-full h-10 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/15 focus:outline-none focus:border-emerald-500/40 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-white/30 font-medium mb-1.5 uppercase tracking-wider">Protocol</label>
+                        <input
+                          type="text"
+                          placeholder="Your protocol or company"
+                          value={contactForm.protocolName}
+                          onChange={(e) => setContactForm(p => ({ ...p, protocolName: e.target.value }))}
+                          className="w-full h-10 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/15 focus:outline-none focus:border-emerald-500/40 transition-colors"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/30 font-medium mb-1.5 uppercase tracking-wider">What are you building?</label>
                       <textarea
-                        placeholder="Tell us about your compliance needs (optional)"
+                        placeholder="e.g. DEX with 50K monthly users, need MiCA + FinCEN coverage"
                         value={contactForm.message}
                         onChange={(e) => setContactForm(p => ({ ...p, message: e.target.value }))}
                         rows={3}
-                        className="w-full px-3 py-2 rounded-lg border border-emerald-500/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/30 resize-none"
+                        className="w-full px-3 py-2.5 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[13px] text-white placeholder:text-white/15 focus:outline-none focus:border-emerald-500/40 transition-colors resize-none"
                       />
-                      <button
-                        onClick={handleContactSales}
-                        disabled={!contactForm.email || loading === 'contact'}
-                        className="w-full py-2.5 rounded-lg bg-emerald-500 text-[13px] font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:shadow-[0_0_30px_rgba(52,211,153,0.2)]"
-                      >
-                        {loading === 'contact' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        Get in Touch
-                      </button>
                     </div>
-                  </>
-                )}
-              </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-7 pb-7 flex items-center justify-between gap-4">
+                    <p className="text-[11px] text-white/20 leading-relaxed">
+                      No commitment. We'll send a custom proposal.
+                    </p>
+                    <button
+                      onClick={handleContactSales}
+                      disabled={!contactForm.email || loading === 'contact'}
+                      className="px-6 py-2.5 rounded-xl bg-white text-[13px] font-semibold text-[#0a0a0a] flex items-center gap-2 disabled:opacity-40 transition-all hover:bg-white/90 active:scale-[0.98] shrink-0"
+                    >
+                      {loading === 'contact' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                      Send request
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Comparison note */}
-      <motion.div
-        className="text-center"
-        initial={{ opacity: 0 }}
-        animate={isInView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.5, delay: 0.8 }}
-      >
+      <div className="text-center">
         <p className="text-[11px] text-white/15 leading-relaxed max-w-lg mx-auto">
           Pricing compared: Sumsub ($199–499/mo), Chainalysis (enterprise-only), ComplyAdvantage ($500–2k/mo).
           FlowShield undercuts by 60–80% — ZK proofs eliminate manual review overhead.
         </p>
-      </motion.div>
+      </div>
     </div>
   )
 }

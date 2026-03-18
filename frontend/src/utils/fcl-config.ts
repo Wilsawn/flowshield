@@ -21,7 +21,7 @@ const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x93c691a98b9
 // ── Configure FCL ──
 fcl.config()
   .put('app.detail.title', 'FlowShield')
-  .put('app.detail.icon', 'https://flowshield.xyz/flowshield_logo.png')
+  .put('app.detail.icon', 'https://flowshield.netlify.app/logo.png')
   .put('flow.network', FLOW_NETWORK)
   .put('accessNode.api',
     FLOW_NETWORK === 'testnet'

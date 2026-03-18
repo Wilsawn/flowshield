@@ -21,7 +21,7 @@ export default function OperatorPage() {
         <h1 className="font-display text-[1.75rem] font-bold tracking-tight text-white">
           Operator Dashboard
         </h1>
-        <p className="text-[13px] text-white/40 mt-1">
+        <p className="text-[13px] text-white/30 mt-1">
           Monitor compliance status, risk scores, and audit logs across your protocol.
         </p>
       </div>

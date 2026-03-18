@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ReactFlow,
@@ -470,9 +470,17 @@ const fitViewOptions = { padding: 0.15, maxZoom: 0.9 }
 export default function ProductShowcase() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [isActive, setIsActive] = useState(false)
+
+  const handleClick = useCallback(() => setIsActive(true), [])
+  const handleMouseLeave = useCallback(() => setIsActive(false), [])
 
   return (
-    <div className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a1410] overflow-hidden relative">
+    <div
+      className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a1410] overflow-hidden relative"
+      onClick={handleClick}
+      onMouseLeave={handleMouseLeave}
+    >
         <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -487,13 +495,16 @@ export default function ProductShowcase() {
         nodesDraggable
         nodesConnectable={false}
         elementsSelectable={false}
+        zoomOnScroll={isActive}
+        preventScrolling={isActive}
+        panOnScroll={false}
         noDragClassName="nodrag"
         className="product-showcase-flow"
       >
         <Background variant="dots" color="rgba(52,211,153,0.18)" gap={22} size={1.2} />
         <Controls
           showInteractive={false}
-          className="!bg-[#0a1410]/80 !border-emerald-500/[0.08] !rounded-xl !shadow-lg [&>button]:!bg-transparent [&>button]:!border-emerald-500/[0.06] [&>button]:!text-emerald-400/50 [&>button:hover]:!text-emerald-400 [&>button]:!w-7 [&>button]:!h-7"
+          className="!bg-white/[0.08] !border-white/[0.12] !rounded-xl !shadow-lg [&>button]:!bg-transparent [&>button]:!border-white/[0.1] [&>button]:!text-white/60 [&>button:hover]:!text-white [&>button:hover]:!bg-white/[0.08] [&>button]:!w-8 [&>button]:!h-8"
         />
       </ReactFlow>
       {/* Subtle gradient overlay at edges */}

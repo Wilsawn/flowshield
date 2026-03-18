@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, Eye, EyeOff, ChevronDown, RefreshCw, Clock, Loader2, Wallet } from 'lucide-react'
+import { authFetch } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import VerificationPanel from '@/components/VerificationPanel'
 import WalletButton from '@/components/WalletButton'
@@ -62,7 +63,7 @@ export default function Dashboard() {
     if (!walletAddr) return // Don't fall back to deployer address
     const API = import.meta.env.VITE_API_URL || 'http://localhost:3002'
     try {
-      const res = await fetch(`${API}/api/accounts/balance/${walletAddr}`)
+      const res = await authFetch(`${API}/api/accounts/balance/${encodeURIComponent(walletAddr)}`)
       const data = await res.json()
       if (data.balance !== undefined) setFlowBalance(data.balance)
       setIsCustodial(!!data.isCustodial)
@@ -133,7 +134,7 @@ export default function Dashboard() {
     setReVerifySteps(prev => [...prev, { label: `Querying RuleEngine contract for ${newCode} rules...`, done: false }])
     let realRules = null
     try {
-      const res = await fetch(`${API}/api/compliance/rules/${newCode}`)
+      const res = await authFetch(`${API}/api/compliance/rules/${encodeURIComponent(newCode)}`)
       if (res.ok) {
         realRules = await res.json()
         setOnChainRules(realRules)
@@ -149,7 +150,7 @@ export default function Dashboard() {
     // Step 3: Compliance check
     setReVerifySteps(prev => [...prev, { label: 'Querying ComplianceCredential contract...', done: false }])
     try {
-      await fetch(`${API}/api/compliance/status/${walletAddr || '0x93c691a98b975493'}`)
+      if (walletAddr) await authFetch(`${API}/api/compliance/status/${encodeURIComponent(walletAddr)}`)
       setReVerifySteps(prev => {
         const updated = [...prev]
         updated[updated.length - 1] = { label: `Credential status verified on Flow testnet (block ${chain.latestBlock?.height || '...'})`, done: true }
@@ -161,10 +162,11 @@ export default function Dashboard() {
     // Step 4: Risk re-check
     setReVerifySteps(prev => [...prev, { label: 'Running risk score re-evaluation...', done: false }])
     try {
-      const riskRes = await fetch(`${API}/api/risk/score`, {
+      if (!walletAddr) return
+      const riskRes = await authFetch(`${API}/api/risk/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: walletAddr || '0x93c691a98b975493' }),
+        body: JSON.stringify({ address: walletAddr }),
       })
       if (riskRes.ok) {
         const riskData = await riskRes.json()
@@ -204,11 +206,11 @@ export default function Dashboard() {
       const walletInfo = (() => { try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} } })()
       const email = walletInfo.email
       if (!email) {
-        console.error('[Dashboard] Cannot renew: no email in wallet info')
+        // Cannot renew without email
         setRenewing(false)
         return
       }
-      const res = await fetch(`${API}/api/accounts/mint-credential`, {
+      const res = await authFetch(`${API}/api/accounts/mint-credential`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -224,37 +226,50 @@ export default function Dashboard() {
         live.refresh()
         setTimeout(() => setRenewed(false), 4000)
       } else {
-        console.error('[Dashboard] Renewal failed:', result.error)
+        // Renewal returned error
       }
     } catch (err) {
-      console.error('[Dashboard] Renewal failed:', err)
+      // Renewal network error
     }
     setRenewing(false)
   }, [live, jurisdictionCode])
 
+  const validateAmount = (raw) => {
+    if (!raw || /[eE]/.test(raw)) return null // reject scientific notation
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) return null
+    // Max 8 decimal places (FLOW precision)
+    const parts = raw.split('.')
+    if (parts[1] && parts[1].length > 8) return null
+    return String(n)
+  }
+
   const handleDeposit = () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) return
-    setVerifying({ action: 'deposit', amount: depositAmount })
+    const safe = validateAmount(depositAmount)
+    if (!safe) return
+    setVerifying({ action: 'deposit', amount: safe })
   }
 
   const maxBorrowRemaining = Math.max(0, ((live.deposited ?? 0) * (live.maxLTVPercent ?? 75) / 100) - (live.borrowed ?? 0))
 
   const handleBorrow = () => {
-    if (!borrowAmount || parseFloat(borrowAmount) <= 0) return
-    if (parseFloat(borrowAmount) > maxBorrowRemaining) {
-      setVerifying({ action: 'borrow', amount: borrowAmount, error: `Exceeds borrow limit. Max remaining: ${maxBorrowRemaining.toFixed(2)} FLOW (75% LTV)` })
+    const safe = validateAmount(borrowAmount)
+    if (!safe) return
+    if (Number(safe) > maxBorrowRemaining) {
+      setVerifying({ action: 'borrow', amount: safe, error: `Exceeds borrow limit. Max remaining: ${maxBorrowRemaining.toFixed(2)} FLOW (75% LTV)` })
       return
     }
-    setVerifying({ action: 'borrow', amount: borrowAmount })
+    setVerifying({ action: 'borrow', amount: safe })
   }
 
   const handleRepay = () => {
-    if (!repayAmount || parseFloat(repayAmount) <= 0) return
-    if (parseFloat(repayAmount) > (live.borrowed ?? 0)) {
+    const safe = validateAmount(repayAmount)
+    if (!safe) return
+    if (Number(safe) > (live.borrowed ?? 0)) {
       setVerifying({ action: 'repay', amount: String(live.borrowed ?? 0) })
       return
     }
-    setVerifying({ action: 'repay', amount: repayAmount })
+    setVerifying({ action: 'repay', amount: safe })
   }
 
   const handleVerificationComplete = () => {
@@ -271,18 +286,17 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060e09] text-white p-6 md:p-10">
+    <div className="text-white">
       <div className="max-w-[1100px] mx-auto">
 
-        {/* Header — clean two-row layout */}
-        <div className="mb-10">
-          {/* Row 1: Title + actions */}
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-start justify-between gap-6 mb-3">
             <div className="min-w-0">
-              <h1 className="font-display text-2xl font-bold tracking-tight truncate">
+              <h1 className="font-display text-[1.75rem] font-bold tracking-tight truncate">
                 Dashboard
               </h1>
-              <p className="text-[13px] text-white/40 mt-0.5">Your compliance status and lending activity.</p>
+              <p className="text-[13px] text-white/30 mt-1">Compliance status and lending activity</p>
             </div>
             <div className="flex items-center gap-2.5 shrink-0">
               {/* Jurisdiction picker */}
@@ -433,8 +447,6 @@ export default function Dashboard() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">ON-CHAIN DATA</p>
 
         <StatsRow
           live={live}

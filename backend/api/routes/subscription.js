@@ -79,7 +79,7 @@ router.post('/checkout', async (req, res) => {
     if (process.env.NODE_ENV === 'production') {
       return res.status(503).json({
         error: 'Payment system not configured',
-        message: 'Stripe is not set up. Contact support@flowshield.xyz for access.',
+        message: 'Stripe is not set up. See github.com/Wilsawn/flowshield for setup instructions.',
       })
     }
     // Dev mode — generate API key directly (demo)

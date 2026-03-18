@@ -358,6 +358,7 @@ export async function chat(userMessage, conversationHistory = [], context = null
       toolHandlers: hasTools ? buildCopilotToolHandlers(appContext) : {},
       maxIterations: 8,
       maxTokens: 4096,
+      model: process.env.COPILOT_MODEL || 'claude-sonnet-4-6',
     })
 
     if (agentResult) {

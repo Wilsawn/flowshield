@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Wallet, LogOut, ShieldCheck, ExternalLink, Copy, Check, Loader2, X } from 'lucide-react'
 import { connectWallet, disconnectWallet, subscribeToWallet } from '@/utils/fcl-config'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 export default function WalletButton() {
   const [walletUser, setWalletUser] = useState(null)
@@ -78,7 +79,7 @@ export default function WalletButton() {
         setShowDiscovery(false)
       }
     } catch (err) {
-      console.error('[Wallet] FCL connect failed:', err)
+      // FCL connect failed — user likely cancelled or wallet unavailable
     }
     setConnecting(false)
   }
@@ -89,8 +90,9 @@ export default function WalletButton() {
 
   const handleManualConnect = () => {
     const addr = manualAddr.trim()
-    if (!addr || !addr.startsWith('0x') || addr.length < 10) return
-    const user = { loggedIn: true, addr }
+    // Validate Flow address format: 0x followed by exactly 16 hex chars
+    if (!addr || !/^0x[a-fA-F0-9]{16}$/.test(addr)) return
+    const user = { loggedIn: true, addr, readOnly: true }
     setWalletUser(user)
     localStorage.setItem('flowshield_wallet', JSON.stringify(user))
     checkComplianceStatus(addr)
@@ -118,7 +120,7 @@ export default function WalletButton() {
   const checkComplianceStatus = async (address) => {
     setCheckingCompliance(true)
     try {
-      const res = await fetch(`${API}/api/compliance/status/${address}`)
+      const res = await authFetch(`${API}/api/compliance/status/${encodeURIComponent(address)}`)
       if (res.ok) {
         const data = await res.json()
         setCompliance(data)
@@ -130,11 +132,10 @@ export default function WalletButton() {
   }
 
   const copyAddress = () => {
-    if (walletUser?.addr) {
-      navigator.clipboard.writeText(walletUser.addr)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+    if (!walletUser?.addr || copied) return
+    navigator.clipboard.writeText(walletUser.addr)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const shortAddr = walletUser?.addr

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Settings, ArrowLeft, Menu, X, Fingerprint, Globe, Key, LogOut, Coins, BookOpen, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { API } from '@/lib/api'
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/copilot', label: 'Builder Copilot', icon: MessageSquare },
   { to: '/operator', label: 'Operator', icon: Settings },
   { to: '/pricing', label: 'Pricing', icon: Coins },
+  { to: '/docs', label: 'Docs', icon: BookOpen },
 ]
 
 export default function Layout() {
@@ -25,6 +26,7 @@ export default function Layout() {
     localStorage.removeItem('flowshield_token')
     localStorage.removeItem('flowshield_wallet')
     localStorage.removeItem('flowshield_user')
+    localStorage.removeItem('flowshield_email')
     setUser(null)
     setSidebarOpen(false)
     navigate('/')
@@ -103,7 +105,7 @@ export default function Layout() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
                 isActive
-                  ? 'bg-emerald-500/[0.08] text-emerald-50 border-l-2 border-emerald-500/50 -ml-[2px] pl-[14px]'
+                  ? 'bg-white/[0.07] text-white/90'
                   : 'text-white/35 hover:text-white/60 hover:bg-white/[0.03]'
               }`
             }
@@ -261,7 +263,14 @@ export default function Layout() {
       {/* Main content */}
       <main className="flex-1 overflow-auto relative z-10 pt-14 md:pt-0">
         <div className="p-4 sm:p-6 md:p-8 lg:p-10">
-          <Outlet />
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Outlet />
+          </motion.div>
         </div>
       </main>
 

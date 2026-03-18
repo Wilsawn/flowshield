@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 
 const navItems = [
   { label: 'Pricing', path: '/pricing' },
-  { label: 'Docs', path: 'https://github.com/Wilsawn/flowshield', external: true },
+  { label: 'Docs', path: '/docs' },
 ]
 
 export default function FloatingNav({ onLaunch }: { onLaunch: () => void }) {
@@ -19,15 +18,12 @@ export default function FloatingNav({ onLaunch }: { onLaunch: () => void }) {
   }, [])
 
   return (
-    <motion.nav
+    <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
           ? 'bg-[#0a0a0a]/80 backdrop-blur-lg border-b border-white/[0.06] shadow-[0_1px_12px_rgba(0,0,0,0.3)]'
           : 'bg-[#0a0a0a]/40 backdrop-blur-md border-b border-transparent'
       }`}
-      initial={{ opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between py-4">
         <button
@@ -64,6 +60,6 @@ export default function FloatingNav({ onLaunch }: { onLaunch: () => void }) {
           </button>
         </div>
       </div>
-    </motion.nav>
+    </nav>
   )
 }

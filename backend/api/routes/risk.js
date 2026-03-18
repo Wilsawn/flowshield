@@ -11,7 +11,7 @@ import { assessRisk, RISK_FACTORS } from '../../agents/risk-scoring.js'
 import { monitorAddress } from '../../agents/anomaly-monitor.js'
 import { logAudit, storeScanResult, fireWebhooks } from '../../lib/supabase.js'
 import { getDemoThreats, isDemoActive, activateDemo, clearDemo } from '../../lib/demo-state.js'
-import { safeError } from '../../lib/middleware.js'
+import { safeError, requireAuth } from '../../lib/middleware.js'
 
 const router = Router()
 
@@ -108,8 +108,8 @@ router.post('/monitor', async (req, res) => {
 // ── Demo Threat Simulation ──────────────────────────────────────────────────
 // Uses shared demo-state so both anomaly monitor AND regulatory radar respond.
 
-// POST /api/risk/monitor/simulate — Inject demo anomalies + radar gaps
-router.post('/monitor/simulate', (req, res) => {
+// POST /api/risk/monitor/simulate — Inject demo anomalies + radar gaps (auth required)
+router.post('/monitor/simulate', requireAuth, (req, res) => {
   const { scenario } = req.body
   const result = activateDemo(scenario)
 
@@ -130,8 +130,8 @@ router.post('/monitor/simulate', (req, res) => {
   })
 })
 
-// POST /api/risk/monitor/clear — Clear all demo state
-router.post('/monitor/clear', (req, res) => {
+// POST /api/risk/monitor/clear — Clear all demo state (auth required)
+router.post('/monitor/clear', requireAuth, (req, res) => {
   clearDemo()
   logAudit({ action: 'demo-clear', agent: 'demo', detail: { message: 'All demo threats and radar gaps cleared' }, severity: 'info' })
   res.json({ ok: true, message: 'Demo threats cleared' })

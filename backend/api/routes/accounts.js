@@ -323,6 +323,10 @@ router.post('/login', async (req, res) => {
 router.post('/register-wallet', async (req, res) => {
   const { address } = req.body
   if (!address) return res.status(400).json({ error: 'address is required' })
+  // Validate Flow address format: 0x + 16 hex chars
+  if (!/^0x[a-fA-F0-9]{16}$/.test(address)) {
+    return res.status(400).json({ error: 'Invalid Flow address format' })
+  }
 
   // Check if this wallet address is already registered
   let existing
@@ -477,12 +481,17 @@ router.get('/balance/:address', async (req, res) => {
  * Uses a two-authorizer transaction: deployer (admin) + user (recipient).
  * This is the only correct way to store a resource in the user's account storage.
  */
-router.post('/mint-credential', async (req, res) => {
+router.post('/mint-credential', requireAuth, async (req, res) => {
   const { email, jurisdiction, riskScore } = req.body
 
   const mintEmailErr = validateEmail(email)
   if (mintEmailErr) {
     return res.status(400).json({ error: mintEmailErr })
+  }
+
+  // Enforce: authenticated user can only mint for their own account
+  if (req.userEmail && email.toLowerCase() !== req.userEmail.toLowerCase()) {
+    return res.status(403).json({ error: 'You can only mint credentials for your own account' })
   }
   if (!hasPrivateKey()) {
     return res.status(500).json({ error: 'Server signing not available' })
@@ -642,8 +651,9 @@ router.post('/mint-credential-wallet', async (req, res) => {
 
   const score = riskScore || 15
   const jur = jurisdiction || 'US'
-  const proofHash = `zkp_${Date.now()}`
-  const claimsHash = `claims_${Date.now()}`
+  const { createHash } = await import('crypto')
+  const proofHash = createHash('sha256').update(`proof:wallet:${address}:${jur}:${score}:${Date.now()}`).digest('hex')
+  const claimsHash = createHash('sha256').update(`claims:wallet:${address}:${jur}:${score}:${Date.now()}`).digest('hex')
 
   // For wallet users, return the Cadence transaction + args so the frontend
   // can construct a two-signer transaction where the user signs via FCL
@@ -721,6 +731,10 @@ router.post('/mint-credential-wallet', async (req, res) => {
  * Testnet/admin utility — saves the deployer key pair into the users table.
  */
 router.post('/link-deployer', async (req, res) => {
+  // Admin-only: block in production entirely — this is a testnet utility
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' })
+  }
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'email is required' })
   const deployerKey = (process.env.FLOW_PRIVATE_KEY || '').trim()

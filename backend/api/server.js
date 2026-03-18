@@ -91,7 +91,7 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false, // Allow FCL wallet popups
 }))
-app.use(express.json())
+app.use(express.json({ limit: '1mb' }))
 app.use(rateLimit({ windowMs: 60000, max: 200 }))
 
 // ── Configure FCL for Flow testnet ──
@@ -125,7 +125,7 @@ app.use('/api/kyc', kycRoutes)
 
 // User-facing write endpoints — protected by session auth in production
 app.use('/api/pool', requireAuth, poolRoutes)
-app.use('/api/copilot', copilotRoutes)  // Public — radar scan + copilot need to work without login
+app.use('/api/copilot', requireAuth, copilotRoutes)  // Auth required — conversations are user-scoped
 app.use('/api/subscription', subscriptionRoutes)  // Pricing — public access needed
 app.use('/api/governance', governanceRoutes)  // Auth applied per-route inside governance.js
 app.use('/api/accounts', accountsRoutes)  // Has its own auth (create/login are public, others protected)
@@ -219,8 +219,8 @@ app.get('/api/stats', async (_req, res) => {
   }
 })
 
-// ── Compliance Report (for export) ──
-app.get('/api/compliance/report', async (_req, res) => {
+// ── Compliance Report (for export) — requires auth ──
+app.get('/api/compliance/report', requireAuth, async (_req, res) => {
   try {
     const sb = getSupabase()
     let auditLog = []

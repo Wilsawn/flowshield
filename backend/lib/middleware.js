@@ -36,7 +36,7 @@ export function requireApiKey(req, res, next) {
     return res.status(401).json({
       error: 'API key required',
       message: 'Include your API key in the x-api-key header or api_key query parameter.',
-      docs: 'https://flowshield.xyz/docs/api',
+      docs: 'https://github.com/Wilsawn/flowshield',
     })
   }
 
