@@ -166,6 +166,22 @@ access(all) fun deposit(user: Address, amount: UFix64) {
     }
   }, [activeAgent])
 
+  // Scroll-driven card changes (Dovetail-style): card updates as you scroll through the section
+  const { scrollYProgress } = useScroll({
+    target: protocolSurfacesRef,
+    offset: ['start start', 'end end'],
+  })
+  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
+    const idx = Math.min(3, Math.max(0, Math.floor(latest * 4)))
+    setActiveAgent((prev) => (idx !== prev ? idx : prev))
+  })
+
+  const scrollToAgent = useCallback((i) => {
+    if (!protocolSurfacesRef.current) return
+    const block = protocolSurfacesRef.current.querySelector(`[data-agent-block="${i}"]`)
+    block?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
+
   if (showOnboarding) {
     return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={handleOnboardingBack} googleEmail={googleEmail} />
   }
@@ -421,22 +437,6 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       { icon: Cpu, name: 'Autonomous monitoring', desc: 'ComplianceAgent.runMonitoringCycle() on a recurring timer.' },
     ],
   ]
-
-  // Scroll-driven card changes (Dovetail-style): card updates as you scroll through the section
-  const { scrollYProgress } = useScroll({
-    target: protocolSurfacesRef,
-    offset: ['start start', 'end end'],
-  })
-  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
-    const idx = Math.min(agents.length - 1, Math.max(0, Math.floor(latest * agents.length)))
-    setActiveAgent((prev) => (idx !== prev ? idx : prev))
-  })
-
-  const scrollToAgent = useCallback((i) => {
-    if (!protocolSurfacesRef.current) return
-    const block = protocolSurfacesRef.current.querySelector(`[data-agent-block="${i}"]`)
-    block?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [])
 
   return (
     <div className="min-h-screen bg-[#070c09] text-white selection:bg-emerald-500/20 antialiased">
