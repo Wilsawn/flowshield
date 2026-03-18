@@ -229,24 +229,16 @@ export function activateDemo(scenario) {
     state.threats = ANOMALY_SCENARIOS[scenario]
     state.radarGaps = RADAR_SCENARIOS[scenario] || []
   } else {
-    // Mixed: one anomaly + one gap from each scenario
+    // Mixed: 4 high-impact scenarios for a clean demo view
     state.threats = [
       ANOMALY_SCENARIOS.whale[0],
-      ANOMALY_SCENARIOS.bot[0],
-      ANOMALY_SCENARIOS.sleeper[0],
-      ANOMALY_SCENARIOS.sybil[0],
       ANOMALY_SCENARIOS.mixer[0],
-      ANOMALY_SCENARIOS.rugpull[0],
       ANOMALY_SCENARIOS.sanctions[0],
       ANOMALY_SCENARIOS.structuring[0],
     ]
     state.radarGaps = [
       RADAR_SCENARIOS.whale[0],
-      RADAR_SCENARIOS.bot[0],
-      RADAR_SCENARIOS.sleeper[0],
-      RADAR_SCENARIOS.sybil[0],
       RADAR_SCENARIOS.mixer[0],
-      RADAR_SCENARIOS.rugpull[0],
       RADAR_SCENARIOS.sanctions[0],
       RADAR_SCENARIOS.structuring[0],
     ]

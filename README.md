@@ -14,7 +14,7 @@ Users prove compliance with zero-knowledge proofs. Identity never touches the ch
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 
-[![Claude AI](https://img.shields.io/badge/Claude_AI-Haiku_4.5-d97706?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMiIgZmlsbD0iI2Q5NzcwNiIvPjwvc3ZnPg==&logoColor=white)](https://anthropic.com)
+[![Claude AI](https://img.shields.io/badge/Claude_AI-Sonnet_4.6_+_Haiku_4.5-d97706?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMiIgZmlsbD0iI2Q5NzcwNiIvPjwvc3ZnPg==&logoColor=white)](https://anthropic.com)
 [![Solidity](https://img.shields.io/badge/Solidity-Groth16-363636?style=for-the-badge&logo=solidity&logoColor=white)](https://soliditylang.org)
 [![Zero Knowledge](https://img.shields.io/badge/ZK_Proofs-circom-8B5CF6?style=for-the-badge)](https://docs.circom.io)
 [![Supabase](https://img.shields.io/badge/Supabase-Database-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
@@ -83,9 +83,17 @@ Four specialized agents, orchestrated through a [Google A2A-style protocol](http
 | **Risk Scoring** | Deterministic | 8 rule-based factors from public chain data. No LLM. |
 | **Anomaly Monitor** | Hybrid | Deterministic detection + Claude AI context enrichment |
 | **Regulatory Radar** | Hybrid | Scans on-chain rules against 5 jurisdiction checklists, Claude adds regulatory context |
-| **Builder Copilot** | AI | Claude-powered assistant for compliance code and integration questions |
+| **Builder Copilot** | AI | Claude Sonnet 4.6 — compliance code assistant and integration questions |
 
 Agent discovery: `GET /.well-known/agent.json`
+
+## Security
+
+- **Prompt injection guard** — all AI agent inputs are sanitized. Injection attempts are classified by severity (block/flag), and high-confidence attacks are rejected before reaching Claude. Zero-width character obfuscation, context object injection, and response leak detection are all covered.
+- **Context sanitization** — only allowlisted keys with type-checked values are passed to AI agents. No raw user input reaches the system prompt.
+- **Zero PII on-chain** — identity data stays off-chain. Only a boolean compliance result and optional risk score are written to the blockchain.
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## Quick Start
 
@@ -111,7 +119,7 @@ Frontend runs on `localhost:3000`, backend on `localhost:3002`.
 | **ZK Proofs** | circom circuits, snarkjs, Groth16 / BN256 pairing |
 | **Frontend** | React 19, Vite, TailwindCSS, Framer Motion |
 | **Backend** | Node.js, Express, A2A protocol |
-| **AI** | Claude Haiku 4.5 — 4 agents with orchestration and chaining |
+| **AI** | Claude Sonnet 4.6 (Copilot) + Haiku 4.5 (agents) with orchestration and chaining |
 | **Auth** | WebAuthn / Passkeys, Google OAuth, Veriff KYC |
 | **Infrastructure** | Supabase, Railway, Netlify |
 
@@ -119,19 +127,28 @@ Frontend runs on `localhost:3000`, backend on `localhost:3002`.
 
 ```
 flowshield/
-├── frontend/           React 19 / Vite / Tailwind
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── docs/          Interactive knowledge graph documentation
+│   │   │   ├── dashboard/     Dashboard widgets (stats, charts, actions)
+│   │   │   └── ui/            Shared UI primitives
+│   │   ├── pages/             Route-level page components
+│   │   ├── lib/               API client, Supabase, security utils
+│   │   └── utils/             Flow/FCL configuration
+│   └── ...
 ├── backend/
-│   ├── agents/         4 AI + rule-based agents
-│   ├── api/            Express server + 12 route files
-│   └── lib/            Auth, crypto, Flow signer, Supabase
+│   ├── agents/                4 AI + rule-based agents, orchestrator, A2A
+│   ├── api/                   Express server + 12 route files
+│   └── lib/                   Auth, crypto, Flow signer, prompt guard, Supabase
 ├── cadence/
-│   ├── contracts/      7 Cadence smart contracts
-│   ├── transactions/   State-changing operations
-│   └── scripts/        Read-only queries
+│   ├── contracts/             7 Cadence smart contracts
+│   ├── transactions/          State-changing operations
+│   └── scripts/               Read-only queries
 ├── evm/
-│   ├── contracts/      Solidity Groth16 verifier
-│   └── circuits/       circom ZK circuit
-└── docs/               Documentation ([index](docs/README.md))
+│   ├── contracts/             Solidity Groth16 verifier
+│   └── circuits/              circom ZK circuit
+└── docs/                      Documentation ([index](docs/README.md))
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
@@ -161,8 +178,9 @@ GET   /.well-known/agent.json          A2A agent discovery
 │  A2A Protocol                               │
 │  Orchestrator · Task Manager · Agent Cards  │
 ├─────────────────────────────────────────────┤
-│  AI Agents                                  │
+│  AI Agents + Security                       │
 │  Risk · Anomaly · Radar · Copilot           │
+│  Prompt Guard · Context Sanitization        │
 ├─────────────────────────────────────────────┤
 │  Compliance Engine (On-Chain)               │
 │  7 Cadence contracts · Fee treasury · Gov   │
