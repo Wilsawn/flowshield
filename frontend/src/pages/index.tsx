@@ -49,6 +49,9 @@ export default function LandingPage() {
   const [integrationCopied, setIntegrationCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
   const [googleEmail, setGoogleEmail] = useState(null)
+  const [displayedAgent, setDisplayedAgent] = useState(0)
+  const [fading, setFading] = useState(false)
+  const protocolSurfacesRef = useRef(null)
   const navigate = useNavigate()
 
   const { scrollY } = useScroll()
@@ -152,14 +155,6 @@ access(all) fun deposit(user: Address, amount: UFix64) {
     setShowOnboarding(false)
   }
 
-  if (showOnboarding) {
-    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={handleOnboardingBack} googleEmail={googleEmail} />
-  }
-
-  const [displayedAgent, setDisplayedAgent] = useState(0)
-  const [fading, setFading] = useState(false)
-  const protocolSurfacesRef = useRef(null)
-
   useEffect(() => {
     if (activeAgent !== displayedAgent) {
       setFading(true)
@@ -170,6 +165,10 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       return () => clearTimeout(timer)
     }
   }, [activeAgent])
+
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={() => navigate(redirectTarget)} onBack={handleOnboardingBack} googleEmail={googleEmail} />
+  }
 
   const agents = [
     {
