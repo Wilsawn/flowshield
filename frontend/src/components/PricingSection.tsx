@@ -41,7 +41,7 @@ const TIERS = [
     icon: Sparkles,
     cta: 'Get Free API Key',
     features: [
-      '10,000 API calls / month',
+      '25,000 API calls / month',
       'verify() + verifyFull()',
       'US jurisdiction',
       'Documentation + community support',
@@ -51,14 +51,14 @@ const TIERS = [
   {
     id: 'growth',
     name: 'Growth',
-    price: '$79',
+    price: '$49',
     period: '/mo',
     description: 'For protocols launching across jurisdictions.',
     icon: ArrowUpRight,
     popular: true,
     cta: 'Start Growth Plan',
     features: [
-      '100,000 API calls / month',
+      '250,000 API calls / month',
       'All verification methods',
       'US, EU, UK, SG, CA jurisdictions',
       'Builder Copilot AI (full)',
@@ -71,7 +71,7 @@ const TIERS = [
   {
     id: 'scale',
     name: 'Scale',
-    price: '$299',
+    price: '$149',
     period: '/mo',
     description: 'For production protocols with custom needs.',
     icon: Building,
@@ -431,7 +431,7 @@ export default function PricingSection() {
       <div className="text-center">
         <p className="text-[11px] text-white/15 leading-relaxed max-w-lg mx-auto">
           Pricing compared: Sumsub ($199–499/mo), Chainalysis (enterprise-only), ComplyAdvantage ($500–2k/mo).
-          FlowShield undercuts by 60–80% — ZK proofs eliminate manual review overhead.
+          FlowShield undercuts by 70–90% — ZK proofs eliminate manual review overhead.
         </p>
       </div>
     </div>
