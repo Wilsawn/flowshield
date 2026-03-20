@@ -183,7 +183,7 @@ function ThinkingSteps({ startTime }: { startTime: number }) {
             ) : (
               <span className="w-3.5 h-3.5 shrink-0" />
             )}
-            <span className={`text-[13px] font-['Inter'] ${
+            <span className={`text-[13px] font-sans ${
               isComplete ? 'text-white/50' :
               isActive ? 'text-white/60' :
               'text-white/20'
@@ -237,7 +237,7 @@ function InlineMarkdown({ text }) {
     <>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="text-white/80 font-semibold">{part.slice(2, -2)}</strong>
+          return <strong key={i} className="text-white/90 font-semibold">{part.slice(2, -2)}</strong>
         }
         if (part.startsWith('`') && part.endsWith('`')) {
           return <code key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400/80 text-[11px] font-['JetBrains_Mono']">{part.slice(1, -1)}</code>
@@ -293,7 +293,7 @@ function RichContent({ content }) {
               <thead>
                 <tr className="bg-white/[0.03]">
                   {tableRows[0].map((cell, ci) => (
-                    <th key={ci} className="px-3 py-2 text-left text-white/40 font-medium border-b border-white/[0.06]">
+                    <th key={ci} className="px-3 py-2 text-left text-white/60 font-medium border-b border-white/[0.06]">
                       <InlineMarkdown text={cell} />
                     </th>
                   ))}
@@ -303,7 +303,7 @@ function RichContent({ content }) {
                 {tableRows.slice(1).map((row, ri) => (
                   <tr key={ri} className="border-b border-white/[0.03] last:border-0">
                     {row.map((cell, ci) => (
-                      <td key={ci} className="px-3 py-2 text-white/40">
+                      <td key={ci} className="px-3 py-2 text-white/60">
                         <InlineMarkdown text={cell} />
                       </td>
                     ))}
@@ -339,7 +339,7 @@ function RichContent({ content }) {
       elements.push(
         <ul key={elements.length} className="my-1.5 space-y-1">
           {listItems.map((item, li) => (
-            <li key={li} className="flex items-start gap-2 text-[13px] text-white/45 leading-relaxed">
+            <li key={li} className="flex items-start gap-2 text-[14px] text-white/75 leading-[1.8]">
               <span className="w-1 h-1 rounded-full bg-emerald-400/50 mt-2 shrink-0" />
               <span><InlineMarkdown text={item} /></span>
             </li>
@@ -358,7 +358,7 @@ function RichContent({ content }) {
       elements.push(
         <ol key={elements.length} className="my-1.5 space-y-1">
           {listItems.map((item, li) => (
-            <li key={li} className="flex items-start gap-2.5 text-[13px] text-white/45 leading-relaxed">
+            <li key={li} className="flex items-start gap-2.5 text-[14px] text-white/75 leading-[1.8]">
               <span className="text-[11px] text-emerald-400/60 font-['JetBrains_Mono'] mt-0.5 shrink-0 w-4 text-right">{li + 1}.</span>
               <span><InlineMarkdown text={item} /></span>
             </li>
@@ -374,7 +374,7 @@ function RichContent({ content }) {
     }
 
     elements.push(
-      <p key={elements.length} className="text-[13px] text-white/45 leading-relaxed font-['Inter']">
+      <p key={elements.length} className="text-[14px] text-white/75 leading-[1.8] font-sans">
         <InlineMarkdown text={line} />
       </p>
     )
@@ -459,10 +459,10 @@ function RecentConvoRow({ convo, onSelect }: { convo: any; onSelect: () => void 
       onClick={onSelect}
       className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.03] transition-colors text-left group"
     >
-      <span className="text-[13px] text-white/40 group-hover:text-white/60 transition-colors truncate mr-3 font-['Inter']">
+      <span className="text-[13px] text-white/40 group-hover:text-white/60 transition-colors truncate mr-3 font-sans">
         {convo.title}
       </span>
-      <span className="text-[11px] text-white/15 shrink-0 font-['Inter'] uppercase tracking-wider">
+      <span className="text-[11px] text-white/15 shrink-0 font-sans uppercase tracking-wider">
         {timeStr}
       </span>
     </button>
@@ -958,7 +958,7 @@ export default function BuilderCopilot() {
             {/* History header */}
             <div className="p-3 border-b border-white/[0.06]">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider font-['Inter']">History</p>
+                <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider font-sans">History</p>
                 <button
                   onClick={() => setShowHistory(false)}
                   className="w-6 h-6 rounded-md flex items-center justify-center text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
@@ -973,7 +973,7 @@ export default function BuilderCopilot() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search conversations..."
-                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-white/60 placeholder:text-white/15 outline-none focus:border-white/[0.12] transition-colors font-['Inter']"
+                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-white/60 placeholder:text-white/15 outline-none focus:border-white/[0.12] transition-colors font-sans"
                 />
               </div>
             </div>
@@ -982,7 +982,7 @@ export default function BuilderCopilot() {
             <div className="p-2">
               <button
                 onClick={createNewConversation}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-emerald-400/70 hover:text-emerald-400 border border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04] transition-all font-['Inter']"
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-emerald-400/70 hover:text-emerald-400 border border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04] transition-all font-sans"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Conversation
@@ -994,11 +994,11 @@ export default function BuilderCopilot() {
               {filteredConversations.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageSquare className="w-5 h-5 text-white/10 mx-auto mb-2" />
-                  <p className="text-[11px] text-white/20 font-['Inter']">
+                  <p className="text-[11px] text-white/20 font-sans">
                     {searchQuery ? 'No matches found' : 'No conversations yet'}
                   </p>
                   {!searchQuery && (
-                    <p className="text-[10px] text-white/15 mt-0.5 font-['Inter']">Start one below or pick a suggestion.</p>
+                    <p className="text-[10px] text-white/15 mt-0.5 font-sans">Start one below or pick a suggestion.</p>
                   )}
                 </div>
               ) : (
@@ -1026,7 +1026,7 @@ export default function BuilderCopilot() {
 
                   return sections.map(section => (
                     <div key={section.label}>
-                      <p className="text-[9px] text-white/15 uppercase tracking-wider px-3 pt-3 pb-1 font-medium font-['Inter']">{section.label}</p>
+                      <p className="text-[9px] text-white/15 uppercase tracking-wider px-3 pt-3 pb-1 font-medium font-sans">{section.label}</p>
                       {section.items.map(convo => (
                         <ConversationItem
                           key={convo.id}
@@ -1045,7 +1045,7 @@ export default function BuilderCopilot() {
             {/* History footer */}
             {conversations.length > 0 && (
               <div className="p-3 border-t border-white/[0.06]">
-                <p className="text-[9px] text-white/15 text-center font-['Inter']">
+                <p className="text-[9px] text-white/15 text-center font-sans">
                   {conversations.length} conversation{conversations.length !== 1 ? 's' : ''} saved locally
                 </p>
               </div>
@@ -1070,14 +1070,14 @@ export default function BuilderCopilot() {
               <Clock className="w-4 h-4" />
             </button>
             {activeConvo && messages.length > 0 && (
-              <p className="text-[12px] text-white/25 truncate max-w-[200px] font-['Inter']">
+              <p className="text-[12px] text-white/25 truncate max-w-[200px] font-sans">
                 {activeConvo.title}
               </p>
             )}
           </div>
           <button
             onClick={createNewConversation}
-            className="flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/50 px-3 py-1.5 rounded-full hover:bg-white/[0.04] transition-all font-['Inter']"
+            className="flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/50 px-3 py-1.5 rounded-full hover:bg-white/[0.04] transition-all font-sans"
           >
             <Plus className="w-3.5 h-3.5" />
             New chat
@@ -1105,7 +1105,7 @@ export default function BuilderCopilot() {
                 >
                   Hey{userName ? ` ${userName}` : ''}, how can I help?
                 </motion.h2>
-                <p className="text-[14px] text-white/25 mb-10 text-center max-w-sm font-['Inter']">
+                <p className="text-[14px] text-white/25 mb-10 text-center max-w-sm font-sans">
                   Compliance, risk scoring, Cadence code, and DeFi regulations
                 </p>
 
@@ -1115,7 +1115,7 @@ export default function BuilderCopilot() {
                     <motion.button
                       key={card.label}
                       onClick={() => sendMessage(card.prompt)}
-                      className="text-[12px] text-white/40 hover:text-white/70 px-4 py-2 rounded-full border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-200 font-['Inter']"
+                      className="text-[12px] text-white/40 hover:text-white/70 px-4 py-2 rounded-full border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-200 font-sans"
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.15 + i * 0.04 }}
@@ -1133,7 +1133,7 @@ export default function BuilderCopilot() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <p className="text-[11px] text-white/20 uppercase tracking-wider font-medium mb-2 px-3 font-['Inter']">Recent</p>
+                    <p className="text-[11px] text-white/20 uppercase tracking-wider font-medium mb-2 px-3 font-sans">Recent</p>
                     <div className="space-y-0.5">
                       {recentConversations.map(convo => (
                         <RecentConvoRow
@@ -1165,8 +1165,8 @@ export default function BuilderCopilot() {
                     {msg.role === 'user' ? (
                       /* User messages: right-aligned, subtle panel */
                       <div className="flex justify-end items-end gap-2">
-                        {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/20 transition-colors mb-1 shrink-0 font-['Inter']">{timeStr}</span>}
-                        <div className="max-w-[80%] px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[13px] text-white/70 leading-relaxed whitespace-pre-wrap font-['Inter']">
+                        {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/20 transition-colors mb-1 shrink-0 font-sans">{timeStr}</span>}
+                        <div className="max-w-[80%] px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[14px] text-white/75 leading-[1.8] whitespace-pre-wrap font-sans">
                           {msg.content}
                         </div>
                       </div>
@@ -1180,10 +1180,10 @@ export default function BuilderCopilot() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[10px] text-white/25 font-medium font-['Inter']">FlowShield Copilot</span>
-                            {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/15 transition-colors font-['Inter']">{timeStr}</span>}
+                            <span className="text-[10px] text-white/25 font-medium font-sans">FlowShield Copilot</span>
+                            {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/15 transition-colors font-sans">{timeStr}</span>}
                           </div>
-                          <div className="text-[13px] leading-relaxed font-['Inter',sans-serif]">
+                          <div className="text-[13px] leading-relaxed font-sans">
                             <RichContent content={msg.content} />
                           </div>
                           {/* Follow-up suggestions after AI messages */}
@@ -1193,7 +1193,7 @@ export default function BuilderCopilot() {
                                 <button
                                   key={card.label}
                                   onClick={() => sendMessage(card.prompt)}
-                                  className="text-[10px] px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/25 hover:text-white/50 hover:border-white/[0.12] hover:bg-white/[0.04] transition-all font-['Inter']"
+                                  className="text-[10px] px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/25 hover:text-white/50 hover:border-white/[0.12] hover:bg-white/[0.04] transition-all font-sans"
                                 >
                                   {card.label}
                                 </button>
@@ -1221,7 +1221,7 @@ export default function BuilderCopilot() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-white/25 mb-1.5 font-medium font-['Inter']">FlowShield Copilot</div>
+                    <div className="text-[10px] text-white/25 mb-1.5 font-medium font-sans">FlowShield Copilot</div>
                     <ThinkingSteps startTime={loadingStartTime} />
                   </div>
                 </motion.div>
@@ -1286,12 +1286,12 @@ export default function BuilderCopilot() {
                   <div className="flex items-center gap-2">
                     <FileCode className="w-3.5 h-3.5 text-white/20" />
                     {codeFileName ? (
-                      <span className="text-[11px] text-white/40 font-medium font-['Inter']">{codeFileName}</span>
+                      <span className="text-[11px] text-white/40 font-medium font-sans">{codeFileName}</span>
                     ) : (
-                      <span className="text-[11px] text-white/25 font-['Inter']">Code</span>
+                      <span className="text-[11px] text-white/25 font-sans">Code</span>
                     )}
                     {codeInput.trim() && (
-                      <span className="text-[10px] text-white/15 font-['Inter']">{codeLanguage}</span>
+                      <span className="text-[10px] text-white/15 font-sans">{codeLanguage}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -1329,12 +1329,12 @@ export default function BuilderCopilot() {
                       {isDraggingOver ? (
                         <div className="flex flex-col items-center gap-2">
                           <Upload className="w-5 h-5 text-white/30" />
-                          <p className="text-[12px] text-white/40 font-medium font-['Inter']">Drop to import</p>
+                          <p className="text-[12px] text-white/40 font-medium font-sans">Drop to import</p>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center gap-2.5">
-                          <p className="text-[13px] text-white/20 font-['Inter']">Paste or drop any file</p>
-                          <div className="flex items-center gap-2 text-[10px] text-white/12 font-['Inter']">
+                          <p className="text-[13px] text-white/20 font-sans">Paste or drop any file</p>
+                          <div className="flex items-center gap-2 text-[10px] text-white/12 font-sans">
                             <span className="px-1.5 py-0.5 rounded border border-white/[0.06] font-['JetBrains_Mono']">Cmd+V</span>
                             <span>or drag and drop</span>
                           </div>
@@ -1382,7 +1382,7 @@ export default function BuilderCopilot() {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between px-3 py-2 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-3 text-[10px] text-white/15 font-['Inter']">
+                  <div className="flex items-center gap-3 text-[10px] text-white/15 font-sans">
                     {codeInput.trim() ? (
                       <>
                         <span>{codeInput.split('\n').length} lines</span>
@@ -1395,7 +1395,7 @@ export default function BuilderCopilot() {
                   <button
                     onClick={handleScanCode}
                     disabled={!codeInput.trim() || isScanning}
-                    className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-20 font-['Inter'] ${
+                    className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-20 font-sans ${
                       codeInput.trim() && !isScanning
                         ? 'bg-white/90 text-[#060e09] hover:bg-white'
                         : 'text-white/20'
@@ -1422,10 +1422,10 @@ export default function BuilderCopilot() {
                 exit={{ opacity: 0, height: 0 }}
               >
                 <span className="w-2 h-2 rounded-full bg-red-400 motion-safe:animate-pulse" />
-                <span className="text-[11px] text-red-400/70 font-medium font-['Inter']">Listening...</span>
+                <span className="text-[11px] text-red-400/70 font-medium font-sans">Listening...</span>
                 <button
                   onClick={toggleVoice}
-                  className="ml-auto text-[10px] text-red-400/50 hover:text-red-400 transition-colors font-['Inter']"
+                  className="ml-auto text-[10px] text-red-400/50 hover:text-red-400 transition-colors font-sans"
                 >
                   Stop
                 </button>
@@ -1433,42 +1433,19 @@ export default function BuilderCopilot() {
             )}
           </AnimatePresence>
 
-          {/* Prompt usage indicator */}
-          {!promptUsage.unlimited && promptUsage.limit && (
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    promptUsage.remaining === 0 ? 'bg-red-400' :
-                    promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'bg-emerald-400' :
-                    'bg-emerald-500/50'
-                  }`}
-                  style={{ width: `${Math.min(100, (promptUsage.used / promptUsage.limit) * 100)}%` }}
-                />
-              </div>
-              <span className={`text-[10px] font-medium shrink-0 font-['Inter'] ${
-                promptUsage.remaining === 0 ? 'text-red-400/70' :
-                promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'text-emerald-400/70' :
-                'text-white/20'
-              }`}>
-                {promptUsage.used}/{promptUsage.limit}
-              </span>
-            </div>
-          )}
-
           {/* Limit reached banner */}
           {limitReached && (
             <div className="flex items-center gap-2 px-3 py-2.5 mb-2 rounded-xl bg-red-500/[0.06] border border-red-500/15">
-              <span className="text-[11px] text-red-400/80 font-medium font-['Inter']">Daily limit reached</span>
-              <span className="text-[10px] text-white/20 font-['Inter']">Resets at midnight UTC</span>
-              <a href="/pricing" className="ml-auto text-[10px] font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors font-['Inter']">Upgrade</a>
+              <span className="text-[11px] text-red-400/80 font-medium font-sans">Daily limit reached</span>
+              <span className="text-[10px] text-white/20 font-sans">Resets at midnight UTC</span>
+              <a href="/pricing" className="ml-auto text-[10px] font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors font-sans">Upgrade</a>
             </div>
           )}
 
-          {/* Approaching limit warning */}
-          {!limitReached && promptUsage.remaining !== null && promptUsage.remaining > 0 && promptUsage.remaining <= 3 && (
+          {/* Approaching limit warning — only shows at 5 or fewer remaining */}
+          {!limitReached && promptUsage.remaining !== null && promptUsage.remaining > 0 && promptUsage.remaining <= 5 && (
             <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
-              <span className="text-[10px] text-emerald-400/70 font-medium font-['Inter']">{promptUsage.remaining} prompt{promptUsage.remaining !== 1 ? 's' : ''} remaining today</span>
+              <span className="text-[10px] text-emerald-400/70 font-medium font-sans">{promptUsage.remaining} prompt{promptUsage.remaining !== 1 ? 's' : ''} remaining today</span>
             </div>
           )}
 
@@ -1477,12 +1454,12 @@ export default function BuilderCopilot() {
             {/* Code attachment indicator */}
             {codeInput.trim() && !showCodeInput && (
               <div className="flex items-center gap-2 px-4 pt-3">
-                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40 font-['Inter']">
+                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40 font-sans">
                   <FileCode className="w-3 h-3" />
                   {codeLanguage} · {codeInput.split('\n').length} lines
                 </span>
-                <button onClick={() => setShowCodeInput(true)} className="text-[10px] text-white/20 hover:text-white/40 font-['Inter']">edit</button>
-                <button onClick={() => setCodeInput('')} className="text-[10px] text-white/20 hover:text-red-400/60 font-['Inter']">remove</button>
+                <button onClick={() => setShowCodeInput(true)} className="text-[10px] text-white/20 hover:text-white/40 font-sans">edit</button>
+                <button onClick={() => setCodeInput('')} className="text-[10px] text-white/20 hover:text-red-400/60 font-sans">remove</button>
               </div>
             )}
 
@@ -1493,7 +1470,7 @@ export default function BuilderCopilot() {
               onKeyDown={handleKeyDown}
               placeholder={codeInput.trim() ? 'Ask about the attached code...' : 'Ask about compliance, risk scoring, Cadence code...'}
               rows={1}
-              className="w-full bg-transparent resize-none border-0 outline-none text-[14px] text-white/70 px-4 pt-4 pb-2 placeholder:text-white/20 max-h-36 leading-relaxed font-['Inter']"
+              className="w-full bg-transparent resize-none border-0 outline-none text-[14px] text-white/70 px-4 pt-4 pb-2 placeholder:text-white/20 max-h-36 leading-relaxed font-sans"
               style={{ minHeight: '44px' }}
             />
 
@@ -1525,7 +1502,7 @@ export default function BuilderCopilot() {
                   </button>
                 )}
                 {liveContext && !contextLoading && (
-                  <span className="text-[10px] text-white/15 ml-1 flex items-center gap-1.5 font-['Inter']">
+                  <span className="text-[10px] text-white/15 ml-1 flex items-center gap-1.5 font-sans">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
                     Risk {liveContext.riskScore ?? '—'}/100
                   </span>
@@ -1561,7 +1538,7 @@ export default function BuilderCopilot() {
             </div>
           </div>
 
-          <p className="text-[10px] text-white/10 text-center mt-2.5 font-['Inter']">
+          <p className="text-[10px] text-white/10 text-center mt-2.5 font-sans">
             FlowShield may make mistakes. Verify compliance advice independently.
           </p>
         </div>

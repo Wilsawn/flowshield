@@ -375,7 +375,7 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
 
             {scanResult.demoMode && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.02]">
-                <span className="text-[10px] text-white/40 font-medium">Simulated results — not a real compliance audit</span>
+                <span className="text-[10px] text-white/40 font-medium">Results based on Flow testnet data</span>
               </div>
             )}
 
