@@ -86,31 +86,31 @@ export default function Layout() {
 
   const sidebarContent = (
     <>
-      <div className="p-5 border-b border-emerald-500/[0.06]">
-        <NavLink to="/" className="flex items-center gap-2.5 group" onClick={() => setSidebarOpen(false)}>
-          <FlowShieldLogo size={24} />
-          <div>
-            <h1 className="text-[14px] font-semibold tracking-tight text-white">FlowShield</h1>
-            <p className="text-[10px] text-white/25 tracking-wider uppercase">Compliance for DeFi</p>
+      <div className="px-4 py-4 border-b border-white/[0.06]">
+        <NavLink to="/" className="flex items-center gap-3 group" onClick={() => setSidebarOpen(false)}>
+          <FlowShieldLogo size={22} />
+          <div className="min-w-0">
+            <h1 className="text-[13px] font-semibold tracking-tight text-white/95 truncate">FlowShield</h1>
+            <p className="text-[10px] font-medium text-white/25 tracking-[0.08em] uppercase">Compliance</p>
           </div>
         </NavLink>
       </div>
 
-      <nav className="p-3 space-y-0.5 shrink-0">
+      <nav className="p-2 space-y-0.5 shrink-0" aria-label="App">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors duration-150 ${
                 isActive
-                  ? 'bg-white/[0.07] text-white/90'
-                  : 'text-white/35 hover:text-white/60 hover:bg-white/[0.03]'
+                  ? 'bg-white/[0.06] text-white/90 border border-white/[0.08]'
+                  : 'text-white/40 hover:text-white/75 hover:bg-white/[0.03] border border-transparent'
               }`
             }
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
             {label}
           </NavLink>
         ))}
@@ -118,7 +118,7 @@ export default function Layout() {
 
       <div className="flex-1 min-h-0" aria-hidden="true" />
 
-      <div className="border-t border-emerald-500/[0.06] shrink-0">
+      <div className="border-t border-white/[0.06] shrink-0 bg-[#060e09]">
         <button
           onClick={() => setBottomOpen(!bottomOpen)}
           className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] text-white/25 hover:text-white/40 transition-colors duration-150"
@@ -217,13 +217,13 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen relative bg-[#060e09] text-white">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-56 border-r border-emerald-500/[0.06] bg-[#060e09] flex-col relative z-10">
+      {/* Desktop Sidebar — PRD §3.2: 224px */}
+      <aside className="hidden md:flex w-[224px] shrink-0 border-r border-white/[0.06] bg-[#060e09] flex-col relative z-10">
         {sidebarContent}
       </aside>
 
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 border-b border-emerald-500/[0.06] bg-[#060e09]/95 backdrop-blur-sm flex items-center justify-between px-4">
+      {/* Mobile Header — blur allowed on nav per UI_PRD §2.3 */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/[0.06] bg-[#060e09]/95 backdrop-blur-md flex items-center justify-between px-4">
         <NavLink to="/" className="flex items-center gap-2">
           <FlowShieldLogo size={20} />
           <span className="text-[14px] font-semibold text-white">FlowShield</span>
@@ -248,11 +248,11 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
             />
             <motion.aside
-              className="md:hidden fixed top-14 left-0 bottom-0 w-56 z-50 border-r border-emerald-500/[0.06] bg-[#060e09] flex flex-col"
+              className="md:hidden fixed top-14 left-0 bottom-0 w-[224px] z-50 border-r border-white/[0.06] bg-[#060e09] flex flex-col"
               initial={{ x: -224 }}
               animate={{ x: 0 }}
               exit={{ x: -224 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               {sidebarContent}
             </motion.aside>
@@ -262,15 +262,10 @@ export default function Layout() {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto relative z-10 pt-14 md:pt-0">
-        <div className="p-4 sm:p-6 md:p-8 lg:p-10">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          >
+        <div className="px-4 sm:px-6 py-6 md:py-8 min-h-full">
+          <div key={location.pathname}>
             <Outlet />
-          </motion.div>
+          </div>
         </div>
       </main>
 

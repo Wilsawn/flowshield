@@ -38,6 +38,18 @@ Use these docs as the source of truth when implementing. Always reference the la
 | @onflow/fcl | 1.21.x | [developers.flow.com](https://developers.flow.com/) |
 | @supabase/supabase-js | 2.98.x | [supabase.com/docs](https://supabase.com/docs) |
 
+### shadcn/ui (pattern reference — use this when building UI)
+
+FlowShield is **aligned with the shadcn/ui stack** in practice: **Tailwind + Radix primitives + `class-variance-authority` + `tailwind-merge` + `cn()`** (`frontend/src/lib/utils.ts`). We do **not** need to match shadcn’s default light/zinc theme; we **re-skin** every component to **§2** (dark `#060e09` / `#0a1410`, **emerald-only** accent).
+
+| Resource | URL | How to use |
+|----------|-----|------------|
+| **Components & docs** | [ui.shadcn.com](https://ui.shadcn.com) | **Primary reference** for new pieces: Dialog, Dropdown, Tabs, Tooltip, Form patterns, accessibility defaults. Prefer **adapting** their markup/API to existing `frontend/src/components/ui/*` rather than inventing one-off patterns. |
+| **Themes / charts** | [ui.shadcn.com/charts](https://ui.shadcn.com/charts) | Recharts-based examples; keep chart strokes minimal per §3.2 (no chartjunk). |
+| **CLI (optional)** | [ui.shadcn.com/docs/installation](https://ui.shadcn.com/docs/installation) | If you add the CLI, point it at this Vite + React + Tailwind repo and **merge** generated files into `components/ui` — then replace colors with PRD tokens. |
+
+**Rule:** Treat shadcn as the **implementation cookbook**; treat **`UI_PRD.md` §2–3** as the **brand and motion law**. Never ship shadcn’s default purple/slate accents on FlowShield surfaces without a PRD update.
+
 ### Backend
 
 | Library | Version | Docs |

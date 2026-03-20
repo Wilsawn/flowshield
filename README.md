@@ -108,7 +108,7 @@ npm install
 npm run dev
 ```
 
-Frontend runs on `localhost:3000`, backend on `localhost:3002`.
+Frontend (Vite) runs on **`http://localhost:5173`**, API on **`http://localhost:3002`**.
 
 ## Tech Stack
 

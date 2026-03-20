@@ -1,20 +1,20 @@
-import { ShieldCheck, AlertTriangle, Wallet } from 'lucide-react'
-
 export default function WalletStatus({ isCustodial, walletAddr, flowBalance, onNavigate }) {
   if (isCustodial && walletAddr) {
     return (
-      <div className="mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-        <p className="text-xs text-emerald-400">
-          <ShieldCheck className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-          Your Flow account is active — transactions are ready
-          {flowBalance !== null && <span className="ml-2 text-white/50">Balance: {flowBalance.toFixed(4)} FLOW</span>}
+      <div className="mb-6 rounded-xl border border-white/[0.06] bg-white/[0.02] py-3 pl-4 pr-4 border-l-2 border-l-emerald-500/60">
+        <p className="text-[12px] font-medium text-white/85">
+          Account active — transactions ready
+          {flowBalance !== null && (
+            <span className="mt-0.5 block text-[11px] font-normal text-white/40">
+              Balance {flowBalance.toFixed(4)} FLOW
+            </span>
+          )}
         </p>
       </div>
     )
   }
 
   if (!isCustodial && walletAddr) {
-    // Self-custodial wallet connected via FCL
     const walletData = (() => {
       try { return JSON.parse(localStorage.getItem('flowshield_wallet') || '{}') } catch { return {} }
     })()
@@ -22,43 +22,44 @@ export default function WalletStatus({ isCustodial, walletAddr, flowBalance, onN
 
     if (isWalletUser) {
       return (
-        <div className="mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-          <p className="text-xs text-emerald-400">
-            <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-            Wallet connected — you sign all transactions
-            {flowBalance !== null && <span className="ml-2 text-white/50">Balance: {flowBalance.toFixed(4)} FLOW</span>}
+        <div className="mb-6 rounded-xl border border-white/[0.06] bg-white/[0.02] py-3 pl-4 pr-4 border-l-2 border-l-emerald-500/60">
+          <p className="text-[12px] font-medium text-white/85">
+            Wallet connected — you sign transactions
+            {flowBalance !== null && (
+              <span className="mt-0.5 block text-[11px] font-normal text-white/40">
+                Balance {flowBalance.toFixed(4)} FLOW
+              </span>
+            )}
           </p>
         </div>
       )
     }
 
     return (
-      <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
-        <p className="text-xs text-amber-400">
-          <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-          Wallet not recognized — create a new account to get started
+      <div className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[12px] text-amber-200/90">
+          Wallet not recognized — create an account to continue.
         </p>
         <button
+          type="button"
           onClick={() => { localStorage.removeItem('flowshield_token'); localStorage.removeItem('flowshield_wallet'); localStorage.removeItem('flowshield_user'); onNavigate('/') }}
-          className="ml-3 px-3 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors whitespace-nowrap"
+          className="shrink-0 rounded-lg bg-amber-500/20 px-3 py-2 text-[12px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/30"
         >
-          Create Account
+          Create account
         </button>
       </div>
     )
   }
 
   return (
-    <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 flex items-center justify-between">
-      <p className="text-xs text-amber-400">
-        <Wallet className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-        No account found — sign up or connect your Flow wallet
-      </p>
+    <div className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-[12px] text-amber-200/90">No account — sign up or connect a Flow wallet.</p>
       <button
+        type="button"
         onClick={() => onNavigate('/')}
-        className="ml-3 px-3 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors whitespace-nowrap"
+        className="shrink-0 rounded-lg bg-amber-500/20 px-3 py-2 text-[12px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/30"
       >
-        Get Started
+        Get started
       </button>
     </div>
   )

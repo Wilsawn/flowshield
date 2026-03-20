@@ -1,5 +1,3 @@
-import { ArrowDownToLine, ArrowUpFromLine, RotateCcw } from 'lucide-react'
-
 export default function ActionCards({
   depositAmount, setDepositAmount, onDeposit,
   borrowAmount, setBorrowAmount, onBorrow,
@@ -7,14 +5,13 @@ export default function ActionCards({
   live, flowBalance, maxBorrowRemaining,
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
       {/* Deposit */}
-      <div className="p-6 rounded-xl border border-white/[0.06]">
-        <div className="flex items-center gap-2 mb-5">
-          <ArrowDownToLine className="w-4 h-4 text-white/40" />
-          <h3 className="text-sm font-semibold text-white/80">Deposit</h3>
-          <span className="text-xs text-white/20 ml-auto">FLOW</span>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:border-white/[0.08]">
+        <div className="mb-4 flex items-baseline justify-between gap-2">
+          <h3 className="text-[13px] font-semibold text-white/90">Deposit</h3>
+          <span className="text-[11px] font-medium uppercase tracking-wider text-white/25">FLOW</span>
         </div>
         <div className="space-y-3">
           <input
@@ -22,27 +19,27 @@ export default function ActionCards({
             placeholder="0.00"
             value={depositAmount}
             onChange={(e) => setDepositAmount(e.target.value)}
-            className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-emerald-500/[0.15] transition-colors"
+            className="h-10 w-full rounded-lg border border-white/[0.06] bg-[#0a1410] px-4 text-[13px] text-white placeholder:text-white/25 transition-colors focus:border-emerald-500/25 focus:outline-none"
           />
           <button
+            type="button"
             onClick={onDeposit}
-            className="w-full h-10 rounded-lg bg-white/90 text-[#060e09] text-sm font-semibold hover:bg-white transition-all disabled:opacity-30"
+            className="h-10 w-full rounded-lg bg-emerald-500 text-[13px] font-semibold text-[#060e09] transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!depositAmount || Number(depositAmount) <= 0}
           >
             Deposit
           </button>
-          <p className="text-xs text-white/25 text-center">
-            {flowBalance !== null ? `Balance: ${flowBalance.toFixed(4)} FLOW` : 'Into Lending Pool'} · Gas sponsored
+          <p className="text-center text-[11px] text-white/30">
+            {flowBalance !== null ? `Balance ${flowBalance.toFixed(4)} FLOW` : 'Lending pool'} · Gas sponsored
           </p>
         </div>
       </div>
 
       {/* Borrow */}
-      <div className="p-6 rounded-xl border border-white/[0.06]">
-        <div className="flex items-center gap-2 mb-5">
-          <ArrowUpFromLine className="w-4 h-4 text-white/40" />
-          <h3 className="text-sm font-semibold text-white/80">Borrow</h3>
-          <span className="text-xs text-white/20 ml-auto">FLOW</span>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:border-white/[0.08]">
+        <div className="mb-4 flex items-baseline justify-between gap-2">
+          <h3 className="text-[13px] font-semibold text-white/90">Borrow</h3>
+          <span className="text-[11px] font-medium uppercase tracking-wider text-white/25">FLOW</span>
         </div>
         <div className="space-y-3">
           <input
@@ -50,27 +47,27 @@ export default function ActionCards({
             placeholder="0.00"
             value={borrowAmount}
             onChange={(e) => setBorrowAmount(e.target.value)}
-            className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-emerald-500/[0.15] transition-colors"
+            className="h-10 w-full rounded-lg border border-white/[0.06] bg-[#0a1410] px-4 text-[13px] text-white placeholder:text-white/25 transition-colors focus:border-emerald-500/25 focus:outline-none"
           />
           <button
+            type="button"
             onClick={onBorrow}
-            className="w-full h-10 rounded-lg bg-white/90 text-[#060e09] text-sm font-semibold hover:bg-white transition-all disabled:opacity-30"
+            className="h-10 w-full rounded-lg bg-emerald-500 text-[13px] font-semibold text-[#060e09] transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!borrowAmount || Number(borrowAmount) <= 0}
           >
             Borrow
           </button>
-          <p className="text-xs text-white/25 text-center">
+          <p className="text-center text-[11px] text-white/30">
             {maxBorrowRemaining.toFixed(2)} remaining · {live.maxLTVPercent ?? 75}% LTV
           </p>
         </div>
       </div>
 
       {/* Repay */}
-      <div className="p-6 rounded-xl border border-white/[0.06]">
-        <div className="flex items-center gap-2 mb-5">
-          <RotateCcw className="w-4 h-4 text-white/40" />
-          <h3 className="text-sm font-semibold text-white/80">Repay</h3>
-          <span className="text-xs text-white/20 ml-auto">FLOW</span>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:border-white/[0.08]">
+        <div className="mb-4 flex items-baseline justify-between gap-2">
+          <h3 className="text-[13px] font-semibold text-white/90">Repay</h3>
+          <span className="text-[11px] font-medium uppercase tracking-wider text-white/25">FLOW</span>
         </div>
         <div className="space-y-3">
           <input
@@ -78,16 +75,17 @@ export default function ActionCards({
             placeholder="0.00"
             value={repayAmount}
             onChange={(e) => setRepayAmount(e.target.value)}
-            className="w-full h-10 bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-emerald-500/[0.15] transition-colors"
+            className="h-10 w-full rounded-lg border border-white/[0.06] bg-[#0a1410] px-4 text-[13px] text-white placeholder:text-white/25 transition-colors focus:border-emerald-500/25 focus:outline-none"
           />
           <button
+            type="button"
             onClick={onRepay}
-            className="w-full h-10 rounded-lg bg-white/90 text-[#060e09] text-sm font-semibold hover:bg-white transition-all disabled:opacity-30"
+            className="h-10 w-full rounded-lg bg-emerald-500 text-[13px] font-semibold text-[#060e09] transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!repayAmount || Number(repayAmount) <= 0 || (live.borrowed ?? 0) <= 0}
           >
             Repay
           </button>
-          <p className="text-xs text-white/25 text-center">
+          <p className="text-center text-[11px] text-white/30">
             {(live.borrowed ?? 0) > 0 ? `${(live.borrowed ?? 0).toFixed(2)} outstanding` : 'No outstanding borrows'}
           </p>
         </div>

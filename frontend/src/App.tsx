@@ -12,7 +12,19 @@ import TermsOfService from './pages/terms'
 import DocsPage from './pages/docs'
 import NotFound from './pages/NotFound'
 
+/**
+ * Dev-only: open /dashboard, /copilot, /operator without API onboarding.
+ * Create `frontend/.env.local` with: VITE_DEV_AUTH_BYPASS=true
+ * Never active in production builds (import.meta.env.DEV is false).
+ */
+function isDevAuthBypass() {
+  return Boolean(import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === 'true')
+}
+
 function RequireAuth({ children }) {
+  if (isDevAuthBypass()) {
+    return children
+  }
   try {
     const token = localStorage.getItem('flowshield_token')
     const wallet = localStorage.getItem('flowshield_wallet')

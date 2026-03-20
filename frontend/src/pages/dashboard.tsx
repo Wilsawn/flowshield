@@ -287,16 +287,16 @@ export default function Dashboard() {
 
   return (
     <div className="text-white">
-      <div className="max-w-[1100px] mx-auto">
+      <div className="mx-auto max-w-6xl">
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-start justify-between gap-6 mb-3">
+          <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h1 className="font-display text-[1.75rem] font-bold tracking-tight truncate">
+              <h1 className="font-display text-[clamp(1.375rem,2.5vw,1.75rem)] font-bold tracking-tight text-white/95">
                 Dashboard
               </h1>
-              <p className="text-[13px] text-white/30 mt-1">Compliance status and lending activity</p>
+              <p className="mt-1 text-[13px] text-white/35">Compliance status and lending activity</p>
             </div>
             <div className="flex items-center gap-2.5 shrink-0">
               {/* Jurisdiction picker */}
@@ -312,11 +312,11 @@ export default function Dashboard() {
                 <AnimatePresence>
                   {showJurisdictionPicker && (
                     <motion.div
-                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a1410] shadow-2xl z-50 overflow-hidden"
-                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-white/[0.08] bg-[#0a1410] shadow-2xl"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
                     >
                       <div className="p-2">
                         <p className="text-[10px] text-white/40 uppercase tracking-wider px-2.5 py-2 font-semibold">Select Jurisdiction</p>
@@ -386,18 +386,32 @@ export default function Dashboard() {
 
         {/* Connect Wallet Prompt */}
         {!walletAddr && (
-          <div className="mb-6 p-6 rounded-xl border border-white/[0.08] bg-white/[0.02] text-center">
-            <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
-              <Wallet className="w-6 h-6 text-white/30" />
+          <div className="mb-8 flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] px-6 py-14 text-center">
+            <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0a1410]">
+              <Wallet className="h-4 w-4 text-white/35" aria-hidden />
             </div>
-            <p className="text-[15px] font-semibold text-white/80 mb-1">Connect your wallet to get started</p>
-            <p className="text-[12px] text-white/30 max-w-sm mx-auto mb-4">Connect a Flow wallet (Lilico, Blocto, or any FCL-compatible wallet) or sign in with passkey to view compliance, deposit, borrow, and manage credentials.</p>
-            <button
-              onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[13px] font-medium hover:bg-emerald-500/30 transition-colors"
-            >
-              Launch dApp (passkey sign-in)
-            </button>
+            <h2 className="font-display text-[17px] font-semibold tracking-tight text-white/90">
+              Connect a wallet to continue
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-white/35">
+              Use a Flow wallet (Lilico, Blocto, or any FCL wallet) or sign in with a passkey to view compliance, pool activity, and credentials.
+            </p>
+            <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="rounded-lg bg-emerald-500 px-5 py-2.5 text-[13px] font-semibold text-[#060e09] transition-colors hover:bg-emerald-400"
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/docs')}
+                className="text-[12px] font-medium text-white/40 underline-offset-4 hover:text-white/60 hover:underline"
+              >
+                Read the docs
+              </button>
+            </div>
           </div>
         )}
 

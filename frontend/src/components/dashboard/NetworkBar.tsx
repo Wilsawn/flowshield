@@ -1,8 +1,6 @@
-import { ExternalLink } from 'lucide-react'
-
 export default function NetworkBar({ chain, walletAddr, jurisdiction }) {
   return (
-    <div className="mb-8 flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-3">
+    <div className="mb-6 flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-[#0a1410] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
         <span className="text-xs text-white/50 font-medium">Flow Testnet</span>

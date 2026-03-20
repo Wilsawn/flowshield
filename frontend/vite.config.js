@@ -10,7 +10,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    // Use default Vite port — do NOT use 3002 (that's the API). Parallel `npm run dev`
+    // was incrementing 3000→3001→3002 and colliding with Express (EADDRINUSE).
+    port: 5173,
+    strictPort: false,
     proxy: {
       '/api': {
         target: 'http://localhost:3002',
