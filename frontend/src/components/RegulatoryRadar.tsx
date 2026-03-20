@@ -374,8 +374,8 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
             <p className="text-[11px] text-white/25 -mt-2">{scanResult.overallAssessment}</p>
 
             {scanResult.demoMode && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-500/15 bg-cyan-500/[0.04]">
-                <span className="text-[10px] text-cyan-400/70 font-medium">Simulated results — not a real compliance audit</span>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.02]">
+                <span className="text-[10px] text-white/40 font-medium">Simulated results — not a real compliance audit</span>
               </div>
             )}
 
@@ -450,10 +450,10 @@ export default function RegulatoryRadar({ onAuditEntry, onRefresh }) {
             </div>
 
             {/* Proposed Rule Updates */}
-            <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.02]">
+            <div className="p-4 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.02]">
               <div className="flex items-center gap-2 mb-4">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                <p className="text-[13px] text-cyan-400 font-semibold">Proposed Rule Updates — {selectedGap.jurisdiction}</p>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <p className="text-[13px] text-emerald-400 font-semibold">Proposed Rule Updates — {selectedGap.jurisdiction}</p>
               </div>
 
               <div className="space-y-3">

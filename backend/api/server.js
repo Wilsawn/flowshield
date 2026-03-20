@@ -123,9 +123,12 @@ app.use('/api/risk', riskRoutes)
 app.use('/api/chain', chainRoutes)
 app.use('/api/kyc', kycRoutes)
 
+// Per-user write rate limit — tighter than global, keyed by session
+const userWriteLimit = rateLimit({ windowMs: 60000, max: 30 })
+
 // User-facing write endpoints — protected by session auth in production
-app.use('/api/pool', requireAuth, poolRoutes)
-app.use('/api/copilot', requireAuth, copilotRoutes)  // Auth required — conversations are user-scoped
+app.use('/api/pool', requireAuth, userWriteLimit, poolRoutes)
+app.use('/api/copilot', requireAuth, userWriteLimit, copilotRoutes)  // Auth required — conversations are user-scoped
 app.use('/api/subscription', subscriptionRoutes)  // Pricing — public access needed
 app.use('/api/governance', governanceRoutes)  // Auth applied per-route inside governance.js
 app.use('/api/accounts', accountsRoutes)  // Has its own auth (create/login are public, others protected)
@@ -169,7 +172,8 @@ app.use('/api/a2a', a2aRoutes)
 app.get('/.well-known/agent.json', wellKnownHandler)
 
 // Admin-only — always require API key when Supabase is configured
-app.use('/api/admin', requireApiKey, adminRoutes)
+const adminRateLimit = rateLimit({ windowMs: 60000, max: 50, keyBy: 'apiKey' })
+app.use('/api/admin', requireApiKey, adminRateLimit, adminRoutes)
 
 // ── Health check ──
 app.get('/health', (req, res) => {

@@ -39,17 +39,13 @@ const TIERS = [
     period: 'forever',
     description: 'For builders exploring compliance on Flow.',
     icon: Sparkles,
-    color: 'emerald',
     cta: 'Get Free API Key',
     features: [
-      { label: '10,000 API calls / month', included: true },
-      { label: 'verify() + verifyFull()', included: true },
-      { label: 'US jurisdiction', included: true },
-      { label: 'Documentation + community support', included: true },
-      { label: 'Builder Copilot (limited)', included: true },
-      { label: 'Multi-jurisdiction', included: false },
-      { label: 'Regulatory Radar', included: false },
-      { label: 'Webhooks', included: false },
+      '10,000 API calls / month',
+      'verify() + verifyFull()',
+      'US jurisdiction',
+      'Documentation + community support',
+      'Builder Copilot (limited)',
     ],
   },
   {
@@ -59,18 +55,17 @@ const TIERS = [
     period: '/mo',
     description: 'For protocols launching across jurisdictions.',
     icon: ArrowUpRight,
-    color: 'emerald',
     popular: true,
     cta: 'Start Growth Plan',
     features: [
-      { label: '100,000 API calls / month', included: true },
-      { label: 'All verification methods', included: true },
-      { label: 'US, EU, UK, SG, CA jurisdictions', included: true },
-      { label: 'Builder Copilot AI (full)', included: true },
-      { label: 'Regulatory Radar scans', included: true },
-      { label: 'Webhook alerts', included: true },
-      { label: '99.9% uptime SLA', included: true },
-      { label: 'Email support (24h response)', included: true },
+      '100,000 API calls / month',
+      'All verification methods',
+      'US, EU, UK, SG, CA jurisdictions',
+      'Builder Copilot AI (full)',
+      'Regulatory Radar scans',
+      'Webhook alerts',
+      '99.9% uptime SLA',
+      'Email support (24h response)',
     ],
   },
   {
@@ -80,47 +75,19 @@ const TIERS = [
     period: '/mo',
     description: 'For production protocols with custom needs.',
     icon: Building,
-    color: 'emerald',
     cta: 'Contact Sales',
     features: [
-      { label: 'Unlimited API calls', included: true },
-      { label: '10+ jurisdictions + custom rules', included: true },
-      { label: 'Dedicated Copilot instance', included: true },
-      { label: 'Regulatory Radar + auto-remediation', included: true },
-      { label: 'Priority webhooks + Slack alerts', included: true },
-      { label: '99.99% uptime SLA', included: true },
-      { label: 'Dedicated support + Slack channel', included: true },
-      { label: 'Custom contract deployment', included: true },
+      'Unlimited API calls',
+      '10+ jurisdictions + custom rules',
+      'Dedicated Copilot instance',
+      'Regulatory Radar + auto-remediation',
+      'Priority webhooks + Slack alerts',
+      '99.99% uptime SLA',
+      'Dedicated support + Slack channel',
+      'Custom contract deployment',
     ],
   },
 ]
-
-const colorMap = {
-  emerald: {
-    border: 'border-emerald-500/20',
-    bg: 'bg-emerald-500/[0.04]',
-    text: 'text-emerald-400',
-    icon: 'bg-emerald-500/10 border-emerald-500/20',
-    button: 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/[0.08]',
-    check: 'text-emerald-400/60',
-  },
-  violet: {
-    border: 'border-emerald-500/20',
-    bg: 'bg-emerald-500/[0.04]',
-    text: 'text-emerald-400',
-    icon: 'bg-emerald-500/10 border-emerald-500/20',
-    button: 'bg-emerald-500 text-white hover:bg-emerald-400 hover:shadow-[0_0_30px_rgba(52,211,153,0.2)]',
-    check: 'text-emerald-400/60',
-  },
-  cyan: {
-    border: 'border-emerald-500/20',
-    bg: 'bg-emerald-500/[0.04]',
-    text: 'text-emerald-400',
-    icon: 'bg-emerald-500/10 border-emerald-500/20',
-    button: 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/[0.08]',
-    check: 'text-emerald-400/60',
-  },
-}
 
 export default function PricingSection() {
   const [loading, setLoading] = useState(null)
@@ -129,6 +96,10 @@ export default function PricingSection() {
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactForm, setContactForm] = useState({ email: '', protocolName: '', message: '' })
   const [contactSent, setContactSent] = useState(false)
+  const [contactError, setContactError] = useState('')
+
+  const isValidEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
 
   const handleTierAction = async (tierId) => {
     setLoading(tierId)
@@ -166,17 +137,32 @@ export default function PricingSection() {
   }
 
   const handleContactSales = async () => {
-    if (!contactForm.email) return
+    setContactError('')
+
+    if (!contactForm.email.trim()) {
+      setContactError('Email is required.')
+      return
+    }
+    if (!isValidEmail(contactForm.email)) {
+      setContactError('Please enter a valid email address.')
+      return
+    }
+
     setLoading('contact')
     try {
-      await fetch(`${API}/api/subscription/contact-sales`, {
+      const res = await fetch(`${API}/api/subscription/contact-sales`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contactForm),
       })
-      setContactSent(true)
+      const data = await res.json()
+      if (!res.ok) {
+        setContactError(data.error || 'Something went wrong. Please try again.')
+      } else {
+        setContactSent(true)
+      }
     } catch {
-      setContactSent(true) // Show success anyway for UX
+      setContactError('Could not reach the server. Please try again.')
     }
     setLoading(null)
   }
@@ -202,20 +188,18 @@ export default function PricingSection() {
 
       {/* Tier cards */}
       <PricingGrid>
-        {TIERS.map((tier, i) => {
-          const c = colorMap[tier.color]
-          return (
+        {TIERS.map((tier, i) => (
             <div
               key={tier.id}
-              className={`relative rounded-2xl p-5 flex flex-col transition-all duration-200 ${
+              className={`relative rounded-xl p-5 flex flex-col transition-all duration-200 ${
                 tier.popular
-                  ? 'border border-emerald-500/25 bg-emerald-500/[0.04] shadow-[0_0_40px_rgba(52,211,153,0.06)] hover:border-emerald-500/35 hover:shadow-[0_0_50px_rgba(52,211,153,0.1)]'
-                  : 'border border-white/[0.08] bg-white/[0.03] hover:border-white/[0.12] hover:bg-white/[0.05]'
+                  ? 'border border-emerald-500/25 bg-emerald-500/[0.04] hover:border-emerald-500/35'
+                  : 'border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] hover:bg-white/[0.04]'
               }`}
             >
               {tier.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 rounded-full bg-emerald-400 text-[10px] font-bold text-[#060e09] uppercase tracking-wider shadow-[0_2px_12px_rgba(52,211,153,0.3)]">
+                  <span className="px-3 py-1 rounded-full bg-emerald-400 text-[10px] font-bold text-[#060e09] uppercase tracking-wider">
                     Most Popular
                   </span>
                 </div>
@@ -245,20 +229,14 @@ export default function PricingSection() {
 
               <p className="text-[12px] text-white/40 mb-5 leading-relaxed">{tier.description}</p>
 
-              <div className="space-y-2 mb-6 flex-1">
-                {tier.features.map((f, j) => (
-                  <div key={j} className="flex items-center gap-2">
-                    {f.included ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400/60 shrink-0" />
-                    ) : (
-                      <X className="w-3.5 h-3.5 text-white/10 shrink-0" />
-                    )}
-                    <span className={`text-[12px] ${f.included ? 'text-white/50' : 'text-white/15'}`}>
-                      {f.label}
-                    </span>
-                  </div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {tier.features.map((feature, j) => (
+                  <li key={j} className="flex items-center gap-2 text-[12px] text-white/50">
+                    <span className="text-emerald-400/50 shrink-0">•</span>
+                    {feature}
+                  </li>
                 ))}
-              </div>
+              </ul>
 
               <button
                 onClick={() => handleTierAction(tier.id)}
@@ -280,8 +258,7 @@ export default function PricingSection() {
                 )}
               </button>
             </div>
-          )
-        })}
+          ))}
       </PricingGrid>
 
       {/* API Key result */}
@@ -337,7 +314,7 @@ export default function PricingSection() {
             onClick={() => { setShowContactModal(false); setContactSent(false) }}
           >
             <motion.div
-              className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.08] bg-[#0c1210] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+              className="w-full max-w-lg mx-4 rounded-xl border border-white/[0.08] bg-[#0c1210] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
@@ -363,7 +340,7 @@ export default function PricingSection() {
               ) : (
                 <>
                   {/* Header with plan context */}
-                  <div className="px-7 pt-7 pb-5 border-b border-white/[0.06]">
+                  <div className="px-5 sm:px-7 pt-7 pb-5 border-b border-white/[0.06]">
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="text-[17px] font-bold text-white tracking-tight">Talk to our team</h3>
@@ -389,8 +366,8 @@ export default function PricingSection() {
                   </div>
 
                   {/* Form */}
-                  <div className="px-7 py-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="px-5 sm:px-7 py-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] text-white/30 font-medium mb-1.5 uppercase tracking-wider">Work email</label>
                         <input
@@ -425,18 +402,23 @@ export default function PricingSection() {
                   </div>
 
                   {/* Footer */}
-                  <div className="px-7 pb-7 flex items-center justify-between gap-4">
-                    <p className="text-[11px] text-white/20 leading-relaxed">
-                      No commitment. We'll send a custom proposal.
-                    </p>
-                    <button
-                      onClick={handleContactSales}
-                      disabled={!contactForm.email || loading === 'contact'}
-                      className="px-6 py-2.5 rounded-xl bg-white text-[13px] font-semibold text-[#0a0a0a] flex items-center gap-2 disabled:opacity-40 transition-all hover:bg-white/90 active:scale-[0.98] shrink-0"
-                    >
-                      {loading === 'contact' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
-                      Send request
-                    </button>
+                  <div className="px-5 sm:px-7 pb-7 space-y-3">
+                    {contactError && (
+                      <p className="text-[12px] text-red-400">{contactError}</p>
+                    )}
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-[11px] text-white/20 leading-relaxed">
+                        No commitment. We'll send a custom proposal.
+                      </p>
+                      <button
+                        onClick={handleContactSales}
+                        disabled={!contactForm.email.trim() || loading === 'contact'}
+                        className="px-6 py-2.5 rounded-xl bg-white text-[13px] font-semibold text-[#0a0a0a] flex items-center gap-2 disabled:opacity-40 transition-all hover:bg-white/90 active:scale-[0.98] shrink-0"
+                      >
+                        {loading === 'contact' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                        Send request
+                      </button>
+                    </div>
                   </div>
                 </>
               )}

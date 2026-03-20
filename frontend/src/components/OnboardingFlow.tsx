@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Sparkles, Globe, Lock, Cpu, Radar } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Fingerprint, Mail, ShieldCheck, Globe, Lock, Cpu } from 'lucide-react'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { JURISDICTION_LIST } from '@/data/jurisdictions'
 import { generateComplianceProof } from '@/utils/zk-proof'
@@ -26,14 +26,13 @@ const slideIn = {
   exit: { opacity: 0, x: -20, transition: { duration: 0.25 } },
 }
 
-/* Primary button with rotating border glow */
-function GlowButton({ children, className = '', ...props }) {
+function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
-      className={`btn-glow-orbit w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#060a13] font-semibold text-[14px] transition-all duration-500 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+      className={`w-full h-12 rounded-xl bg-emerald-500 text-[#060a13] font-semibold text-[14px] transition-colors duration-200 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
       {...props}
     >
-      <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
+      <span className="flex items-center justify-center gap-2">{children}</span>
     </button>
   )
 }
@@ -359,12 +358,6 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
 
   return (
     <div className="min-h-screen bg-[#060e09] text-white flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Mesh gradient background — matching landing page */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[15%] left-[10%] w-[600px] h-[600px] rounded-full bg-emerald-600/[0.06] blur-[180px]" />
-        <div className="absolute bottom-[5%] right-[5%] w-[500px] h-[500px] rounded-full bg-emerald-500/[0.04] blur-[150px]" />
-        <div className="absolute top-[50%] left-[60%] w-[400px] h-[400px] rounded-full bg-cyan-600/[0.03] blur-[120px]" />
-      </div>
 
       {/* Dot grid overlay — matching landing dot-grid */}
       <div className="absolute inset-0 pointer-events-none" style={{
@@ -405,7 +398,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
         {/* Progress bar */}
         <div className="h-[3px] bg-emerald-500/[0.06] rounded-full mb-8 overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-400 rounded-full"
+            className="h-full bg-emerald-500 rounded-full"
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           />
@@ -413,7 +406,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
 
         {/* Card — matching landing page glass style */}
         <motion.div
-          className="rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410]/60 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/40"
+          className="rounded-xl border border-white/[0.06] bg-[#0a1410] overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -421,10 +414,8 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
           <div className="p-8 md:p-10">
             {/* Logo */}
             <div className="flex items-center gap-2.5 mb-8">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/[0.12] flex items-center justify-center">
-                <FlowShieldLogo size={20} />
-              </div>
-              <span className="text-[15px] font-semibold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">FlowShield</span>
+              <FlowShieldLogo size={20} />
+              <span className="text-[15px] font-semibold text-white/90">FlowShield</span>
             </div>
 
             <AnimatePresence mode="wait">
@@ -482,13 +473,13 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                       </p>
                     )}
                     {error && <p className="text-[12px] text-red-400">{error}</p>}
-                    <GlowButton type="submit" disabled={emailLoading}>
+                    <PrimaryButton type="submit" disabled={emailLoading}>
                       {emailLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" /> Checking...
                         </>
                       ) : 'Continue with Email'}
-                    </GlowButton>
+                    </PrimaryButton>
                   </div>
                   <p className="text-[11px] text-white/15 mt-6 text-center leading-relaxed">
                     Your account is secured with industry-standard encryption.
@@ -511,8 +502,8 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                         onClick={() => setJurisdiction(j.code)}
                         className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl border text-left transition-all duration-300 ${
                           jurisdiction === j.code
-                            ? 'border-emerald-500/30 bg-emerald-500/[0.06] shadow-[0_0_20px_rgba(52,211,153,0.06)]'
-                            : 'border-emerald-500/[0.06] bg-emerald-500/[0.02] hover:border-emerald-500/[0.12] hover:bg-emerald-500/[0.04]'
+                            ? 'border-emerald-500/30 bg-emerald-500/[0.06]'
+                            : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] hover:bg-white/[0.04]'
                         }`}
                       >
                         <span className="text-2xl leading-none">{j.flag}</span>
@@ -527,18 +518,12 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                           </p>
                         </div>
                         {jurisdiction === j.code && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                          >
-                            <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
-                          </motion.div>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                         )}
                       </button>
                     ))}
                   </div>
-                  <GlowButton
+                  <PrimaryButton
                     onClick={() => {
                       if (!jurisdiction) return
                       if (authMethod === 'google') {
@@ -551,7 +536,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                     disabled={!jurisdiction}
                   >
                     Continue
-                  </GlowButton>
+                  </PrimaryButton>
                 </motion.div>
               )}
 
@@ -563,44 +548,24 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                     Use your fingerprint, face, or device PIN. Fast, secure, no passwords ever.
                   </p>
                   <div className="flex flex-col items-center py-4">
-                    {/* Fingerprint scanner animation */}
                     <div className="relative mb-8">
-                      <motion.div
-                        className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl"
-                        animate={scanPulse ? {
-                          scale: [1, 1.5, 1],
-                          opacity: [0.3, 0.6, 0.3],
-                        } : {}}
-                        transition={{ duration: 1, repeat: Infinity }}
-                      />
-                      <motion.div
-                        className={`relative w-24 h-24 rounded-full flex items-center justify-center border-2 transition-colors duration-500 ${
+                      <div
+                        className={`relative w-16 h-16 rounded-full flex items-center justify-center border transition-colors duration-300 ${
                           scanPulse
-                            ? 'border-emerald-400 bg-emerald-500/10'
-                            : 'border-emerald-500/[0.08] bg-emerald-500/[0.02]'
+                            ? 'border-emerald-400/30 bg-emerald-500/10'
+                            : 'border-white/[0.08] bg-white/[0.02]'
                         }`}
-                        animate={scanPulse ? { scale: [1, 0.95, 1] } : {}}
-                        transition={{ duration: 0.8, repeat: Infinity }}
                       >
-                        <Fingerprint className={`w-12 h-12 transition-colors duration-500 ${
+                        <Fingerprint className={`w-6 h-6 transition-colors duration-300 ${
                           scanPulse ? 'text-emerald-400' : 'text-white/25'
                         }`} />
-                        {/* Scan line */}
-                        {scanPulse && (
-                          <motion.div
-                            className="absolute left-3 right-3 h-0.5 bg-emerald-400/60 rounded-full"
-                            initial={{ top: '20%' }}
-                            animate={{ top: ['20%', '80%', '20%'] }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                          />
-                        )}
-                      </motion.div>
+                      </div>
                     </div>
 
                     {error && (
                       <p className="text-[12px] text-red-400 text-center mb-3 w-full">{error}</p>
                     )}
-                    <GlowButton onClick={handlePasskeySetup} disabled={scanPulse}>
+                    <PrimaryButton onClick={handlePasskeySetup} disabled={scanPulse}>
                       {scanPulse ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -612,7 +577,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                           {error ? 'Try Again' : 'Set Up Passkey'}
                         </>
                       )}
-                    </GlowButton>
+                    </PrimaryButton>
                   </div>
                   <p className="text-[11px] text-white/15 text-center mt-2">
                     Passkeys use WebAuthn — the same tech behind Apple Face ID and Google Passkeys.
@@ -645,13 +610,7 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                         >
                           <div className="shrink-0 mt-0.5">
                             {done ? (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                              >
-                                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
-                              </motion.div>
+                              <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
                             ) : active ? (
                               <Loader2 className="h-4.5 w-4.5 text-emerald-400 animate-spin" />
                             ) : (
@@ -682,42 +641,18 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
               {/* Step: Complete */}
               {step === 'complete' && (
                 <motion.div key="complete" {...slideIn} className="text-center">
-                  {/* Success animation */}
-                  <motion.div
-                    className="relative w-20 h-20 mx-auto mb-6"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 rounded-full bg-emerald-500/20"
-                      animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <div className="relative w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                      <motion.div
-                        initial={{ scale: 0, rotate: -45 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ delay: 0.3, type: 'spring', stiffness: 300 }}
-                      >
-                        <ShieldCheck className="w-9 h-9 text-emerald-400" />
-                      </motion.div>
-                    </div>
-                  </motion.div>
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+                    <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                  </div>
 
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <motion.div
-                      className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 mb-4"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.35 }}
-                    >
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-emerald-500/20 border border-emerald-500/30 mb-4">
                       <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-                    </motion.div>
+                    </div>
                     <h2 className="font-display text-[22px] font-bold text-white mb-2 tracking-[-0.01em]">You're all set!</h2>
                     <p className="text-[13px] text-white/35 mb-3">
                       Account created, verified, and compliant.
@@ -725,28 +660,18 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
 
                     {/* Veriff badge */}
                     {veriffUrl && (
-                      <motion.div
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/20 mb-2"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.45 }}
-                      >
-                        <span className="text-[10px] font-semibold text-cyan-400 tracking-wide uppercase">Verified by Veriff</span>
-                      </motion.div>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] mb-2">
+                        <span className="text-[10px] font-semibold text-white/50 tracking-wide uppercase">Verified by Veriff</span>
+                      </div>
                     )}
 
                     {/* ZK Proof badge */}
-                    <motion.div
-                      className="flex items-center justify-center gap-3 mb-4"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.5 }}
-                    >
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/[0.08] border border-violet-500/20">
-                        <Lock className="w-3 h-3 text-violet-400" />
-                        <span className="text-[10px] font-semibold text-violet-400 tracking-wide uppercase">ZK Proof Generated</span>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                        <Lock className="w-3 h-3 text-white/40" />
+                        <span className="text-[10px] font-semibold text-white/50 tracking-wide uppercase">ZK Proof Generated</span>
                       </div>
-                    </motion.div>
+                    </div>
 
                     {/* Success details */}
                     <div className="flex items-center justify-center gap-4 mb-8">
@@ -767,9 +692,9 @@ export default function OnboardingFlow({ onComplete, onBack, googleEmail }) {
                       ))}
                     </div>
 
-                    <GlowButton onClick={onComplete}>
+                    <PrimaryButton onClick={onComplete}>
                       Go to Dashboard
-                    </GlowButton>
+                    </PrimaryButton>
                   </motion.div>
                 </motion.div>
               )}

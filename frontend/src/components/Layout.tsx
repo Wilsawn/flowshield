@@ -252,7 +252,7 @@ export default function Layout() {
               initial={{ x: -224 }}
               animate={{ x: 0 }}
               exit={{ x: -224 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
               {sidebarContent}
             </motion.aside>

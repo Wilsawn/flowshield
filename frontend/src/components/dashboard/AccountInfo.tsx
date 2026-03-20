@@ -2,7 +2,7 @@ import { Activity } from 'lucide-react'
 
 export default function AccountInfo({ live }) {
   return (
-    <div className="mt-4 p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+    <div className="mt-4 p-6 rounded-xl border border-white/[0.06] bg-white/[0.02]">
       <div className="flex items-center gap-2 mb-5">
         <Activity className="w-4 h-4 text-white/40" />
         <h3 className="text-sm font-semibold text-white/80">On-Chain Account</h3>

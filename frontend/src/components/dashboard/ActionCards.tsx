@@ -10,7 +10,7 @@ export default function ActionCards({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
       {/* Deposit */}
-      <div className="p-6 rounded-2xl border border-white/[0.06]">
+      <div className="p-6 rounded-xl border border-white/[0.06]">
         <div className="flex items-center gap-2 mb-5">
           <ArrowDownToLine className="w-4 h-4 text-white/40" />
           <h3 className="text-sm font-semibold text-white/80">Deposit</h3>
@@ -38,7 +38,7 @@ export default function ActionCards({
       </div>
 
       {/* Borrow */}
-      <div className="p-6 rounded-2xl border border-white/[0.06]">
+      <div className="p-6 rounded-xl border border-white/[0.06]">
         <div className="flex items-center gap-2 mb-5">
           <ArrowUpFromLine className="w-4 h-4 text-white/40" />
           <h3 className="text-sm font-semibold text-white/80">Borrow</h3>
@@ -66,7 +66,7 @@ export default function ActionCards({
       </div>
 
       {/* Repay */}
-      <div className="p-6 rounded-2xl border border-white/[0.06]">
+      <div className="p-6 rounded-xl border border-white/[0.06]">
         <div className="flex items-center gap-2 mb-5">
           <RotateCcw className="w-4 h-4 text-white/40" />
           <h3 className="text-sm font-semibold text-white/80">Repay</h3>

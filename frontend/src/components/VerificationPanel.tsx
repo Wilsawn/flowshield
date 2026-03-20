@@ -196,7 +196,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
         <motion.div
-          className="relative w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
+          className="relative w-full max-w-md mx-4 rounded-xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -239,9 +239,7 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                     {isError ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
                     ) : isDone ? (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      </motion.div>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     ) : (
                       <Loader2 className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
                     )}
@@ -267,14 +265,9 @@ export default function VerificationPanel({ isOpen, onClose, action = 'deposit',
                 transition={{ duration: 0.4 }}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <motion.div
-                    className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
-                  >
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center">
                     <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                  </motion.div>
+                  </div>
                   <div>
                     <p className="text-[13px] font-semibold text-emerald-400">Compliant {action} confirmed</p>
                     <p className="text-[11px] text-white/25">Gas: {txResult.events?.find(e => e.type === 'FeesDeducted')?.data?.amount || '~0.001'} FLOW (sponsored)</p>

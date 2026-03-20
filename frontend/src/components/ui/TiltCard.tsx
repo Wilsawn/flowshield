@@ -72,7 +72,7 @@ export default function TiltCard({
           backfaceVisibility: 'hidden',
         }}
         animate={{ scale: disabled ? 1 : hovered ? scaleOnHover : 1 }}
-        transition={{ type: 'spring', stiffness: spring.stiffness, damping: spring.damping }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       >
         {children}
       </motion.div>

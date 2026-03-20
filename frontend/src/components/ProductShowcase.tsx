@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import FlowShieldLogo from '@/components/FlowShieldLogo'
 import {
   ReactFlow,
   Background,
@@ -13,24 +14,15 @@ import {
 import '@xyflow/react/dist/style.css'
 
 /* ─── Shared: stagger-in animation wrapper ─── */
-function NodeShell({ children, delay = 0, glowColor, hoverBorder = 'hover:border-emerald-500/20', className = '' }) {
+function NodeShell({ children, delay = 0, hoverBorder = 'hover:border-emerald-500/20', className = '' }) {
   return (
-    <div className="relative group">
-      {/* Ambient glow behind node */}
-      {glowColor && (
-        <div
-          className="absolute -inset-8 rounded-3xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-          style={{ background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)` }}
-        />
-      )}
-      <div
-        className={`rounded-2xl bg-[#0a1410]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden transition-all duration-300 ${hoverBorder} hover:shadow-[0_8px_40px_rgba(0,0,0,0.5)] ${className}`}
-        style={{
-          animation: `nodeEnter 0.5s cubic-bezier(0.25,0.1,0.25,1) ${delay}s both`,
-        }}
-      >
-        {children}
-      </div>
+    <div
+      className={`rounded-xl bg-[#0a1410] shadow-2xl shadow-black/50 overflow-hidden transition-all duration-300 ${hoverBorder} ${className}`}
+      style={{
+        animation: `nodeEnter 0.5s cubic-bezier(0.25,0.1,0.25,1) ${delay}s both`,
+      }}
+    >
+      {children}
     </div>
   )
 }
@@ -38,7 +30,7 @@ function NodeShell({ children, delay = 0, glowColor, hoverBorder = 'hover:border
 /* ─── Custom Node: Dashboard ─── */
 function DashboardNode() {
   return (
-    <NodeShell delay={0} glowColor="rgba(52,211,153,0.12)" className="w-[380px] border border-emerald-500/[0.08]">
+    <NodeShell delay={0} className="w-[380px] border border-emerald-500/[0.08]">
       <Handle type="source" position={Position.Right} id="dash-out" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
       <Handle type="source" position={Position.Bottom} id="dash-bottom" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
       <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/[0.06]">
@@ -62,7 +54,7 @@ function DashboardNode() {
           {[
             { label: 'Balance', value: '199,999', unit: 'FLOW', color: 'text-white/60' },
             { label: 'Deposited', value: '50,000', unit: 'USDC', color: 'text-emerald-400/70' },
-            { label: 'Borrowed', value: '12,000', unit: 'USDC', color: 'text-cyan-400/70' },
+            { label: 'Borrowed', value: '12,000', unit: 'USDC', color: 'text-emerald-400/70' },
           ].map(s => (
             <div key={s.label} className="rounded-xl bg-white/[0.02] border border-emerald-500/[0.06] p-3">
               <p className="text-[9px] text-white/25 uppercase">{s.label}</p>
@@ -72,7 +64,7 @@ function DashboardNode() {
           ))}
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           <span className="text-[10px] text-emerald-400/60 font-medium">Flow Testnet · Block #98,412,087</span>
           <span className="ml-auto text-[9px] text-white/20">Gas: Sponsored</span>
         </div>
@@ -84,9 +76,9 @@ function DashboardNode() {
 /* ─── Custom Node: Builder Copilot ─── */
 function CopilotNode() {
   return (
-    <NodeShell delay={0.08} hoverBorder="hover:border-cyan-500/20" className="w-[340px] border border-emerald-500/[0.08]">
-      <Handle type="target" position={Position.Left} id="cop-in" className="!w-2.5 !h-2.5 !bg-cyan-400 !border-2 !border-cyan-400/30" />
-      <Handle type="source" position={Position.Bottom} id="cop-out" className="!w-2.5 !h-2.5 !bg-cyan-400 !border-2 !border-cyan-400/30" />
+    <NodeShell delay={0.08} hoverBorder="hover:border-emerald-500/20" className="w-[340px] border border-emerald-500/[0.08]">
+      <Handle type="target" position={Position.Left} id="cop-in" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
+      <Handle type="source" position={Position.Bottom} id="cop-out" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
       <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/[0.06]">
         <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
@@ -95,14 +87,14 @@ function CopilotNode() {
       </div>
       <div className="p-4 space-y-3">
         <div className="flex justify-end">
-          <div className="max-w-[80%] px-3.5 py-2.5 rounded-2xl rounded-br-md bg-emerald-500/15 border border-emerald-500/20">
+          <div className="max-w-[80%] px-3.5 py-2.5 rounded-xl rounded-br-md bg-emerald-500/15 border border-emerald-500/20">
             <p className="text-[12px] text-white/70">Does my Cadence contract handle the travel rule for EU users?</p>
           </div>
         </div>
         <div className="flex justify-start">
-          <div className="max-w-[90%] px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-white/[0.03] border border-emerald-500/[0.06]">
+          <div className="max-w-[90%] px-3.5 py-2.5 rounded-xl rounded-bl-md bg-white/[0.03] border border-emerald-500/[0.06]">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="w-4 h-4 rounded-md bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-[8px] font-bold text-[#060a13]">AI</span>
+              <FlowShieldLogo size={16} />
               <span className="text-[10px] text-white/30">FlowShield Copilot</span>
             </div>
             <p className="text-[12px] text-white/50 leading-relaxed">Your contract checks <code className="text-[11px] px-1 py-0.5 rounded bg-white/[0.06] text-emerald-400/80 font-mono">isCompliant()</code> but doesn't enforce the <span className="text-amber-400/80 font-medium">MiCA travel rule threshold</span> of 1,000.</p>
@@ -133,7 +125,7 @@ function OrchestratorNode() {
   const [activeTab, setActiveTab] = useState(1)
   const content = orchTabContent[activeTab]
   return (
-    <NodeShell delay={0.24} glowColor="rgba(139,92,246,0.08)" hoverBorder="hover:border-violet-500/20" className="w-[360px] border border-violet-500/[0.12]">
+    <NodeShell delay={0.24} hoverBorder="hover:border-violet-500/20" className="w-[360px] border border-violet-500/[0.12]">
       <Handle type="target" position={Position.Left} id="orch-left" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
       <Handle type="target" position={Position.Top} id="orch-top" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
       <Handle type="source" position={Position.Right} id="orch-right" className="!w-2.5 !h-2.5 !bg-violet-400 !border-2 !border-violet-400/30" />
@@ -158,7 +150,7 @@ function OrchestratorNode() {
                 }`}
               >
                 {step.status === 'done' && <span className="text-violet-400">&#10003;</span>}
-                {activeTab === i && step.status === 'working' && <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" />}
+                {activeTab === i && step.status === 'working' && <span className="w-1 h-1 rounded-full bg-violet-400" />}
                 <span className="truncate">{step.label}</span>
               </button>
               {i < 2 && <span className="text-white/15 mx-0.5 shrink-0">&#8250;</span>}
@@ -225,7 +217,7 @@ function RadarNode() {
   const [activeTab, setActiveTab] = useState(2)
   const content = radarTabContent[activeTab]
   return (
-    <NodeShell delay={0.16} glowColor="rgba(251,191,36,0.06)" hoverBorder="hover:border-amber-500/20" className="w-[400px] border border-emerald-500/[0.08]">
+    <NodeShell delay={0.16} hoverBorder="hover:border-amber-500/20" className="w-[400px] border border-emerald-500/[0.08]">
       <Handle type="target" position={Position.Top} id="radar-in" className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-amber-400/30" />
       <Handle type="target" position={Position.Left} id="radar-left" className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-amber-400/30" />
       <Handle type="source" position={Position.Right} id="radar-right" className="!w-2.5 !h-2.5 !bg-emerald-400 !border-2 !border-emerald-400/30" />
@@ -250,7 +242,7 @@ function RadarNode() {
                 }`}
               >
                 {s.done && <span className="text-emerald-400">&#10003;</span>}
-                {activeTab === i && !s.done && <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />}
+                {activeTab === i && !s.done && <span className="w-1 h-1 rounded-full bg-emerald-400" />}
                 <span className="truncate">{s.label}</span>
               </button>
               {i < 3 && <span className="text-white/15 mx-0.5 shrink-0">&#8250;</span>}
@@ -266,18 +258,18 @@ function RadarNode() {
             transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
             className={`rounded-xl p-3 flex items-start gap-3 nodrag border ${
               content.status === 'amber' ? 'bg-amber-500/[0.04] border-amber-500/15' :
-              content.status === 'cyan' ? 'bg-cyan-500/[0.04] border-cyan-500/15' :
+              content.status === 'cyan' ? 'bg-white/[0.04] border-white/[0.08]' :
               'bg-emerald-500/[0.04] border-emerald-500/15'
             }`}
           >
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
               content.status === 'amber' ? 'bg-amber-500/10 border border-amber-500/20' :
-              content.status === 'cyan' ? 'bg-cyan-500/10 border border-cyan-500/20' :
+              content.status === 'cyan' ? 'bg-white/[0.06] border border-white/[0.08]' :
               'bg-emerald-500/10 border border-emerald-500/20'
             }`}>
               <span className={`text-[11px] font-semibold ${
                 content.status === 'amber' ? 'text-amber-400' :
-                content.status === 'cyan' ? 'text-cyan-400' :
+                content.status === 'cyan' ? 'text-white/50' :
                 'text-emerald-400'
               }`}>{content.icon}</span>
             </div>
@@ -311,13 +303,13 @@ function RadarNode() {
 function StatusNode({ data }) {
   return (
     <div
-      className="px-4 py-2.5 rounded-xl border border-emerald-500/[0.06] bg-[#0a1410]/90 backdrop-blur-xl shadow-lg shadow-black/30 transition-all duration-300 hover:border-emerald-500/15 hover:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+      className="px-4 py-2.5 rounded-xl border border-emerald-500/[0.06] bg-[#0a1410] shadow-lg shadow-black/30"
       style={{ animation: `nodeEnter 0.5s cubic-bezier(0.25,0.1,0.25,1) ${data.delay || 0.32}s both` }}
     >
       <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-emerald-400/50 !border-emerald-400/20" />
       <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-emerald-400/50 !border-emerald-400/20" />
       <div className="flex items-center gap-2">
-        <span className={`w-1.5 h-1.5 rounded-full ${data.color || 'bg-emerald-400'} ${data.pulse ? 'animate-pulse' : ''}`} />
+        <span className={`w-1.5 h-1.5 rounded-full ${data.color || 'bg-emerald-400'}`} />
         <span className="text-[10px] font-medium text-white/45">{data.label}</span>
         {data.badge && (
           <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold ${data.badgeClass || 'bg-emerald-500/10 text-emerald-400'}`}>{data.badge}</span>
@@ -361,19 +353,19 @@ const initialNodes = [
     id: 'status-flow',
     type: 'status',
     position: { x: 680, y: 680 },
-    data: { label: 'Flow Testnet', color: 'bg-emerald-400', pulse: true, badge: 'LIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400', delay: 0.4 },
+    data: { label: 'Flow Testnet', color: 'bg-emerald-400', badge: 'LIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400', delay: 0.4 },
   },
   {
     id: 'status-compliance',
     type: 'status',
     position: { x: -100, y: 400 },
-    data: { label: 'Compliance Check', color: 'bg-cyan-400', pulse: false, badge: 'PASSED', badgeClass: 'bg-cyan-500/10 text-cyan-400', delay: 0.36 },
+    data: { label: 'Compliance Check', color: 'bg-emerald-400', badge: 'PASSED', badgeClass: 'bg-emerald-500/10 text-emerald-400', delay: 0.36 },
   },
   {
     id: 'status-guard',
     type: 'status',
     position: { x: 900, y: 160 },
-    data: { label: 'Prompt Guard', color: 'bg-cyan-400', pulse: false, badge: 'ACTIVE', badgeClass: 'bg-cyan-500/10 text-cyan-400', delay: 0.32 },
+    data: { label: 'Prompt Guard', color: 'bg-emerald-400', badge: 'ACTIVE', badgeClass: 'bg-emerald-500/10 text-emerald-400', delay: 0.32 },
   },
 ]
 
@@ -449,8 +441,8 @@ const initialEdges = [
     source: 'status-guard',
     target: 'copilot',
     targetHandle: 'cop-in',
-    style: { stroke: 'rgba(34,211,238,0.3)', strokeWidth: 1 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(34,211,238,0.45)', width: 14, height: 14 },
+    style: { stroke: 'rgba(52,211,153,0.3)', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(52,211,153,0.45)', width: 14, height: 14 },
     className: 'edge-delayed',
   },
   {
@@ -477,7 +469,7 @@ export default function ProductShowcase() {
 
   return (
     <div
-      className="w-full h-[600px] md:h-[680px] rounded-2xl border border-emerald-500/[0.06] bg-[#0a1410] overflow-hidden relative"
+      className="w-full h-[400px] sm:h-[500px] md:h-[680px] rounded-xl border border-emerald-500/[0.06] bg-[#0a1410] overflow-hidden relative"
       onClick={handleClick}
       onMouseLeave={handleMouseLeave}
     >
@@ -508,7 +500,7 @@ export default function ProductShowcase() {
         />
       </ReactFlow>
       {/* Subtle gradient overlay at edges */}
-      <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+      <div className="absolute inset-0 pointer-events-none rounded-xl" style={{
         background: 'linear-gradient(to right, #0a1410 0%, transparent 6%, transparent 94%, #0a1410 100%), linear-gradient(to bottom, #0a1410 0%, transparent 6%, transparent 94%, #0a1410 100%)',
       }} />
     </div>

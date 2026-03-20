@@ -25,7 +25,7 @@ export default function FloatingNav({ onLaunch }: { onLaunch: () => void }) {
           : 'bg-[#0a0a0a]/40 backdrop-blur-md border-b border-transparent'
       }`}
     >
-      <div className="max-w-6xl mx-auto px-6 flex items-center justify-between py-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between py-3 sm:py-4">
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-150"
@@ -53,7 +53,7 @@ export default function FloatingNav({ onLaunch }: { onLaunch: () => void }) {
 
           <button
             onClick={onLaunch}
-            className="text-[13px] font-medium text-[#0a0a0a] bg-white px-4 py-1.5 rounded-full ml-2 transition-all duration-200 ease-out hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
+            className="text-[12px] sm:text-[13px] font-medium text-[#0a0a0a] bg-white px-3 sm:px-4 py-1.5 rounded-full ml-1 sm:ml-2 transition-all duration-200 ease-out hover:bg-white/95 hover:scale-[1.03] active:scale-[0.98]"
             aria-label="Launch FlowShield app"
           >
             Try FlowShield

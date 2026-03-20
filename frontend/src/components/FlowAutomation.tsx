@@ -298,7 +298,7 @@ export default function FlowAutomation({ onAuditEntry }) {
         </span>
         {enabledCount > 0 && (
           <span className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">
-            <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-1 h-1 rounded-full bg-emerald-400" />
             Running
           </span>
         )}
@@ -311,7 +311,7 @@ export default function FlowAutomation({ onAuditEntry }) {
           const isExpanded = expandedId === auto.id
           const colorMap = {
             emerald: { border: 'border-emerald-500/15', bg: 'bg-emerald-500/[0.04]', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-            cyan: { border: 'border-cyan-500/15', bg: 'bg-cyan-500/[0.04]', text: 'text-cyan-400', dot: 'bg-cyan-400' },
+            cyan: { border: 'border-emerald-500/15', bg: 'bg-emerald-500/[0.04]', text: 'text-emerald-400', dot: 'bg-emerald-400' },
             violet: { border: 'border-violet-500/15', bg: 'bg-violet-500/[0.04]', text: 'text-violet-400', dot: 'bg-violet-400' },
             amber: { border: 'border-amber-500/15', bg: 'bg-amber-500/[0.04]', text: 'text-amber-400', dot: 'bg-amber-400' },
           }
@@ -437,11 +437,11 @@ export default function FlowAutomation({ onAuditEntry }) {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3 mb-3"
+                            className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] p-3 mb-3"
                           >
                             <div className="flex items-center gap-2">
-                              <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-                              <span className="text-[11px] text-cyan-400/70">Querying Flow testnet and running analysis...</span>
+                              <Loader2 className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+                              <span className="text-[11px] text-emerald-400/70">Querying Flow testnet and running analysis...</span>
                             </div>
                           </motion.div>
                         )}

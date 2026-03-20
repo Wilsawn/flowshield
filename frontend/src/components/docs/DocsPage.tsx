@@ -6,6 +6,35 @@ import DocPanel from './DocPanel'
 import DocsMiniChat from './DocsMiniChat'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 
+function LegendShape({ shape, color }: { shape: string; color: string }) {
+  const s = 10
+  const h = s / 2
+  let points: string
+  switch (shape) {
+    case 'diamond':
+      points = `${h},0 ${s},${h} ${h},${s} 0,${h}`
+      break
+    case 'hexagon':
+      points = Array.from({ length: 6 }, (_, i) => {
+        const a = (Math.PI / 3) * i - Math.PI / 2
+        return `${h + h * Math.cos(a)},${h + h * Math.sin(a)}`
+      }).join(' ')
+      break
+    case 'triangle':
+      points = `${h},0 ${s},${s} 0,${s}`
+      break
+    case 'square':
+      return <span className="block w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: color }} />
+    default:
+      return <span className="block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+  }
+  return (
+    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`}>
+      <polygon points={points} fill={color} />
+    </svg>
+  )
+}
+
 export default function DocsPage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
@@ -30,14 +59,14 @@ export default function DocsPage() {
         <div className="w-px h-4 bg-white/[0.08]" />
         <div className="flex flex-wrap gap-3">
           {[
-            { label: 'Frontend', color: '#34d399', shape: 'rounded-full' },
-            { label: 'Backend', color: '#a78bfa', shape: 'rounded-[2px]' },
-            { label: 'Contracts', color: '#22d3ee', shape: 'rotate-45 rounded-[1px]' },
-            { label: 'Agents', color: '#fbbf24', shape: 'rotate-45 rounded-[1px]' },
-            { label: 'Infrastructure', color: '#fb7185', shape: 'rounded-sm' },
+            { label: 'Frontend', color: '#34d399', shape: 'circle' },
+            { label: 'Backend', color: '#a78bfa', shape: 'square' },
+            { label: 'Contracts', color: '#22d3ee', shape: 'diamond' },
+            { label: 'Agents', color: '#fbbf24', shape: 'hexagon' },
+            { label: 'Infrastructure', color: '#fb7185', shape: 'triangle' },
           ].map(g => (
             <div key={g.label} className="flex items-center gap-1.5">
-              <span className={`w-2.5 h-2.5 ${g.shape}`} style={{ backgroundColor: g.color }} />
+              <LegendShape shape={g.shape} color={g.color} />
               <span className="text-[10px] text-white/35 font-medium">{g.label}</span>
             </div>
           ))}

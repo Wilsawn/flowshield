@@ -13,7 +13,7 @@ export default function StatDetailModal({ showStatDetail, onClose, live }) {
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
+            className="w-full max-w-md mx-4 rounded-xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}

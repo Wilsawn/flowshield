@@ -115,7 +115,7 @@ interface PastedContentCardProps {
 
 const PastedContentCard: React.FC<PastedContentCardProps> = ({ content, onRemove }) => {
     return (
-        <div className="relative group flex-shrink-0 w-28 h-28 rounded-2xl overflow-hidden border border-claude-bg-300 bg-claude-bg-100 animate-fade-in p-3 flex flex-col justify-between shadow-sm">
+        <div className="relative group flex-shrink-0 w-28 h-28 rounded-xl overflow-hidden border border-claude-bg-300 bg-claude-bg-100 animate-fade-in p-3 flex flex-col justify-between shadow-sm">
             <div className="overflow-hidden w-full">
                 <p className="text-[10px] text-claude-text-500 leading-[1.4] font-mono break-words whitespace-pre-wrap line-clamp-4 select-none">
                     {content.content}
@@ -188,7 +188,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ models, selectedModel, on
             </button>
 
             {isOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-[260px] bg-claude-bg-100 border border-claude-bg-300 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col p-1.5 animate-fade-in origin-bottom-right">
+                <div className="absolute bottom-full right-0 mb-2 w-[260px] bg-claude-bg-100 border border-claude-bg-300 rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col p-1.5 animate-fade-in origin-bottom-right">
                     {models.map(model => (
                         <button
                             key={model.id}
@@ -370,7 +370,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
             onDrop={onDrop}
         >
             {/* Main Container */}
-            <div className="!box-content flex flex-col mx-2 md:mx-0 items-stretch transition-all duration-200 relative z-10 rounded-2xl cursor-text border border-claude-bg-300 shadow-[0_0_15px_rgba(0,0,0,0.08)] hover:shadow-[0_0_20px_rgba(0,0,0,0.12)] focus-within:shadow-[0_0_25px_rgba(0,0,0,0.15)] bg-claude-bg-100 font-sans antialiased">
+            <div className="!box-content flex flex-col mx-2 md:mx-0 items-stretch transition-all duration-200 relative z-10 rounded-xl cursor-text border border-claude-bg-300 shadow-[0_0_15px_rgba(0,0,0,0.08)] hover:shadow-[0_0_20px_rgba(0,0,0,0.12)] focus-within:shadow-[0_0_25px_rgba(0,0,0,0.15)] bg-claude-bg-100 font-sans antialiased">
 
                 <div className="flex flex-col px-3 pt-3 pb-2 gap-2">
 
@@ -474,7 +474,7 @@ export const ClaudeChatInput: React.FC<ClaudeChatInputProps> = ({ onSendMessage 
 
             {/* Drag Overlay */}
             {isDragging && (
-                <div className="absolute inset-0 bg-claude-bg-200/90 border-2 border-dashed border-claude-accent rounded-2xl z-50 flex flex-col items-center justify-center backdrop-blur-sm pointer-events-none">
+                <div className="absolute inset-0 bg-claude-bg-200/90 border-2 border-dashed border-claude-accent rounded-xl z-50 flex flex-col items-center justify-center backdrop-blur-sm pointer-events-none">
                     <Icons.Archive className="w-10 h-10 text-claude-accent mb-2 animate-bounce" />
                     <p className="text-claude-accent font-medium">Drop files to upload</p>
                 </div>

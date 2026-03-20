@@ -7,7 +7,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-[#060e09] flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] mb-8">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] mb-8">
           <FileQuestion className="w-10 h-10 text-amber-400/80" />
         </div>
         <p className="font-display text-[4rem] md:text-[5rem] font-bold text-white/[0.08] leading-none mb-2">404</p>

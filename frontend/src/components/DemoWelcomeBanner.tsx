@@ -36,9 +36,9 @@ const colorMap = {
     icon: 'text-emerald-400',
   },
   cyan: {
-    border: 'border-cyan-500/20 hover:border-cyan-500/30',
-    bg: 'bg-cyan-500/[0.04] hover:bg-cyan-500/[0.08]',
-    icon: 'text-cyan-400',
+    border: 'border-emerald-500/20 hover:border-emerald-500/30',
+    bg: 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]',
+    icon: 'text-emerald-400',
   },
   amber: {
     border: 'border-amber-500/20 hover:border-amber-500/30',
@@ -63,7 +63,7 @@ export default function DemoWelcomeBanner() {
   return (
     <AnimatePresence>
       <motion.div
-        className="mb-6 p-5 rounded-2xl border border-emerald-500/[0.1] bg-gradient-to-br from-emerald-500/[0.04] to-transparent"
+        className="mb-6 p-5 rounded-xl border border-emerald-500/[0.1] bg-emerald-500/[0.04]"
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -12 }}

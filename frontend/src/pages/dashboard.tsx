@@ -312,7 +312,7 @@ export default function Dashboard() {
                 <AnimatePresence>
                   {showJurisdictionPicker && (
                     <motion.div
-                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a1410] backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#0a1410] shadow-2xl z-50 overflow-hidden"
                       initial={{ opacity: 0, y: -8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -350,7 +350,7 @@ export default function Dashboard() {
                 onClick={() => setShowCompliance(!showCompliance)}
                 className={`h-9 px-3 rounded-lg border text-[12px] transition-all ${
                   showCompliance
-                    ? 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-400'
+                    ? 'border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-400'
                     : 'border-white/[0.06] bg-white/[0.02] text-white/30 hover:text-white/50'
                 }`}
                 title={showCompliance ? 'Hide compliance layer' : 'Show compliance layer'}
@@ -386,7 +386,7 @@ export default function Dashboard() {
 
         {/* Connect Wallet Prompt */}
         {!walletAddr && (
-          <div className="mb-6 p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] text-center">
+          <div className="mb-6 p-6 rounded-xl border border-white/[0.08] bg-white/[0.02] text-center">
             <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
               <Wallet className="w-6 h-6 text-white/30" />
             </div>
@@ -405,7 +405,7 @@ export default function Dashboard() {
         <AnimatePresence>
           {credentialExpiring && !renewed && (
             <motion.div
-              className="mb-6 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] flex items-center gap-4"
+              className="mb-6 p-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] flex items-center gap-4"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -432,7 +432,7 @@ export default function Dashboard() {
           )}
           {renewed && (
             <motion.div
-              className="mb-6 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] flex items-center gap-4"
+              className="mb-6 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] flex items-center gap-4"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}

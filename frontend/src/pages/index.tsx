@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck, Fingerprint, Bot, Lock, Cpu, Radar, ArrowRight, Scan, ChevronRight, Check, AlertTriangle, User, Copy, CheckCheck, Globe, FileCode, KeyRound, MessageSquare, Workflow } from 'lucide-react'
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'framer-motion'
+import { ShieldCheck, Fingerprint, Bot, Lock, Cpu, Radar, ArrowRight, Scan, ChevronRight, Check, AlertTriangle, User, Copy, CheckCheck, Globe, FileCode, KeyRound, MessageSquare, Workflow, Sparkles, Activity } from 'lucide-react'
+import { motion, useScroll, useTransform, useMotionValueEvent, AnimatePresence } from 'framer-motion'
 
 /* ── CSS-based scroll reveal (no compositing layer conflicts) ── */
 function Reveal({ children, className = '', delay = 0, stagger = false, as: Tag = 'div' }: {
@@ -29,15 +29,12 @@ function Reveal({ children, className = '', delay = 0, stagger = false, as: Tag 
 import OnboardingFlow from '@/components/OnboardingFlow'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import ProductShowcase from '@/components/ProductShowcase'
+import HeroProductPreview from '@/components/HeroProductPreview'
 import FloatingNav from '@/components/FloatingNav'
 import DataGridHero from '@/components/ui/data-grid-hero'
 import { Button } from '@/components/ui/button'
 import { getSupabaseSession, signOutSupabase } from '@/lib/supabase'
 import { API } from '@/lib/api'
-
-/* ── shared glass card style (opaque enough for readability) ── */
-const glass = 'rounded-xl border border-white/[0.08] bg-[#0a0f0c]/95'
-const glassInner = 'rounded-xl border border-white/[0.08] bg-[#0a0f0c]/90'
 
 /** Replace with your case study or integration doc when live */
 const CASE_STUDY_URL = 'https://github.com/Wilsawn/flowshield'
@@ -51,12 +48,13 @@ export default function LandingPage() {
   const [googleEmail, setGoogleEmail] = useState(null)
   const [displayedAgent, setDisplayedAgent] = useState(0)
   const [fading, setFading] = useState(false)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
   const protocolSurfacesRef = useRef(null)
   const navigate = useNavigate()
 
   const { scrollY } = useScroll()
   const heroOpacity = useTransform(scrollY, [0, 500], [1, 0])
-  const heroScale = useTransform(scrollY, [0, 500], [1, 0.96])
+
 
   // Handle Google OAuth callback
   useEffect(() => {
@@ -204,7 +202,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             { name: 'MAS', region: 'Singapore', ok: true },
             { name: 'FINTRAC', region: 'Canada', ok: true },
           ].map((j) => (
-            <div key={j.name} className="flex items-center justify-between py-2.5 border-b border-white/[0.06] last:border-0">
+            <div key={j.name} className="flex items-center justify-between py-2.5">
               <div className="flex items-center gap-3">
                 <span className="text-[13px] font-medium text-white/70 w-16">{j.name}</span>
                 <span className="text-[11px] text-white/30">{j.region}</span>
@@ -220,7 +218,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
               )}
             </div>
           ))}
-          <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+          <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between">
             <span className="text-[10px] text-white/30">Last scanned 3m ago</span>
             <span className="text-[10px] text-white/30">5 / 5 monitored</span>
           </div>
@@ -280,7 +278,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
           <div className="flex gap-3 justify-end">
             <div className="flex-1 max-w-[85%]">
               <p className="text-[11px] text-white/35 mb-1.5 text-right">You</p>
-              <div className="rounded-2xl rounded-tr-md bg-white/[0.06] border border-white/[0.06] px-4 py-3">
+              <div className="rounded-xl rounded-tr-md bg-white/[0.06] border border-white/[0.06] px-4 py-3">
                 <p className="text-[13px] text-white/60 leading-relaxed">How do I add compliance checks to my DEX contract?</p>
               </div>
             </div>
@@ -291,8 +289,8 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
           {/* Copilot response */}
           <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-full bg-white/[0.06] border border-white/[0.06] flex items-center justify-center shrink-0 mt-6">
-              <Bot className="w-3.5 h-3.5 text-emerald-400/60" />
+            <div className="shrink-0 mt-6">
+              <FlowShieldLogo size={28} />
             </div>
             <div className="flex-1">
               <p className="text-[11px] text-white/35 mb-1.5">FlowShield Copilot</p>
@@ -314,7 +312,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
           <div className="flex gap-3 justify-end">
             <div className="flex-1 max-w-[85%]">
               <p className="text-[11px] text-white/35 mb-1.5 text-right">You</p>
-              <div className="rounded-2xl rounded-tr-md bg-white/[0.06] border border-white/[0.06] px-4 py-3">
+              <div className="rounded-xl rounded-tr-md bg-white/[0.06] border border-white/[0.06] px-4 py-3">
                 <p className="text-[13px] text-white/60 leading-relaxed">What about MiCA requirements for EU users?</p>
               </div>
             </div>
@@ -328,6 +326,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             <span className="px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] text-[11px] text-white/35 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer transition-all">Add transaction limits</span>
             <span className="px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] text-[11px] text-white/35 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer transition-all">Check MiCA rules</span>
             <span className="px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] text-[11px] text-white/35 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer transition-all">Deploy to testnet</span>
+            <span className="px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] text-[11px] text-white/35 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer transition-all">Scan risk factors</span>
           </div>
         </div>
       ),
@@ -394,7 +393,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                 <span className={`flex items-center gap-1.5 text-[11px] font-medium ${
                   chain.status === 'active' ? 'text-white/35' : 'text-white/20'
                 }`}>
-                  {chain.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                  {chain.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                   {chain.status === 'active' ? 'Running' : 'Idle'}
                 </span>
               </div>
@@ -414,7 +413,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
     [
       { icon: Globe, name: 'Deterministic checklist', desc: 'Compares RuleEngine rules to fixed checklists for US, EU, UK, SG, CA.' },
       { icon: AlertTriangle, name: 'Gap detection', desc: 'Fix a rule on-chain and the gap disappears on next scan.' },
-      { icon: Check, name: 'AI enrichment', desc: 'Claude improves descriptions only. Cannot add or remove gaps.' },
+      { icon: Sparkles, name: 'AI enrichment', desc: 'Claude improves descriptions only. Cannot add or remove gaps.' },
     ],
     [
       { icon: FileCode, name: '8 dimensions', desc: 'KYC/AML, Travel Rule, sanctions, access controls, fund flow, privacy, rate limits, jurisdiction.' },
@@ -434,7 +433,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
     [
       { icon: Workflow, name: 'A2A protocol', desc: 'Chains Risk, Anomaly, Radar, Copilot. Discovery at /.well-known/agent.json.' },
       { icon: AlertTriangle, name: '8 risk factors', desc: 'Account age, tx volume, rapid in-out, mixer, dormancy. Rule-based.' },
-      { icon: Cpu, name: 'Autonomous monitoring', desc: 'ComplianceAgent.runMonitoringCycle() on a recurring timer.' },
+      { icon: Activity, name: 'Autonomous monitoring', desc: 'ComplianceAgent.runMonitoringCycle() on a recurring timer.' },
     ],
   ]
 
@@ -458,22 +457,22 @@ access(all) fun deposit(user: Address, amount: UFix64) {
         >
           <motion.div
             className="flex items-center h-screen w-full relative"
-            style={{ opacity: heroOpacity, scale: heroScale }}
+            style={{ opacity: heroOpacity }}
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_50%_50%,rgba(10,10,10,0.6),rgba(10,10,10,0.25)_50%,transparent_85%)] pointer-events-none" />
-            <div className="relative max-w-6xl mx-auto px-6 w-full py-32 md:py-40">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-start">
-                {/* Left: headline + CTA — single stagger controller */}
+            <div className="relative max-w-7xl mx-auto px-6 sm:px-8 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-16 items-center">
+                {/* Left: text + CTA */}
                 <motion.div
                   initial="hidden"
                   animate="visible"
                   variants={{
                     hidden: {},
-                    visible: { transition: { staggerChildren: 0.2, delayChildren: 0.15 } },
+                    visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
                   }}
                 >
                   <motion.div
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.1] bg-[#0a0a0a]/85 backdrop-blur-md mb-8"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.1] bg-[#0a0a0a]/85 backdrop-blur-md mb-6"
                     variants={{
                       hidden: { opacity: 0, y: -10 },
                       visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
@@ -484,7 +483,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   </motion.div>
 
                   <motion.h1
-                    className="font-display text-hero mb-6"
+                    className="font-display text-hero mb-5"
                     variants={{
                       hidden: { opacity: 0, y: -10 },
                       visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
@@ -495,7 +494,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   </motion.h1>
 
                   <motion.p
-                    className="text-[18px] md:text-[20px] leading-[1.6] text-white/50 max-w-[480px] mb-10"
+                    className="text-[16px] md:text-[18px] leading-[1.6] text-white/50 max-w-[420px] mb-8"
                     variants={{
                       hidden: { opacity: 0, y: -10 },
                       visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.25, 0.1, 0.25, 1] } },
@@ -523,72 +522,15 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   </motion.div>
                 </motion.div>
 
-                {/* Right: product preview — Runway-style, shows what protocols get */}
-                <div
-                  className="hidden lg:block mt-10"
-                  style={{ animation: 'heroCardIn 1.2s ease 0.8s both' }}
+                {/* Right: product mockup */}
+                <motion.div
+                  className="hidden lg:block relative"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1], delay: 0.6 }}
                 >
-                  <div className="rounded-xl border border-white/[0.12] bg-[#0a0a0a] overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.5),0_8px_32px_rgba(0,0,0,0.4)]">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-                      <span className="text-[12px] text-white/40 font-medium">What your protocol gets</span>
-                      <span className="flex items-center gap-1.5 text-[11px] text-emerald-400/80">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        Live
-                      </span>
-                    </div>
-                    <div className="p-5 space-y-5">
-                      {/* Mini viz: jurisdiction coverage */}
-                      <div>
-                        <p className="text-[11px] text-white/30 uppercase tracking-wider mb-2">5 jurisdictions covered</p>
-                        <div className="flex gap-1">
-                          {['US', 'EU', 'UK', 'SG', 'CA'].map((j) => (
-                            <div key={j} className="flex-1 h-2 rounded-full bg-emerald-500/30" title={j} />
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-white/25 mt-1.5">FinCEN · MiCA · FCA · MAS · FINTRAC</p>
-                      </div>
-
-                      {/* Status row */}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] px-3 py-2">
-                          <p className="text-[10px] text-white/30 uppercase">Compliance</p>
-                          <p className="text-[13px] font-semibold text-emerald-400/90">Active</p>
-                        </div>
-                        <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] px-3 py-2">
-                          <p className="text-[10px] text-white/30 uppercase">Risk</p>
-                          <p className="text-[13px] font-semibold text-white/90">12 / 100</p>
-                        </div>
-                        <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] px-3 py-2">
-                          <p className="text-[10px] text-white/30 uppercase">PII on-chain</p>
-                          <p className="text-[13px] font-semibold text-white/90">0%</p>
-                        </div>
-                      </div>
-
-                      {/* Core value: one line */}
-                      <div>
-                        <p className="text-[11px] text-white/40 mb-2">This is all you add</p>
-                        <div className="rounded-lg bg-[#0a0f0c]/95 border border-white/[0.08] p-3 font-mono text-[11px] leading-[1.7]">
-                          <span className="text-white/30">import</span>{' '}
-                          <span className="text-emerald-400/90">ComplianceAction</span>{' '}
-                          <span className="text-white/30">from</span>{' '}
-                          <span className="text-white/40">0x93c6...5493</span>
-                          <br />
-                          <span className="text-white/30">let ok =</span>{' '}
-                          <span className="text-emerald-400/90">ComplianceAction</span>
-                          <span className="text-white/30">.verify(user)</span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleLaunch}
-                        className="w-full py-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-[12px] font-medium text-emerald-400/90 hover:bg-emerald-500/20 transition-colors"
-                      >
-                        See it in action
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  <HeroProductPreview />
+                </motion.div>
               </div>
             </div>
           </motion.div>
@@ -599,7 +541,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       <FloatingNav onLaunch={handleLaunch} />
 
       {/* ─── Everything below swoops over the sticky hero ─── */}
-      <main className="relative z-10 rounded-t-[40px] bg-[#070c09] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] landing-grid-bg">
+      <main className="relative z-10 rounded-t-[24px] sm:rounded-t-[40px] bg-[#070c09] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] landing-grid-bg">
 
       {/* ─── POWERED BY FLOW (seamless infinite marquee) ─── */}
       <div className="py-8 border-b border-white/[0.04] overflow-hidden">
@@ -624,7 +566,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
       {/* ─── PROTOCOL SURFACES (Dovetail-style: card changes on scroll) ─── */}
       <section ref={protocolSurfacesRef} id="protocol-surfaces" className="scroll-mt-20">
-        <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 md:py-24">
           <Reveal className="mb-12">
             <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15]">
               Built for every compliance surface
@@ -634,7 +576,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             </p>
           </Reveal>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-start">
             {/* Left: stacked blocks — scroll through these to change the card */}
             <div className="space-y-0">
               {agents.map((agent, i) => {
@@ -693,7 +635,6 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             {/* Right: sticky card — updates based on scroll position */}
             <div className="lg:sticky lg:top-24">
               <Reveal className="rounded-xl border border-white/[0.1] bg-[#0a0f0c]/98 overflow-hidden relative shadow-[0_0_0_1px_rgba(52,211,153,0.08),0_0_24px_rgba(52,211,153,0.04)]">
-                <div className="scan-line" />
                 <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.08] bg-[#0a0f0c]/95">
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
@@ -704,7 +645,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                     <span className="text-[12px] text-white/50 ml-1">{agents[displayedAgent].name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     <span className="text-[11px] text-white/35">Live</span>
                   </div>
                 </div>
@@ -731,7 +672,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
       {/* ─── HOW IT WORKS ─── */}
       <section id="how-it-works" className="py-16 md:py-24 scroll-mt-20">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <Reveal className="mb-10 max-w-xl">
             <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] sm:whitespace-nowrap">
               From fingerprint to compliant transaction
@@ -741,9 +682,9 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             </p>
           </Reveal>
 
-          <div className="space-y-20 md:space-y-28">
+          <div className="space-y-12 md:space-y-20 lg:space-y-28">
             {/* Step 1: Passkey Sign-Up */}
-            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-center">
               <div>
                 <span className="text-[11px] font-mono text-white/20 block mb-4">01</span>
                 <h3 className="text-[20px] font-semibold text-white/90 mb-3 tracking-[-0.01em]">Passkey Sign-Up</h3>
@@ -756,36 +697,23 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   <span className="text-white/60">Works on any device</span>
                 </div>
               </div>
-              <motion.div
+              <div
                 className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden"
-                whileHover={{ borderColor: 'rgba(255,255,255,0.1)' }}
-                transition={{ duration: 0.2 }}
               >
                 <div className="px-5 py-3 border-b border-white/[0.06] flex items-center gap-2">
                   <Fingerprint className="w-3.5 h-3.5 text-white/35" />
                   <span className="text-[12px] text-white/35">Sign Up</span>
                 </div>
                 <div className="p-6 space-y-4">
-                  <motion.div
-                    className="flex items-center gap-4 cursor-default"
-                    whileHover={{ scale: 1.01 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <motion.div
-                      className="w-12 h-12 rounded-xl bg-white/[0.06] border border-white/[0.06] flex items-center justify-center cursor-pointer"
-                      whileHover={{
-                        boxShadow: '0 0 20px rgba(52, 211, 153, 0.25)',
-                        borderColor: 'rgba(52, 211, 153, 0.3)',
-                      }}
-                      transition={{ duration: 0.2 }}
-                    >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.06] border border-white/[0.06] flex items-center justify-center">
                       <Fingerprint className="w-5 h-5 text-white/60" />
-                    </motion.div>
+                    </div>
                     <div>
                       <p className="text-[13px] font-medium text-white/90">Touch to authenticate</p>
                       <p className="text-[11px] text-white/20">WebAuthn · Passkey</p>
                     </div>
-                  </motion.div>
+                  </div>
                   <div className="h-px bg-white/[0.06]" />
                   <div className="space-y-1">
                     {[
@@ -793,11 +721,9 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                       { label: 'Auth Method', value: 'Passkey (biometric)', mono: false },
                       { label: 'Status', value: null, status: true },
                     ].map((row, idx) => (
-                      <motion.div
+                      <div
                         key={idx}
-                        className="group/row flex items-center justify-between py-2.5 px-3 -mx-3 rounded-lg cursor-default relative"
-                        whileHover={{ backgroundColor: 'rgba(52, 211, 153, 0.06)' }}
-                        transition={{ duration: 0.2 }}
+                        className="flex items-center justify-between py-2.5 px-3 -mx-3 rounded-lg"
                       >
                         <span className="text-[12px] text-white/35">{row.label}</span>
                         {row.status ? (
@@ -808,19 +734,17 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                         ) : (
                           <span className={`text-[12px] ${row.mono ? 'font-mono text-white/60' : 'text-white/60'}`}>{row.value}</span>
                         )}
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </Reveal>
 
             {/* Step 2: ZK Verification */}
-            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              <motion.div
+            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-center">
+              <div
                 className="order-2 lg:order-1 rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden"
-                whileHover={{ borderColor: 'rgba(255,255,255,0.1)' }}
-                transition={{ duration: 0.2 }}
               >
                 <div className="px-5 py-3 border-b border-white/[0.06] flex items-center gap-2">
                   <Lock className="w-3.5 h-3.5 text-white/35" />
@@ -834,30 +758,19 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   ].map((item, idx) => {
                     const ItemIcon = item.icon
                     return (
-                      <motion.div
+                      <div
                         key={idx}
-                        className="group/zk flex items-center gap-4 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] cursor-default relative"
-                        whileHover={{
-                          backgroundColor: 'rgba(52, 211, 153, 0.06)',
-                          borderColor: 'rgba(52, 211, 153, 0.15)',
-                        }}
-                        transition={{ duration: 0.2 }}
+                        className="flex items-center gap-4 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]"
                       >
-                        <motion.div
-                          className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0"
-                          whileHover={{
-                            boxShadow: '0 0 16px rgba(52, 211, 153, 0.2)',
-                          }}
-                          transition={{ duration: 0.2 }}
-                        >
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
                           <ItemIcon className="w-3.5 h-3.5 text-white/35" />
-                        </motion.div>
+                        </div>
                         <div className="flex-1">
                           <p className="text-[12px] font-medium text-white/60">{item.label}</p>
                           <p className="text-[11px] text-white/20">{item.value}</p>
                         </div>
                         {item.done && <Check className="w-3.5 h-3.5 text-emerald-400/60 shrink-0" />}
-                      </motion.div>
+                      </div>
                     )
                   })}
                   <div className="pt-2 flex items-center justify-between text-[11px] text-white/20">
@@ -865,7 +778,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                     <span>Valid 90 days</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
               <div className="order-1 lg:order-2">
                 <span className="text-[11px] font-mono text-white/20 block mb-4">02</span>
                 <h3 className="text-[20px] font-semibold text-white/90 mb-3 tracking-[-0.01em]">Identity Verified Privately</h3>
@@ -881,7 +794,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
             </Reveal>
 
             {/* Step 3: Compliance Check */}
-            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-center">
               <div>
                 <span className="text-[11px] font-mono text-white/20 block mb-4">03</span>
                 <h3 className="text-[20px] font-semibold text-white/90 mb-3 tracking-[-0.01em]">Agents Enforce Compliance</h3>
@@ -892,10 +805,8 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                   Open Dashboard <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </div>
-              <motion.div
+              <div
                 className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden"
-                whileHover={{ borderColor: 'rgba(255,255,255,0.1)' }}
-                transition={{ duration: 0.2 }}
               >
                 <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -903,7 +814,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                     <span className="text-[12px] text-white/35">Compliance Check</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     <span className="text-[11px] text-white/20">Live</span>
                   </div>
                 </div>
@@ -915,23 +826,21 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                       { tx: 'withdraw(0x9ef4...)', jurisdiction: 'FCA', result: 'pass', time: '0.2s' },
                       { tx: 'stake(0x3d7a...)', jurisdiction: 'MAS', result: 'flag', time: '0.4s' },
                     ].map((tx, idx) => (
-                      <motion.div
+                      <div
                         key={idx}
-                        className="group/tx flex items-center justify-between py-2.5 px-3 -mx-3 rounded-lg border-b border-white/[0.06] last:border-0 cursor-default relative"
-                        whileHover={{ backgroundColor: 'rgba(52, 211, 153, 0.06)' }}
-                        transition={{ duration: 0.2 }}
+                        className="flex items-center justify-between py-2.5 px-3 -mx-3 rounded-lg border-b border-white/[0.06] last:border-0"
                       >
-                        <span className="text-[12px] font-mono text-white/60">{tx.tx}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="text-[11px] text-white/20">{tx.jurisdiction}</span>
-                          <span className="text-[11px] font-mono text-white/20">{tx.time}</span>
+                        <span className="text-[11px] sm:text-[12px] font-mono text-white/60 truncate">{tx.tx}</span>
+                        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                          <span className="text-[10px] sm:text-[11px] text-white/20">{tx.jurisdiction}</span>
+                          <span className="text-[10px] sm:text-[11px] font-mono text-white/20 hidden sm:inline">{tx.time}</span>
                           {tx.result === 'pass' ? (
                             <Check className="w-3.5 h-3.5 text-emerald-400/60" />
                           ) : (
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-400/60" />
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                   <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-white/20">
@@ -939,15 +848,15 @@ access(all) fun deposit(user: Address, amount: UFix64) {
                     <span>Avg 0.35s</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </Reveal>
           </div>
         </div>
       </section>
 
       {/* ─── ARCHITECTURE ─── */}
-      <section id="architecture" className="py-20 md:py-28 scroll-mt-20">
-        <div className="max-w-6xl mx-auto px-6">
+      <section id="architecture" className="py-16 md:py-24 scroll-mt-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <Reveal className="text-center mb-10">
             <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 mb-2 leading-[1.15]">
               How everything connects
@@ -964,7 +873,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
       {/* ─── CODE PREVIEW ─── */}
       <section id="integration-code" className="pt-12 pb-20 md:pt-16 md:pb-24 scroll-mt-24">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           {/* Copy block: centered, compact */}
           <Reveal className="text-center max-w-2xl mx-auto mb-6">
             <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 leading-[1.15] mb-3">
@@ -1048,8 +957,8 @@ access(all) fun deposit(user: Address, amount: UFix64) {
       </section>
 
       {/* ─── FAQs ─── */}
-      <section id="faq" className="py-20 md:py-28 border-t border-white/[0.06] scroll-mt-20">
-        <div className="max-w-6xl mx-auto px-6">
+      <section id="faq" className="pt-4 pb-16 md:pt-6 md:pb-24 scroll-mt-20">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <Reveal className="text-center mb-12">
             <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 mb-2">
               FAQs
@@ -1058,37 +967,61 @@ access(all) fun deposit(user: Address, amount: UFix64) {
               Common questions about FlowShield, integration, and compliance.
             </p>
           </Reveal>
-          <Reveal className="grid grid-cols-1 md:grid-cols-2 gap-4" stagger>
-            {[
+          {(() => {
+            const faqs = [
               { q: 'What is FlowShield?', a: 'An autonomous compliance layer for DeFi on Flow. One on-chain boolean per user, regulatory scanning across five jurisdictions, zero PII on-chain via zero-knowledge proofs.' },
               { q: 'Who is it for?', a: 'Flow protocols (lending, DEXs, NFT marketplaces), compliance operators, and end users who get a passkey-based credential without seed phrases.' },
               { q: 'Who pays?', a: 'Protocols pay for on-chain compliance checks. End users get credentials free. B2B and enterprise pricing available for custom deployments.' },
               { q: 'Is my data stored on-chain?', a: 'No. Only a boolean result and optional risk score are on-chain. Identity data stays off-chain. Verification uses zero-knowledge proofs.' },
               { q: 'How do I integrate?', a: 'Import ComplianceAction, call verify(user) before any restricted action, handle the boolean. One line of code.' },
               { q: 'Pricing and support?', a: 'Start with a free trial. No credit card required. For questions or feedback, open an issue on our GitHub repository.' },
-            ].map((faq) => (
-              <details
-                key={faq.q}
-                className="group rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition-all duration-200 hover:border-white/[0.08] hover:bg-white/[0.04] cursor-pointer"
-              >
-                <summary className="flex items-center justify-between gap-4 px-5 py-4 list-none select-none">
-                  <span className="text-[14px] font-medium text-white/70 group-open:text-white/90 transition-colors">
-                    {faq.q}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-white/25 group-open:rotate-90 transition-all duration-200 shrink-0" />
-                </summary>
-                <p className="text-[13px] text-white/40 leading-[1.75] px-5 pb-5 pt-0">
-                  {faq.a}
-                </p>
-              </details>
-            ))}
-          </Reveal>
+            ]
+            return (
+              <div>
+                {/* Question buttons */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {faqs.map((faq, i) => (
+                    <button
+                      key={faq.q}
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      className={`flex items-center justify-between gap-4 px-5 py-4 rounded-xl border text-left transition-all duration-200 ${
+                        openFaq === i
+                          ? 'border-emerald-500/20 bg-emerald-500/[0.04] text-white/90'
+                          : 'border-white/[0.06] bg-white/[0.02] text-white/60 hover:border-white/[0.08]'
+                      }`}
+                    >
+                      <span className="text-[14px] font-medium">{faq.q}</span>
+                      <span className={`text-[18px] text-white/25 shrink-0 leading-none transition-transform duration-200 ${openFaq === i ? 'rotate-45' : ''}`}>+</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Fixed answer panel */}
+                <div className="mt-4 h-[80px] flex items-center">
+                  <AnimatePresence mode="wait">
+                    {openFaq !== null && (
+                      <motion.p
+                        key={openFaq}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                        className="text-[14px] text-white/45 leading-[1.75] px-1"
+                      >
+                        {faqs[openFaq].a}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </section>
 
       {/* ─── CTA ─── */}
-      <section className="py-20 md:py-24 border-t border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-16 md:py-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col items-center gap-8 text-center">
             <div>
               <h2 className="font-display text-[clamp(1.5rem,3.5vw,2.25rem)] font-bold tracking-[-0.025em] text-white/90 mb-3">
@@ -1114,14 +1047,14 @@ access(all) fun deposit(user: Address, amount: UFix64) {
 
       {/* ─── FOOTER ─── */}
       <footer className="pt-16 pb-8">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           {/* Top row: brand + tagline + CTA */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-10 border-b border-white/[0.06] pt-10">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <FlowShieldLogo size={22} />
-              <span className="text-[16px] font-semibold text-white/90">FlowShield</span>
-              <span className="text-white/20 mx-1">|</span>
-              <span className="text-[13px] text-white/35">Autonomous Compliance for DeFi</span>
+              <span className="text-[15px] sm:text-[16px] font-semibold text-white/90">FlowShield</span>
+              <span className="text-white/20 mx-0.5 sm:mx-1 hidden sm:inline">|</span>
+              <span className="text-[12px] sm:text-[13px] text-white/35 hidden sm:inline">Autonomous Compliance for DeFi</span>
             </div>
             <Button variant="outline" onClick={handleLaunch}>
               Join the Testnet
@@ -1129,7 +1062,7 @@ access(all) fun deposit(user: Address, amount: UFix64) {
           </div>
 
           {/* Link columns */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 py-10">
             <div>
               <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-white/20 mb-4">Company</p>
               <div className="flex flex-col gap-2.5">

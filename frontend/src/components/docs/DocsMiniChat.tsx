@@ -78,7 +78,7 @@ export default function DocsMiniChat() {
         ) : (
           <motion.div
             key="chat-panel"
-            className="absolute bottom-4 right-4 z-50 w-[340px] max-w-[calc(100%-2rem)] rounded-2xl border border-white/[0.08] bg-[#060e09] shadow-[0_8px_48px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col"
+            className="absolute bottom-4 right-4 z-50 w-[340px] max-w-[calc(100%-2rem)] rounded-xl border border-white/[0.08] bg-[#060e09] shadow-[0_8px_48px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col"
             style={{ height: '420px' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

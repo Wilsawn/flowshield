@@ -16,7 +16,7 @@ export default function DocPanel({ node, onClose }: Props) {
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
     >
       {/* Backdrop — fully opaque so graph doesn't bleed through */}
       <div className="absolute inset-0 bg-[#060e09] border-l border-white/[0.06]" />

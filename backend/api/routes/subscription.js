@@ -146,7 +146,12 @@ router.post('/checkout', async (req, res) => {
 // ── Contact Sales — for enterprise inquiries ──
 router.post('/contact-sales', (req, res) => {
   const { email, protocolName, message, estimatedVolume } = req.body
-  if (!email) return res.status(400).json({ error: 'Email is required' })
+  if (!email || typeof email !== 'string' || !email.trim()) {
+    return res.status(400).json({ error: 'Email is required' })
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+    return res.status(400).json({ error: 'Please provide a valid email address' })
+  }
 
   // In production: send to CRM/email. For now: log and acknowledge.
   console.log(`[Sales] Enterprise inquiry from ${email} (${protocolName}): ${message}`)

@@ -27,9 +27,9 @@ export default function OperatorPage() {
       </div>
 
       {!hintDismissed && (
-        <div className="mb-6 flex items-start gap-3 p-4 rounded-xl border border-cyan-500/15 bg-cyan-500/[0.04]">
-          <Lightbulb className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-          <p className="text-[12px] text-cyan-400/80 leading-relaxed flex-1">
+        <div className="mb-6 flex items-start gap-3 p-4 rounded-xl border border-emerald-500/[0.08] bg-emerald-500/[0.04]">
+          <Lightbulb className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+          <p className="text-[12px] text-emerald-400/80 leading-relaxed flex-1">
             Start by clicking <strong>"Simulate Threat"</strong> in Compliance Controls below, then use <strong>Regulatory Radar</strong> to detect and fix the gaps.
           </p>
           <button onClick={dismissHint} className="p-1 rounded text-white/20 hover:text-white/50 transition-colors shrink-0">

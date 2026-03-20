@@ -48,8 +48,8 @@ export const GROUP_LABELS: Record<string, string> = {
 export const GROUP_SHAPES: Record<string, string> = {
   'frontend': 'circle',
   'backend': 'square',
-  'contracts': 'hexagon',
-  'agents': 'diamond',
+  'contracts': 'diamond',
+  'agents': 'hexagon',
   'infra': 'triangle',
 }
 
@@ -252,7 +252,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'Risk Scoring',
     group: 'agents',
     repoPath: 'backend/agents/risk-scoring.js',
-    shape: 'diamond',
+    shape: 'hexagon',
     content: {
       title: 'Risk Scoring Agent',
       description: 'Calculates a 0-100 risk score based on 8 on-chain factors.',
@@ -276,7 +276,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'Anomaly Monitor',
     group: 'agents',
     repoPath: 'backend/agents/anomaly-monitor.js',
-    shape: 'diamond',
+    shape: 'hexagon',
     content: {
       title: 'Anomaly Monitor Agent',
       description: 'Real-time anomaly detection on wallet activity.',
@@ -296,7 +296,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'Regulatory Radar',
     group: 'agents',
     repoPath: 'backend/agents/regulatory-radar.js',
-    shape: 'diamond',
+    shape: 'hexagon',
     content: {
       title: 'Regulatory Radar Agent',
       description: 'Scans on-chain rules against jurisdiction checklists.',
@@ -316,7 +316,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'Builder Copilot',
     group: 'agents',
     repoPath: 'backend/agents/builder-copilot.js',
-    shape: 'diamond',
+    shape: 'hexagon',
     content: {
       title: 'Builder Copilot',
       description: 'AI assistant with tool-calling for compliance and code generation.',
@@ -337,7 +337,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'A2A Orchestrator',
     group: 'agents',
     repoPath: 'backend/agents/orchestrator.js',
-    shape: 'diamond',
+    shape: 'hexagon',
     content: {
       title: 'A2A Orchestrator',
       description: 'Chains multiple agents into multi-step compliance workflows.',
@@ -365,7 +365,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'ComplianceAction',
     group: 'contracts',
     repoPath: 'cadence/contracts/ComplianceAction.cdc',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'ComplianceAction.cdc',
       description: 'The primary contract protocols import. One function: verify().',
@@ -385,7 +385,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'ComplianceCredential',
     group: 'contracts',
     repoPath: 'cadence/contracts/ComplianceCredential.cdc',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'ComplianceCredential.cdc',
       description: 'NFT-based credential stored in user account storage.',
@@ -405,7 +405,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'RuleEngine',
     group: 'contracts',
     repoPath: 'cadence/contracts/RuleEngine.cdc',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'RuleEngine.cdc',
       description: 'On-chain rule definitions for jurisdiction-specific compliance.',
@@ -425,7 +425,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'ZKVerifier',
     group: 'contracts',
     repoPath: 'cadence/contracts/ZKVerifier.cdc',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'ZKVerifier.cdc',
       description: 'Zero-knowledge proof verification on Flow via EVM bridge.',
@@ -448,7 +448,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'Governance',
     group: 'contracts',
     repoPath: 'cadence/contracts/Governance.cdc',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'Governance.cdc',
       description: 'On-chain governance for compliance rule proposals and voting.',
@@ -468,7 +468,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'DemoLendingPool',
     group: 'contracts',
     repoPath: 'cadence/contracts/DemoLendingPool.cdc',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'DemoLendingPool.cdc',
       description: 'Example DeFi protocol with built-in compliance gates.',
@@ -489,7 +489,7 @@ export const GRAPH_NODES: DocNode[] = [
     label: 'Transactions',
     group: 'contracts',
     repoPath: 'cadence/transactions',
-    shape: 'hexagon',
+    shape: 'diamond',
     content: {
       title: 'Cadence Transactions',
       description: 'On-chain transaction templates.',

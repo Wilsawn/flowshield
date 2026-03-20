@@ -12,7 +12,7 @@ export default function JurisdictionChangeModal({ jurisdictionChanging, reVerify
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="w-full max-w-md mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] p-8"
+            className="w-full max-w-md mx-4 rounded-xl border border-emerald-500/[0.08] bg-[#0a1410] p-8"
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
@@ -36,13 +36,7 @@ export default function JurisdictionChangeModal({ jurisdictionChanging, reVerify
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                  >
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  </motion.div>
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="text-[12px] text-emerald-400/80">{s.label}</span>
                 </motion.div>
               ))}

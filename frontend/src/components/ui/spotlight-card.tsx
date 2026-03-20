@@ -20,13 +20,13 @@ export default function SpotlightCard({ children, className, onClick }) {
       onMouseEnter={() => setOpacity(1)}
       onMouseLeave={() => setOpacity(0)}
       className={cn(
-        "relative rounded-2xl border border-white/[0.04] bg-gradient-to-b from-white/[0.03] to-white/[0.01] backdrop-blur-md overflow-hidden transition-all duration-500 hover:border-white/[0.08] shadow-[0_0_1px_0_rgba(255,255,255,0.03)]",
+        "relative rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition-all duration-300 hover:border-white/[0.10] hover:bg-white/[0.04]",
         className
       )}
     >
       {/* Spotlight follow glow */}
       <div
-        className="pointer-events-none absolute -inset-px rounded-2xl transition-opacity duration-500"
+        className="pointer-events-none absolute -inset-px rounded-xl transition-opacity duration-500"
         style={{
           opacity,
           background: `radial-gradient(600px circle at ${pos.x}px ${pos.y}px, rgba(52,211,153,0.05), transparent 40%)`,

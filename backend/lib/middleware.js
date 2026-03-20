@@ -61,36 +61,56 @@ export function requireApiKey(req, res, next) {
 }
 
 /**
- * Simple in-memory rate limiter.
- * Limits requests per IP per window (default: 100 req / 60s).
+ * In-memory rate limiter with per-IP and per-API-key support.
+ *
+ * Options:
+ *   windowMs  — window duration in ms (default: 60000)
+ *   max       — max requests per window (default: 100)
+ *   keyBy     — 'ip' | 'apiKey' | 'auto' (default: 'auto')
+ *               'auto' uses API key when present (req.apiKeyData), falls back to IP.
+ *
+ * Sets standard rate limit headers on every response:
+ *   X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
  */
 const rateLimitStore = new Map()
 
-export function rateLimit({ windowMs = 60000, max = 100 } = {}) {
+export function rateLimit({ windowMs = 60000, max = 100, keyBy = 'auto' } = {}) {
   return (req, res, next) => {
-    const key = req.ip || req.connection.remoteAddress || 'unknown'
+    let key
+    if (keyBy === 'apiKey' || (keyBy === 'auto' && req.apiKeyData?.id)) {
+      key = `key:${req.apiKeyData.id}`
+    } else {
+      key = `ip:${req.ip || req.connection.remoteAddress || 'unknown'}`
+    }
+
     const now = Date.now()
 
     if (!rateLimitStore.has(key)) {
       rateLimitStore.set(key, { count: 1, resetAt: now + windowMs })
-      return next()
+    } else {
+      const entry = rateLimitStore.get(key)
+      if (now > entry.resetAt) {
+        entry.count = 1
+        entry.resetAt = now + windowMs
+      } else {
+        entry.count++
+      }
     }
 
     const entry = rateLimitStore.get(key)
+    const remaining = Math.max(0, max - entry.count)
 
-    if (now > entry.resetAt) {
-      entry.count = 1
-      entry.resetAt = now + windowMs
-      return next()
-    }
-
-    entry.count++
+    // Standard rate limit headers
+    res.set('X-RateLimit-Limit', String(max))
+    res.set('X-RateLimit-Remaining', String(remaining))
+    res.set('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)))
 
     if (entry.count > max) {
-      res.set('Retry-After', Math.ceil((entry.resetAt - now) / 1000))
+      const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
+      res.set('Retry-After', String(retryAfter))
       return res.status(429).json({
         error: 'Rate limit exceeded',
-        message: `Maximum ${max} requests per ${windowMs / 1000}s. Try again in ${Math.ceil((entry.resetAt - now) / 1000)}s.`,
+        message: `Maximum ${max} requests per ${windowMs / 1000}s. Try again in ${retryAfter}s.`,
       })
     }
 

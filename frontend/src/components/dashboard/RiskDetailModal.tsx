@@ -35,7 +35,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-lg mx-4 rounded-2xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
+            className="w-full max-w-lg mx-4 rounded-xl border border-emerald-500/[0.08] bg-[#0a1410] overflow-hidden"
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
@@ -58,7 +58,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
                   <Info className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="text-[12px] font-semibold text-emerald-400">How the Score Works</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                   {[
                     { step: '1', title: 'Fetch', desc: 'Pull public on-chain data from Flow' },
                     { step: '2', title: 'Analyze', desc: 'Check wallet against 8 risk factors' },
@@ -81,7 +81,7 @@ export default function RiskDetailModal({ show, onClose, live }) {
 
               {/* Score gauge */}
               <div className="flex items-center gap-5 mb-6">
-                <div className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center ${
+                <div className={`w-20 h-20 rounded-xl flex flex-col items-center justify-center ${
                   (live.riskScore ?? 0) <= 30 ? 'bg-emerald-500/10 border border-emerald-500/20' :
                   (live.riskScore ?? 0) <= 70 ? 'bg-amber-500/10 border border-amber-500/20' :
                   'bg-red-500/10 border border-red-500/20'

@@ -82,18 +82,34 @@ function isAuthenticated() {
   return !!localStorage.getItem('flowshield_token')
 }
 
+function getUserName() {
+  try {
+    const raw = localStorage.getItem('flowshield_user')
+    if (!raw) return null
+    const user = JSON.parse(raw)
+    return user.name || user.displayName || user.username || null
+  } catch {
+    // If it's a plain string, use directly
+    try {
+      const val = localStorage.getItem('flowshield_user')
+      if (val && !val.startsWith('{')) return val
+    } catch { /* ignore */ }
+    return null
+  }
+}
+
 const BASE_SUGGESTION_CARDS = [
   { icon: Shield, label: 'Risk Score', prompt: 'Why is my risk score what it is and how can I improve it?', color: 'emerald' },
   { icon: Code, label: 'Integrate', prompt: 'How do I add compliance to my lending pool?', color: 'emerald' },
   { icon: BookOpen, label: 'Regulations', prompt: 'Explain MiCA vs FinCEN in simple terms', color: 'emerald' },
-  { icon: Lock, label: 'ZK Privacy', prompt: 'What happens to my identity data?', color: 'amber' },
+  { icon: Lock, label: 'ZK Privacy', prompt: 'What happens to my identity data?', color: 'emerald' },
   { icon: Zap, label: 'Gas Fees', prompt: 'How do sponsored transactions work?', color: 'emerald' },
   { icon: Globe, label: 'Jurisdictions', prompt: 'What jurisdictions does FlowShield support?', color: 'emerald' },
 ]
 
 const ALERT_SUGGESTION_CARDS = [
-  { icon: AlertTriangle, label: 'My Anomalies', prompt: 'I have active anomalies detected. What do they mean and how should I respond?', color: 'amber' },
-  { icon: Activity, label: 'Risk Factors', prompt: 'What are my current risk factors and how can I reduce my risk score?', color: 'amber' },
+  { icon: AlertTriangle, label: 'My Anomalies', prompt: 'I have active anomalies detected. What do they mean and how should I respond?', color: 'emerald' },
+  { icon: Activity, label: 'Risk Factors', prompt: 'What are my current risk factors and how can I reduce my risk score?', color: 'emerald' },
   { icon: Shield, label: 'Fix Compliance', prompt: 'What steps should I take to get back to compliant status?', color: 'emerald' },
   { icon: Scan, label: 'Scan My Code', prompt: 'I want to scan my smart contract code for compliance issues', color: 'emerald' },
 ]
@@ -126,18 +142,57 @@ function getFallbackResponse(message) {
   return FALLBACK_RESPONSES.default
 }
 
-// ── Typing indicator ──
-function TypingIndicator() {
+// ── AI thinking steps ──
+const THINKING_STEPS = [
+  'Gathering context',
+  'Planning',
+  'Reasoning',
+  'Synthesizing',
+]
+
+function ThinkingSteps({ startTime }: { startTime: number }) {
+  const [completedSteps, setCompletedSteps] = useState(0)
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = []
+    // Each step completes after a staggered delay
+    THINKING_STEPS.forEach((_, i) => {
+      if (i < THINKING_STEPS.length - 1) {
+        timers.push(setTimeout(() => setCompletedSteps(i + 1), 800 + i * 1200))
+      }
+    })
+    return () => timers.forEach(clearTimeout)
+  }, [startTime])
+
   return (
-    <div className="flex items-center gap-1 px-1 py-1">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="w-1.5 h-1.5 rounded-full bg-emerald-400"
-          animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-        />
-      ))}
+    <div className="space-y-2 py-1">
+      {THINKING_STEPS.map((step, i) => {
+        const isComplete = i < completedSteps
+        const isActive = i === completedSteps
+        return (
+          <div
+            key={step}
+            className="flex items-center gap-2.5"
+          >
+            {isComplete ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            ) : isActive ? (
+              <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                <span className="text-[12px] text-white/40 font-mono tracking-widest motion-safe:animate-pulse">...</span>
+              </span>
+            ) : (
+              <span className="w-3.5 h-3.5 shrink-0" />
+            )}
+            <span className={`text-[13px] font-['Inter'] ${
+              isComplete ? 'text-white/50' :
+              isActive ? 'text-white/60' :
+              'text-white/20'
+            }`}>
+              {step}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -152,9 +207,9 @@ function CodeBlock({ lang, code }) {
     setTimeout(() => setCopied(false), 2000)
   }
   return (
-    <div className="my-3 rounded-xl bg-[#0a1410] border border-emerald-500/[0.08] overflow-hidden group">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-emerald-500/[0.06] bg-white/[0.01]">
-        <span className="text-[10px] text-white/20 uppercase tracking-wider font-mono">{lang || 'code'}</span>
+    <div className="my-3 rounded-xl bg-[#0a0f0c] border border-white/[0.08] overflow-hidden group">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] bg-white/[0.01]">
+        <span className="text-[11px] text-white/20 uppercase tracking-wider font-['JetBrains_Mono'] font-medium">{lang || 'code'}</span>
         <button
           onClick={handleCopy}
           className="flex items-center gap-1 text-[10px] text-white/20 hover:text-white/50 transition-colors opacity-0 group-hover:opacity-100"
@@ -164,7 +219,7 @@ function CodeBlock({ lang, code }) {
         </button>
       </div>
       <pre className="p-4 overflow-x-auto">
-        <code className="text-[12px] text-emerald-300/80 font-mono leading-relaxed">{code}</code>
+        <code className="text-[12px] text-emerald-300/80 font-['JetBrains_Mono'] leading-relaxed">{code}</code>
       </pre>
     </div>
   )
@@ -185,7 +240,7 @@ function InlineMarkdown({ text }) {
           return <strong key={i} className="text-white/80 font-semibold">{part.slice(2, -2)}</strong>
         }
         if (part.startsWith('`') && part.endsWith('`')) {
-          return <code key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400/80 text-[11px] font-mono">{part.slice(1, -1)}</code>
+          return <code key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400/80 text-[11px] font-['JetBrains_Mono']">{part.slice(1, -1)}</code>
         }
         const linkMatch = part.match(/\[(.*?)\]\((.*?)\)/)
         if (linkMatch) {
@@ -233,12 +288,12 @@ function RichContent({ content }) {
       }
       if (tableRows.length > 0) {
         elements.push(
-          <div key={elements.length} className="my-3 rounded-lg border border-emerald-500/[0.08] overflow-hidden">
+          <div key={elements.length} className="my-3 rounded-lg border border-white/[0.06] overflow-hidden">
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="bg-white/[0.03]">
                   {tableRows[0].map((cell, ci) => (
-                    <th key={ci} className="px-3 py-2 text-left text-white/40 font-medium border-b border-emerald-500/[0.06]">
+                    <th key={ci} className="px-3 py-2 text-left text-white/40 font-medium border-b border-white/[0.06]">
                       <InlineMarkdown text={cell} />
                     </th>
                   ))}
@@ -263,15 +318,15 @@ function RichContent({ content }) {
     }
 
     if (line.startsWith('# ')) {
-      elements.push(<h2 key={elements.length} className="text-[16px] font-bold text-white mt-4 mb-2">{line.slice(2)}</h2>)
+      elements.push(<h2 key={elements.length} className="text-[16px] font-bold text-white font-['Syne'] mt-4 mb-2">{line.slice(2)}</h2>)
       i++; continue
     }
     if (line.startsWith('## ')) {
-      elements.push(<h3 key={elements.length} className="text-[14px] font-semibold text-white/90 mt-3 mb-1.5">{line.slice(3)}</h3>)
+      elements.push(<h3 key={elements.length} className="text-[14px] font-semibold text-white/90 font-['Syne'] mt-3 mb-1.5">{line.slice(3)}</h3>)
       i++; continue
     }
     if (line.startsWith('### ')) {
-      elements.push(<h4 key={elements.length} className="text-[13px] font-semibold text-white/80 mt-2 mb-1">{line.slice(4)}</h4>)
+      elements.push(<h4 key={elements.length} className="text-[13px] font-semibold text-white/80 font-['Syne'] mt-2 mb-1">{line.slice(4)}</h4>)
       i++; continue
     }
 
@@ -304,7 +359,7 @@ function RichContent({ content }) {
         <ol key={elements.length} className="my-1.5 space-y-1">
           {listItems.map((item, li) => (
             <li key={li} className="flex items-start gap-2.5 text-[13px] text-white/45 leading-relaxed">
-              <span className="text-[11px] text-emerald-400/60 font-mono mt-0.5 shrink-0 w-4 text-right">{li + 1}.</span>
+              <span className="text-[11px] text-emerald-400/60 font-['JetBrains_Mono'] mt-0.5 shrink-0 w-4 text-right">{li + 1}.</span>
               <span><InlineMarkdown text={item} /></span>
             </li>
           ))}
@@ -319,7 +374,7 @@ function RichContent({ content }) {
     }
 
     elements.push(
-      <p key={elements.length} className="text-[13px] text-white/45 leading-relaxed">
+      <p key={elements.length} className="text-[13px] text-white/45 leading-relaxed font-['Inter']">
         <InlineMarkdown text={line} />
       </p>
     )
@@ -369,9 +424,9 @@ function ConversationItem({ convo, isActive, onSelect, onDelete }) {
       <AnimatePresence>
         {hovering && !isActive && (
           <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={(e) => { e.stopPropagation(); onDelete() }}
             className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors"
           >
@@ -379,6 +434,37 @@ function ConversationItem({ convo, isActive, onSelect, onDelete }) {
           </motion.button>
         )}
       </AnimatePresence>
+    </button>
+  )
+}
+
+// ── Recent conversation row (for empty state) ──
+function RecentConvoRow({ convo, onSelect }: { convo: any; onSelect: () => void }) {
+  const timeStr = useMemo(() => {
+    const d = new Date(convo.updatedAt)
+    const now = new Date()
+    const diff = now.getTime() - d.getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    const days = Math.floor(hrs / 24)
+    if (days < 7) return `${days}d ago`
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }, [convo.updatedAt])
+
+  return (
+    <button
+      onClick={onSelect}
+      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.03] transition-colors text-left group"
+    >
+      <span className="text-[13px] text-white/40 group-hover:text-white/60 transition-colors truncate mr-3 font-['Inter']">
+        {convo.title}
+      </span>
+      <span className="text-[11px] text-white/15 shrink-0 font-['Inter'] uppercase tracking-wider">
+        {timeStr}
+      </span>
     </button>
   )
 }
@@ -392,6 +478,7 @@ export default function BuilderCopilot() {
   const [activeId, setActiveId] = useState(loadActiveId)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingStartTime, setLoadingStartTime] = useState(0)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -690,6 +777,7 @@ export default function BuilderCopilot() {
     }))
 
     setIsLoading(true)
+    setLoadingStartTime(Date.now())
 
     try {
       const res = await authFetch(`${API}/api/copilot/chat`, {
@@ -766,6 +854,7 @@ export default function BuilderCopilot() {
       messages: [...c.messages, { role: 'user', content: scanMsg, timestamp: Date.now() }],
     }))
     setIsLoading(true)
+    setLoadingStartTime(Date.now())
 
     try {
       const res = await authFetch(`${API}/api/copilot/scan-code`, {
@@ -842,6 +931,17 @@ export default function BuilderCopilot() {
     )
   }, [conversations, searchQuery])
 
+  // Recent conversations for empty state (up to 5, sorted by most recent)
+  const recentConversations = useMemo(() => {
+    return [...conversations]
+      .filter(c => c.messages.length > 0)
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 5)
+  }, [conversations])
+
+  // Get user name for greeting
+  const userName = useMemo(() => getUserName(), [])
+
   return (
     <div className="flex h-[calc(100dvh-4rem)] max-w-[960px] mx-auto">
 
@@ -849,19 +949,19 @@ export default function BuilderCopilot() {
       <AnimatePresence>
         {showHistory && (
           <motion.div
-            className="w-72 shrink-0 border-r border-emerald-500/[0.06] flex flex-col bg-[#060e09]/50 backdrop-blur-sm mr-4 rounded-2xl overflow-hidden border border-emerald-500/[0.08]"
+            className="w-72 shrink-0 border-r border-white/[0.06] flex flex-col bg-[#060e09]/50 mr-4 rounded-xl overflow-hidden border border-white/[0.06]"
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 288, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
             {/* History header */}
-            <div className="p-3 border-b border-emerald-500/[0.06]">
+            <div className="p-3 border-b border-white/[0.06]">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">History</p>
+                <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider font-['Inter']">History</p>
                 <button
                   onClick={() => setShowHistory(false)}
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-white/20 hover:text-white/50 hover:bg-emerald-500/[0.04] transition-colors"
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -873,7 +973,7 @@ export default function BuilderCopilot() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search conversations..."
-                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-white/[0.03] border border-emerald-500/[0.08] text-[11px] text-white/60 placeholder:text-white/15 outline-none focus:border-emerald-500/20 transition-colors"
+                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-white/60 placeholder:text-white/15 outline-none focus:border-white/[0.12] transition-colors font-['Inter']"
                 />
               </div>
             </div>
@@ -882,7 +982,7 @@ export default function BuilderCopilot() {
             <div className="p-2">
               <button
                 onClick={createNewConversation}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-emerald-400/70 hover:text-emerald-400 border border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04] transition-all"
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-emerald-400/70 hover:text-emerald-400 border border-emerald-500/10 hover:border-emerald-500/25 hover:bg-emerald-500/[0.04] transition-all font-['Inter']"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Conversation
@@ -894,11 +994,11 @@ export default function BuilderCopilot() {
               {filteredConversations.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageSquare className="w-5 h-5 text-white/10 mx-auto mb-2" />
-                  <p className="text-[11px] text-white/20">
+                  <p className="text-[11px] text-white/20 font-['Inter']">
                     {searchQuery ? 'No matches found' : 'No conversations yet'}
                   </p>
                   {!searchQuery && (
-                    <p className="text-[10px] text-white/15 mt-0.5">Start one below or pick a suggestion.</p>
+                    <p className="text-[10px] text-white/15 mt-0.5 font-['Inter']">Start one below or pick a suggestion.</p>
                   )}
                 </div>
               ) : (
@@ -926,7 +1026,7 @@ export default function BuilderCopilot() {
 
                   return sections.map(section => (
                     <div key={section.label}>
-                      <p className="text-[9px] text-white/15 uppercase tracking-wider px-3 pt-3 pb-1 font-medium">{section.label}</p>
+                      <p className="text-[9px] text-white/15 uppercase tracking-wider px-3 pt-3 pb-1 font-medium font-['Inter']">{section.label}</p>
                       {section.items.map(convo => (
                         <ConversationItem
                           key={convo.id}
@@ -944,8 +1044,8 @@ export default function BuilderCopilot() {
 
             {/* History footer */}
             {conversations.length > 0 && (
-              <div className="p-3 border-t border-emerald-500/[0.06]">
-                <p className="text-[9px] text-white/15 text-center">
+              <div className="p-3 border-t border-white/[0.06]">
+                <p className="text-[9px] text-white/15 text-center font-['Inter']">
                   {conversations.length} conversation{conversations.length !== 1 ? 's' : ''} saved locally
                 </p>
               </div>
@@ -970,18 +1070,14 @@ export default function BuilderCopilot() {
               <Clock className="w-4 h-4" />
             </button>
             {activeConvo && messages.length > 0 && (
-              <motion.p
-                className="text-[12px] text-white/25 truncate max-w-[200px]"
-                initial={{ opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-              >
+              <p className="text-[12px] text-white/25 truncate max-w-[200px] font-['Inter']">
                 {activeConvo.title}
-              </motion.p>
+              </p>
             )}
           </div>
           <button
             onClick={createNewConversation}
-            className="flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/50 px-3 py-1.5 rounded-full hover:bg-white/[0.04] transition-all"
+            className="flex items-center gap-1.5 text-[11px] text-white/25 hover:text-white/50 px-3 py-1.5 rounded-full hover:bg-white/[0.04] transition-all font-['Inter']"
           >
             <Plus className="w-3.5 h-3.5" />
             New chat
@@ -990,40 +1086,36 @@ export default function BuilderCopilot() {
 
         {/* ── Messages area ── */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto relative chat-scroll">
-          {/* Empty state */}
+          {/* Empty state — centered greeting */}
           <AnimatePresence>
             {isEmptyState && (
               <motion.div
-                className="flex flex-col items-center justify-center h-full px-6"
+                className="flex flex-col items-center justify-center h-full px-6 max-w-[720px] mx-auto"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
               >
-                {/* Minimal logo */}
-                <motion.div
-                  className="mb-6"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.1 }}
+                {/* Greeting */}
+                <motion.h2
+                  className="text-[28px] font-bold text-white/90 mb-2 text-center tracking-tight font-['Syne']"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
                 >
-                  <FlowShieldLogo size={32} />
-                </motion.div>
-
-                <h2 className="text-[28px] font-semibold text-white/90 mb-2 text-center tracking-tight">
-                  What can I help with?
-                </h2>
-                <p className="text-[13px] text-white/25 mb-12 text-center max-w-sm">
+                  Hey{userName ? ` ${userName}` : ''}, how can I help?
+                </motion.h2>
+                <p className="text-[14px] text-white/25 mb-10 text-center max-w-sm font-['Inter']">
                   Compliance, risk scoring, Cadence code, and DeFi regulations
                 </p>
 
-                {/* Suggestion pills — clean, minimal */}
-                <div className="flex flex-wrap justify-center gap-2 max-w-xl">
+                {/* Suggested prompts as text buttons */}
+                <div className="flex flex-wrap justify-center gap-2 max-w-xl mb-10">
                   {SUGGESTION_CARDS.map((card, i) => (
                     <motion.button
                       key={card.label}
                       onClick={() => sendMessage(card.prompt)}
-                      className="text-[12px] text-white/40 hover:text-white/70 px-4 py-2 rounded-full border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-200"
+                      className="text-[12px] text-white/40 hover:text-white/70 px-4 py-2 rounded-full border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-200 font-['Inter']"
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.15 + i * 0.04 }}
@@ -1033,18 +1125,25 @@ export default function BuilderCopilot() {
                   ))}
                 </div>
 
-                {/* Saved conversations hint */}
-                {conversations.length > 0 && (
-                  <motion.button
-                    onClick={() => setShowHistory(true)}
-                    className="mt-10 flex items-center gap-2 text-[11px] text-white/15 hover:text-white/30 transition-colors"
+                {/* Recent conversations as simple rows */}
+                {recentConversations.length > 0 && (
+                  <motion.div
+                    className="w-full max-w-md"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.4 }}
                   >
-                    <Clock className="w-3 h-3" />
-                    {conversations.length} saved conversation{conversations.length !== 1 ? 's' : ''}
-                  </motion.button>
+                    <p className="text-[11px] text-white/20 uppercase tracking-wider font-medium mb-2 px-3 font-['Inter']">Recent</p>
+                    <div className="space-y-0.5">
+                      {recentConversations.map(convo => (
+                        <RecentConvoRow
+                          key={convo.id}
+                          convo={convo}
+                          onSelect={() => selectConversation(convo.id)}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
                 )}
               </motion.div>
             )}
@@ -1052,7 +1151,7 @@ export default function BuilderCopilot() {
 
           {/* Messages */}
           {!isEmptyState && (
-            <div className="space-y-5 py-6 px-1">
+            <div className="space-y-5 py-6 px-1 max-w-[720px] mx-auto">
               {messages.map((msg, i) => {
                 const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
                 return (
@@ -1064,23 +1163,25 @@ export default function BuilderCopilot() {
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                   >
                     {msg.role === 'user' ? (
+                      /* User messages: right-aligned, subtle panel */
                       <div className="flex justify-end items-end gap-2">
-                        {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/20 transition-colors mb-1 shrink-0">{timeStr}</span>}
-                        <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-sm bg-white/[0.04] border border-white/[0.06] text-[13px] text-white/70 leading-relaxed whitespace-pre-wrap">
+                        {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/20 transition-colors mb-1 shrink-0 font-['Inter']">{timeStr}</span>}
+                        <div className="max-w-[80%] px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[13px] text-white/70 leading-relaxed whitespace-pre-wrap font-['Inter']">
                           {msg.content}
                         </div>
                       </div>
                     ) : (
+                      /* AI messages: left-aligned, no background */
                       <div className="flex gap-3 group/ai">
                         <div className="shrink-0 mt-0.5">
-                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/12 to-emerald-500/4 border border-emerald-500/15 flex items-center justify-center">
+                          <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
                             <FlowShieldLogo size={14} />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[10px] text-white/25 font-medium">FlowShield Copilot</span>
-                            {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/15 transition-colors">{timeStr}</span>}
+                            <span className="text-[10px] text-white/25 font-medium font-['Inter']">FlowShield Copilot</span>
+                            {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/15 transition-colors font-['Inter']">{timeStr}</span>}
                           </div>
                           <div className="text-[13px] leading-relaxed">
                             <RichContent content={msg.content} />
@@ -1092,7 +1193,7 @@ export default function BuilderCopilot() {
                                 <button
                                   key={card.label}
                                   onClick={() => sendMessage(card.prompt)}
-                                  className="text-[10px] px-3 py-1.5 rounded-lg border border-emerald-500/[0.06] bg-emerald-500/[0.02] text-white/25 hover:text-white/50 hover:border-emerald-500/15 hover:bg-emerald-500/[0.04] transition-all"
+                                  className="text-[10px] px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/25 hover:text-white/50 hover:border-white/[0.12] hover:bg-white/[0.04] transition-all font-['Inter']"
                                 >
                                   {card.label}
                                 </button>
@@ -1106,7 +1207,7 @@ export default function BuilderCopilot() {
                 )
               })}
 
-              {/* Loading skeleton — message-style placeholder while response streams */}
+              {/* Loading — step-by-step thinking states */}
               {isLoading && (
                 <motion.div
                   className="flex gap-3"
@@ -1115,21 +1216,13 @@ export default function BuilderCopilot() {
                   transition={{ ease: [0.16, 1, 0.3, 1] }}
                 >
                   <div className="shrink-0 mt-0.5">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/12 to-emerald-500/4 border border-emerald-500/15 flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
                       <FlowShieldLogo size={14} />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-white/25 mb-1.5 font-medium">FlowShield Copilot</div>
-                    <div className="flex items-center gap-2">
-                      <TypingIndicator />
-                      <span className="text-[11px] text-white/20">Thinking...</span>
-                    </div>
-                    <div className="space-y-1.5 mt-3">
-                      <div className="h-2 w-full max-w-[85%] rounded-full bg-white/[0.04] animate-pulse" />
-                      <div className="h-2 w-[70%] rounded-full bg-white/[0.03] animate-pulse" style={{ animationDelay: '0.15s' }} />
-                      <div className="h-2 w-[55%] rounded-full bg-white/[0.03] animate-pulse" style={{ animationDelay: '0.3s' }} />
-                    </div>
+                    <div className="text-[10px] text-white/25 mb-1.5 font-medium font-['Inter']">FlowShield Copilot</div>
+                    <ThinkingSteps startTime={loadingStartTime} />
                   </div>
                 </motion.div>
               )}
@@ -1143,7 +1236,7 @@ export default function BuilderCopilot() {
             {showScrollBtn && !isEmptyState && (
               <motion.button
                 onClick={scrollToBottom}
-                className="fixed bottom-32 right-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-emerald-500/[0.06] border border-emerald-500/[0.08] flex items-center justify-center text-white/40 hover:text-white/60 hover:bg-emerald-500/[0.08] transition-all backdrop-blur-sm z-20 shadow-lg"
+                className="fixed bottom-32 right-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/60 hover:bg-white/[0.06] transition-all z-20 shadow-lg"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
@@ -1155,15 +1248,15 @@ export default function BuilderCopilot() {
         </div>
 
         {/* ── Input area ── */}
-        <div className="pt-3 pb-2 shrink-0 px-1">
+        <div className="pt-3 pb-2 shrink-0 px-1 max-w-[720px] mx-auto w-full">
           {/* Code import panel */}
           <AnimatePresence>
             {showCodeInput && (
               <motion.div
-                className={`mb-3 rounded-2xl overflow-hidden transition-all duration-200 group/codepanel border ${
+                className={`mb-3 rounded-xl overflow-hidden transition-all duration-200 group/codepanel border ${
                   isDraggingOver
                     ? 'border-white/[0.15] bg-white/[0.04]'
-                    : 'border-white/[0.07] bg-white/[0.02]'
+                    : 'border-white/[0.06] bg-white/[0.02]'
                 }`}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -1193,12 +1286,12 @@ export default function BuilderCopilot() {
                   <div className="flex items-center gap-2">
                     <FileCode className="w-3.5 h-3.5 text-white/20" />
                     {codeFileName ? (
-                      <span className="text-[11px] text-white/40 font-medium">{codeFileName}</span>
+                      <span className="text-[11px] text-white/40 font-medium font-['Inter']">{codeFileName}</span>
                     ) : (
-                      <span className="text-[11px] text-white/25">Code</span>
+                      <span className="text-[11px] text-white/25 font-['Inter']">Code</span>
                     )}
                     {codeInput.trim() && (
-                      <span className="text-[10px] text-white/15">{codeLanguage}</span>
+                      <span className="text-[10px] text-white/15 font-['Inter']">{codeLanguage}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -1234,15 +1327,15 @@ export default function BuilderCopilot() {
                   {!codeInput.trim() && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
                       {isDraggingOver ? (
-                        <motion.div className="flex flex-col items-center gap-2" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                        <div className="flex flex-col items-center gap-2">
                           <Upload className="w-5 h-5 text-white/30" />
-                          <p className="text-[12px] text-white/40 font-medium">Drop to import</p>
-                        </motion.div>
+                          <p className="text-[12px] text-white/40 font-medium font-['Inter']">Drop to import</p>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center gap-2.5">
-                          <p className="text-[13px] text-white/20">Paste or drop any file</p>
-                          <div className="flex items-center gap-2 text-[10px] text-white/12">
-                            <span className="px-1.5 py-0.5 rounded border border-white/[0.06] font-mono">Cmd+V</span>
+                          <p className="text-[13px] text-white/20 font-['Inter']">Paste or drop any file</p>
+                          <div className="flex items-center gap-2 text-[10px] text-white/12 font-['Inter']">
+                            <span className="px-1.5 py-0.5 rounded border border-white/[0.06] font-['JetBrains_Mono']">Cmd+V</span>
                             <span>or drag and drop</span>
                           </div>
                         </div>
@@ -1263,7 +1356,7 @@ export default function BuilderCopilot() {
                     {codeInput.trim() && (
                       <div
                         ref={gutterRef}
-                        className="select-none text-right shrink-0 py-4 pr-3 pl-4 font-mono leading-[1.55] text-[13px] text-white/10 overflow-hidden"
+                        className="select-none text-right shrink-0 py-4 pr-3 pl-4 font-['JetBrains_Mono'] leading-[1.55] text-[13px] text-white/10 overflow-hidden"
                         style={{ minWidth: '44px' }}
                         aria-hidden="true"
                       >
@@ -1278,7 +1371,7 @@ export default function BuilderCopilot() {
                       onChange={(e) => setCodeInput(e.target.value)}
                       placeholder=""
                       rows={codeInput.trim() ? Math.min(Math.max(codeInput.split('\n').length, 6), 20) : 6}
-                      className="w-full bg-transparent resize-none border-0 outline-none font-mono leading-[1.55] text-[13px] text-white/60 py-4 pr-4 placeholder:text-transparent [tab-size:2]"
+                      className="w-full bg-transparent resize-none border-0 outline-none font-['JetBrains_Mono'] leading-[1.55] text-[13px] text-white/60 py-4 pr-4 placeholder:text-transparent [tab-size:2]"
                       style={{ caretColor: 'rgba(255,255,255,0.5)', paddingLeft: codeInput.trim() ? '0' : '44px' }}
                       spellCheck={false}
                       autoCorrect="off"
@@ -1289,7 +1382,7 @@ export default function BuilderCopilot() {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between px-3 py-2 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-3 text-[10px] text-white/15">
+                  <div className="flex items-center gap-3 text-[10px] text-white/15 font-['Inter']">
                     {codeInput.trim() ? (
                       <>
                         <span>{codeInput.split('\n').length} lines</span>
@@ -1302,14 +1395,14 @@ export default function BuilderCopilot() {
                   <button
                     onClick={handleScanCode}
                     disabled={!codeInput.trim() || isScanning}
-                    className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-20 ${
+                    className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-20 font-['Inter'] ${
                       codeInput.trim() && !isScanning
                         ? 'bg-white/90 text-[#060e09] hover:bg-white'
                         : 'text-white/20'
                     }`}
                   >
                     {isScanning ? (
-                      <><div className="w-3 h-3 border-[1.5px] border-current/30 border-t-current rounded-full animate-spin" />Scanning...</>
+                      <><div className="w-3 h-3 border-[1.5px] border-current/30 border-t-current rounded-full motion-safe:animate-spin" />Scanning...</>
                     ) : (
                       <><Scan className="w-3 h-3" />Scan</>
                     )}
@@ -1328,11 +1421,11 @@ export default function BuilderCopilot() {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                <span className="text-[11px] text-red-400/70 font-medium">Listening...</span>
+                <span className="w-2 h-2 rounded-full bg-red-400 motion-safe:animate-pulse" />
+                <span className="text-[11px] text-red-400/70 font-medium font-['Inter']">Listening...</span>
                 <button
                   onClick={toggleVoice}
-                  className="ml-auto text-[10px] text-red-400/50 hover:text-red-400 transition-colors"
+                  className="ml-auto text-[10px] text-red-400/50 hover:text-red-400 transition-colors font-['Inter']"
                 >
                   Stop
                 </button>
@@ -1347,15 +1440,15 @@ export default function BuilderCopilot() {
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     promptUsage.remaining === 0 ? 'bg-red-400' :
-                    promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'bg-amber-400' :
+                    promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'bg-emerald-400' :
                     'bg-emerald-500/50'
                   }`}
                   style={{ width: `${Math.min(100, (promptUsage.used / promptUsage.limit) * 100)}%` }}
                 />
               </div>
-              <span className={`text-[10px] font-medium shrink-0 ${
+              <span className={`text-[10px] font-medium shrink-0 font-['Inter'] ${
                 promptUsage.remaining === 0 ? 'text-red-400/70' :
-                promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'text-amber-400/70' :
+                promptUsage.remaining !== null && promptUsage.remaining <= 3 ? 'text-emerald-400/70' :
                 'text-white/20'
               }`}>
                 {promptUsage.used}/{promptUsage.limit}
@@ -1366,30 +1459,30 @@ export default function BuilderCopilot() {
           {/* Limit reached banner */}
           {limitReached && (
             <div className="flex items-center gap-2 px-3 py-2.5 mb-2 rounded-xl bg-red-500/[0.06] border border-red-500/15">
-              <span className="text-[11px] text-red-400/80 font-medium">Daily limit reached</span>
-              <span className="text-[10px] text-white/20">Resets at midnight UTC</span>
-              <a href="/pricing" className="ml-auto text-[10px] font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors">Upgrade</a>
+              <span className="text-[11px] text-red-400/80 font-medium font-['Inter']">Daily limit reached</span>
+              <span className="text-[10px] text-white/20 font-['Inter']">Resets at midnight UTC</span>
+              <a href="/pricing" className="ml-auto text-[10px] font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors font-['Inter']">Upgrade</a>
             </div>
           )}
 
           {/* Approaching limit warning */}
           {!limitReached && promptUsage.remaining !== null && promptUsage.remaining > 0 && promptUsage.remaining <= 3 && (
-            <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-amber-500/[0.04] border border-amber-500/10">
-              <span className="text-[10px] text-amber-400/70 font-medium">{promptUsage.remaining} prompt{promptUsage.remaining !== 1 ? 's' : ''} remaining today</span>
+            <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
+              <span className="text-[10px] text-emerald-400/70 font-medium font-['Inter']">{promptUsage.remaining} prompt{promptUsage.remaining !== 1 ? 's' : ''} remaining today</span>
             </div>
           )}
 
           {/* Main input container */}
-          <div className={`relative rounded-2xl bg-white/[0.03] border border-white/[0.07] overflow-hidden transition-all duration-200 focus-within:border-white/[0.12] focus-within:bg-white/[0.04] ${limitReached ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className={`relative rounded-xl border border-white/[0.06] overflow-hidden transition-all duration-200 focus-within:border-white/[0.12] ${limitReached ? 'opacity-50 pointer-events-none' : ''}`}>
             {/* Code attachment indicator */}
             {codeInput.trim() && !showCodeInput && (
               <div className="flex items-center gap-2 px-4 pt-3">
-                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40">
+                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40 font-['Inter']">
                   <FileCode className="w-3 h-3" />
                   {codeLanguage} · {codeInput.split('\n').length} lines
                 </span>
-                <button onClick={() => setShowCodeInput(true)} className="text-[10px] text-white/20 hover:text-white/40">edit</button>
-                <button onClick={() => setCodeInput('')} className="text-[10px] text-white/20 hover:text-red-400/60">remove</button>
+                <button onClick={() => setShowCodeInput(true)} className="text-[10px] text-white/20 hover:text-white/40 font-['Inter']">edit</button>
+                <button onClick={() => setCodeInput('')} className="text-[10px] text-white/20 hover:text-red-400/60 font-['Inter']">remove</button>
               </div>
             )}
 
@@ -1400,7 +1493,7 @@ export default function BuilderCopilot() {
               onKeyDown={handleKeyDown}
               placeholder={codeInput.trim() ? 'Ask about the attached code...' : 'Ask about compliance, risk scoring, Cadence code...'}
               rows={1}
-              className="w-full bg-transparent resize-none border-0 outline-none text-[13px] text-white/70 px-4 pt-4 pb-2 placeholder:text-white/20 max-h-36 leading-relaxed"
+              className="w-full bg-transparent resize-none border-0 outline-none text-[14px] text-white/70 px-4 pt-4 pb-2 placeholder:text-white/20 max-h-36 leading-relaxed font-['Inter']"
               style={{ minHeight: '44px' }}
             />
 
@@ -1423,7 +1516,7 @@ export default function BuilderCopilot() {
                     onClick={toggleVoice}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                       isRecording
-                        ? 'bg-red-500/15 text-red-400 animate-pulse'
+                        ? 'bg-red-500/15 text-red-400 motion-safe:animate-pulse'
                         : 'text-white/15 hover:text-white/35 hover:bg-white/[0.04]'
                     }`}
                     title={isRecording ? 'Stop recording' : 'Voice input'}
@@ -1432,7 +1525,7 @@ export default function BuilderCopilot() {
                   </button>
                 )}
                 {liveContext && !contextLoading && (
-                  <span className="text-[10px] text-white/15 ml-1 flex items-center gap-1.5">
+                  <span className="text-[10px] text-white/15 ml-1 flex items-center gap-1.5 font-['Inter']">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
                     Risk {liveContext.riskScore ?? '—'}/100
                   </span>
@@ -1445,10 +1538,10 @@ export default function BuilderCopilot() {
                     key="send"
                     onClick={() => sendMessage()}
                     disabled={isLoading}
-                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white/90 text-[#060e09] hover:bg-white"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
+                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-emerald-500 text-white hover:bg-emerald-400"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
                   >
                     <Send className="h-3.5 w-3.5" />
@@ -1468,7 +1561,7 @@ export default function BuilderCopilot() {
             </div>
           </div>
 
-          <p className="text-[10px] text-white/10 text-center mt-2.5">
+          <p className="text-[10px] text-white/10 text-center mt-2.5 font-['Inter']">
             FlowShield may make mistakes. Verify compliance advice independently.
           </p>
         </div>
