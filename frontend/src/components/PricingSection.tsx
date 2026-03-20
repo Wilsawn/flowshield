@@ -5,27 +5,14 @@
  *              Includes scroll-triggered animations, Stripe checkout integration,
  *              contact sales modal, and API key generation for free tier.
  */
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, X, Sparkles, ArrowUpRight, Building, Copy, CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
 import { API } from '@/lib/api'
 
-/* CSS-based stagger reveal for pricing cards */
 function PricingGrid({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } }, { threshold: 0.15 })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
   return (
-    <div
-      ref={ref}
-      className={`grid grid-cols-1 md:grid-cols-3 gap-5 ${visible ? 'reveal-stagger reveal-visible' : 'reveal-hidden'}`}
-    >
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       {children}
     </div>
   )
