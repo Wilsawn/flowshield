@@ -1183,7 +1183,7 @@ export default function BuilderCopilot() {
                             <span className="text-[10px] text-white/25 font-medium font-['Inter']">FlowShield Copilot</span>
                             {timeStr && <span className="text-[9px] text-white/0 group-hover/msg:text-white/15 transition-colors font-['Inter']">{timeStr}</span>}
                           </div>
-                          <div className="text-[13px] leading-relaxed">
+                          <div className="text-[13px] leading-relaxed font-['Inter',sans-serif]">
                             <RichContent content={msg.content} />
                           </div>
                           {/* Follow-up suggestions after AI messages */}

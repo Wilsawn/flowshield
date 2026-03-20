@@ -18,7 +18,7 @@ import { sanitizeMessage, sanitizeHistory, sanitizeContext, detectInjectionAttem
 // ── Daily prompt limits per tier ──
 // Free users get limited prompts to control Claude API costs.
 const DAILY_PROMPT_LIMITS = {
-  starter: 15,   // Free tier — enough to try it, not enough to abuse
+  starter: 50,   // Free tier — generous enough to evaluate properly
   growth: 200,   // Paid tier — generous daily allowance
   scale: -1,     // Unlimited
 }
