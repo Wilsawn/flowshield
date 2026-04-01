@@ -18,11 +18,11 @@
 
 const TIERS = {
   starter: {
-    name: 'Starter',
+    name: 'Free',
     price: 0,
-    monthlyLimit: 1000,
+    monthlyLimit: 100,
     jurisdictions: ['US'],
-    features: ['verify', 'verifyFull'],
+    features: ['verify'],
     copilot: false,
     radar: false,
     webhooks: false,
@@ -30,9 +30,9 @@ const TIERS = {
     stripePriceId: null, // free tier — no Stripe product
   },
   growth: {
-    name: 'Growth',
-    price: 149,
-    monthlyLimit: 25000,
+    name: 'Pro',
+    price: 49,
+    monthlyLimit: 5000,
     jurisdictions: ['US', 'EU', 'UK', 'SG', 'CA'],
     features: ['verify', 'verifyFull', 'verifyWithRecord', 'verifyForJurisdiction', 'radar', 'copilot'],
     copilot: true,

@@ -9,30 +9,30 @@ const TIERS = [
     name: 'Free',
     price: '$0',
     period: '/month',
-    description: 'Get started with the basics',
+    description: 'For testing and prototyping',
     cta: 'Get started free',
     features: [
-      { icon: Monitor, text: '50,000 API calls / month' },
-      { icon: Send, text: 'verify() + verifyFull()' },
+      { icon: Monitor, text: '100 verifications / month' },
+      { icon: Send, text: 'verify() endpoint only' },
       { icon: Search, text: 'US jurisdiction' },
-      { icon: Eye, text: 'Builder Copilot (limited)' },
+      { icon: Eye, text: 'Builder Copilot (5 prompts/day)' },
     ],
   },
   {
     id: 'growth',
     name: 'Pro',
-    price: '$20',
+    price: '$49',
     period: '/month',
-    description: 'For power users who want it all',
+    description: 'For teams shipping to production',
     popular: true,
     cta: 'Get Pro',
     features: [
-      { icon: Monitor, text: '500,000 API calls / month' },
+      { icon: Monitor, text: '5,000 verifications / month' },
       { icon: Send, text: 'All verification methods' },
       { icon: Search, text: 'US, EU, UK, SG, CA jurisdictions' },
       { icon: Clock, text: 'Regulatory Radar + alerts' },
-      { icon: Eye, text: 'Builder Copilot AI (full)' },
-      { icon: Shield, text: '99.9% uptime SLA + priority support' },
+      { icon: Eye, text: 'Builder Copilot (unlimited)' },
+      { icon: Shield, text: 'Priority support + webhooks' },
     ],
   },
 ]
@@ -179,9 +179,9 @@ export default function PricingSection() {
 
       {/* Comparison note */}
       <div className="text-center">
-        <p className="text-[11px] text-white/15 leading-relaxed max-w-lg mx-auto">
+        <p className="text-[11px] text-white/15 leading-relaxed max-w-3xl mx-auto">
           Compared: Sumsub ($199–499/mo), Chainalysis (enterprise-only), ComplyAdvantage ($500–2k/mo).
-          FlowShield undercuts by 85–95% — ZK proofs eliminate manual review overhead.
+          FlowShield undercuts by 75–90% — ZK proofs eliminate manual review overhead.
         </p>
       </div>
     </div>
