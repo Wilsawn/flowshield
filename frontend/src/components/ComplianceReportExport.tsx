@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Download, Loader2, AlertCircle } from 'lucide-react'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 export default function ComplianceReportExport() {
   const [exporting, setExporting] = useState(false)
@@ -10,10 +11,7 @@ export default function ComplianceReportExport() {
     setExporting(true)
     setError(null)
     try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 15000)
-      const res = await fetch(`${API}/api/compliance/report`, { signal: controller.signal })
-      clearTimeout(timer)
+      const res = await authFetch(`${API}/api/compliance/report`, { timeout: 15000 })
 
       if (!res.ok) throw new Error(`Server error (${res.status})`)
       const data = await res.json()
