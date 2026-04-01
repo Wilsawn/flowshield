@@ -1355,27 +1355,6 @@ export default function BuilderCopilot() {
             )}
           </AnimatePresence>
 
-          {/* Recording indicator */}
-          <AnimatePresence>
-            {isRecording && (
-              <motion.div
-                className="flex items-center gap-2 px-3 py-2 mb-2 rounded-xl bg-red-500/[0.06] border border-red-500/15"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <span className="w-2 h-2 rounded-full bg-red-400 motion-safe:animate-pulse" />
-                <span className="text-[11px] text-red-400/70 font-medium font-sans">Listening...</span>
-                <button
-                  onClick={toggleVoice}
-                  className="ml-auto text-[10px] text-red-400/50 hover:text-red-400 transition-colors font-sans"
-                >
-                  Stop
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Limit reached banner */}
           {limitReached && (
             <div className="flex items-center gap-2 px-3 py-2.5 mb-2 rounded-xl bg-red-500/[0.06] border border-red-500/15">
