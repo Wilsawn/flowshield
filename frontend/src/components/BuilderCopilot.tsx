@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search, CornerDownLeft, Mic, MicOff } from 'lucide-react'
+import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search, CornerDownLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { API } from '@/lib/api'
@@ -498,57 +498,6 @@ export default function BuilderCopilot() {
   const codeScrollRef = useRef(null)
   const gutterRef = useRef(null)
 
-  // Voice-to-text
-  const [isRecording, setIsRecording] = useState(false)
-  const [voiceSupported] = useState(() => typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window))
-  const recognitionRef = useRef(null)
-
-  const toggleVoice = useCallback(() => {
-    if (isRecording && recognitionRef.current) {
-      recognitionRef.current.stop()
-      setIsRecording(false)
-      return
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) return
-
-    const recognition = new SpeechRecognition()
-    recognition.continuous = true
-    recognition.interimResults = true
-    recognition.lang = 'en-US'
-
-    let finalTranscript = ''
-
-    recognition.onresult = (event) => {
-      let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' '
-        } else {
-          interim = transcript
-        }
-      }
-      setInput(prev => {
-        const base = prev.replace(/\u200B.*$/, '').trimEnd()
-        const spoken = (finalTranscript + interim).trim()
-        return base ? `${base} ${spoken}` : spoken
-      })
-    }
-
-    recognition.onerror = () => setIsRecording(false)
-    recognition.onend = () => setIsRecording(false)
-
-    recognitionRef.current = recognition
-    recognition.start()
-    setIsRecording(true)
-  }, [isRecording])
-
-  // Cleanup recognition on unmount
-  useEffect(() => {
-    return () => { recognitionRef.current?.stop() }
-  }, [])
 
   // Prompt usage tracking
   const [promptUsage, setPromptUsage] = useState({ used: 0, limit: null, remaining: null, tier: 'starter', unlimited: false })
@@ -736,12 +685,6 @@ export default function BuilderCopilot() {
 
     // Block if daily limit reached
     if (limitReached) return
-
-    // Stop voice recording if active
-    if (isRecording && recognitionRef.current) {
-      recognitionRef.current.stop()
-      setIsRecording(false)
-    }
 
     let fullMessage = userMessage
     if (codeInput.trim()) {
@@ -1488,19 +1431,6 @@ export default function BuilderCopilot() {
                   <Upload className="w-4 h-4" />
                   <input type="file" className="hidden" onChange={handleFileUpload} />
                 </label>
-                {voiceSupported && (
-                  <button
-                    onClick={toggleVoice}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                      isRecording
-                        ? 'bg-red-500/15 text-red-400 motion-safe:animate-pulse'
-                        : 'text-white/15 hover:text-white/35 hover:bg-white/[0.04]'
-                    }`}
-                    title={isRecording ? 'Stop recording' : 'Voice input'}
-                  >
-                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
-                )}
                 {liveContext && !contextLoading && (
                   <span className="text-[10px] text-white/15 ml-1 flex items-center gap-1.5 font-sans">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
