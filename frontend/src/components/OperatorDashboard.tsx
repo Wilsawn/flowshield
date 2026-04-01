@@ -8,6 +8,7 @@ import RegulatoryRadar from '@/components/RegulatoryRadar'
 import FlowAutomation from '@/components/FlowAutomation'
 import ComplianceReportExport from '@/components/ComplianceReportExport'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 const severityColors = {
   success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -48,7 +49,7 @@ export default function OperatorDashboard() {
   // Pre-populate audit log when demo is active and log is empty
   useEffect(() => {
     if (auditLog.length > 0) return
-    fetch(`${API}/api/risk/monitor/demo-status`)
+    authFetch(`${API}/api/risk/monitor/demo-status`)
       .then(r => r.json())
       .then(data => {
         if (data.active && auditLog.length === 0) {
@@ -65,7 +66,7 @@ export default function OperatorDashboard() {
 
   const handleSimulateThreat = async () => {
     try {
-      const res = await fetch(`${API}/api/risk/monitor/simulate`, {
+      const res = await authFetch(`${API}/api/risk/monitor/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -85,7 +86,7 @@ export default function OperatorDashboard() {
 
   const handleClearThreat = async () => {
     try {
-      await fetch(`${API}/api/risk/monitor/clear`, { method: 'POST' })
+      await authFetch(`${API}/api/risk/monitor/clear`, { method: 'POST' })
       setDemoActive(false)
       addAuditEntry('resolve', 'Threats investigated and cleared by compliance operator', 'success')
       // toast removed — no popup during demos
@@ -99,12 +100,12 @@ export default function OperatorDashboard() {
   // Shared cycle runner — used by both manual button and auto-refresh
   const runCycleInternal = async (silent = false) => {
     const [monitorRes, riskRes] = await Promise.all([
-      fetch(`${API}/api/risk/monitor`, {
+      authFetch(`${API}/api/risk/monitor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: live.address }),
       }).then(r => r.json()),
-      fetch(`${API}/api/risk/score`, {
+      authFetch(`${API}/api/risk/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: live.address }),
