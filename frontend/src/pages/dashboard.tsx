@@ -159,24 +159,10 @@ export default function Dashboard() {
     } catch { /* continue */ }
     await new Promise((r) => setTimeout(r, 500))
 
-    // Step 4: Risk re-check
-    setReVerifySteps(prev => [...prev, { label: 'Running risk score re-evaluation...', done: false }])
-    try {
-      if (!walletAddr) return
-      const riskRes = await authFetch(`${API}/api/risk/score`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: walletAddr }),
-      })
-      if (riskRes.ok) {
-        const riskData = await riskRes.json()
-        setReVerifySteps(prev => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { label: `Risk score: ${riskData.score}/100 (${riskData.tier}) — ${riskData.factors?.length || 0} factors`, done: true }
-          return updated
-        })
-      }
-    } catch { /* continue */ }
+    // Step 4: Show current risk score (consistent with dashboard)
+    const currentScore = live.riskScore ?? 0
+    const currentTier = currentScore <= 30 ? 'compliant' : currentScore <= 70 ? 'semi-compliant' : 'non-compliant'
+    setReVerifySteps(prev => [...prev, { label: `Risk score: ${currentScore}/100 (${currentTier})`, done: true }])
     await new Promise((r) => setTimeout(r, 400))
 
     // Step 5: Confirm
