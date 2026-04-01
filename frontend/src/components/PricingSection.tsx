@@ -88,15 +88,14 @@ export default function PricingSection() {
                 : 'border border-white/[0.06] bg-white/[0.02]'
             }`}
           >
-            {tier.popular && (
-              <div className="absolute -top-3 right-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[15px] font-semibold text-white/80">{tier.name}</h3>
+              {tier.popular && (
                 <span className="px-3 py-1 rounded-full border border-white/[0.12] bg-white/[0.06] text-[10px] font-semibold text-white/70 tracking-wide">
                   Best value
                 </span>
-              </div>
-            )}
-
-            <h3 className="text-[15px] font-semibold text-white/80 mb-4">{tier.name}</h3>
+              )}
+            </div>
 
             <div className="mb-1">
               <span className="text-[42px] font-bold text-white tracking-tight">{tier.price}</span>
