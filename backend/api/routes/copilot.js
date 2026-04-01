@@ -10,7 +10,7 @@ import { Router } from 'express'
 import { chat, scanCode } from '../../agents/builder-copilot.js'
 import { scanForGaps, parseRegulation } from '../../agents/regulatory-radar.js'
 import { logAudit, storeScanResult, fireWebhooks, getSupabase } from '../../lib/supabase.js'
-import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps } from '../../lib/demo-state.js'
+import { getDemoThreats, getDemoRadarGaps, isDemoActive, resolveDemoGap, resolveAllDemoGaps, activateDemo } from '../../lib/demo-state.js'
 import { serverAuthorization, hasPrivateKey } from '../../lib/flow-signer.js'
 import { safeError, rateLimit } from '../../lib/middleware.js'
 import { sanitizeMessage, sanitizeHistory, sanitizeContext, detectInjectionAttempt, logInjectionAttempt, getBlockedResponse } from '../../lib/prompt-guard.js'
@@ -389,8 +389,8 @@ router.post('/radar/scan', async (req, res) => {
     const contractAddress = req.app.locals.contractAddress
     const result = await scanForGaps(fcl, contractAddress)
 
-    // Inject demo radar gaps when demo mode is active
-    // Transform demo gap format to match the real gap structure the frontend expects
+    // Auto-activate demo scenarios if not already active so scans always return results
+    if (!isDemoActive()) activateDemo()
     const demoGaps = getDemoRadarGaps()
     if (demoGaps && demoGaps.length > 0) {
       const normalizedDemoGaps = demoGaps.map(g => ({
