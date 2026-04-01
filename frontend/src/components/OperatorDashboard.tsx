@@ -74,11 +74,8 @@ export default function OperatorDashboard() {
       const data = await res.json()
       setDemoActive(true)
       addAuditEntry('threat', `${data.injectedCount} anomaly pattern(s) detected — flagged by AI monitor`, 'danger')
-      // toast removed — no popup during demos
-      // Auto-refresh all panels so Risk Analysis, Anomaly Monitor, and Compliance Agent update
-      await live.refresh()
-      // Auto-run monitoring cycle so Compliance Controls shows the results immediately
-      await autoRunCycle()
+      // Refresh panels and run cycle in parallel
+      await Promise.all([live.refresh(), autoRunCycle()])
     } catch (err) {
       addAuditEntry('error', `Simulation failed: ${err.message}`, 'danger')
     }
@@ -90,8 +87,8 @@ export default function OperatorDashboard() {
       setDemoActive(false)
       setCycleResults(null)
       addAuditEntry('resolve', 'Threats investigated and cleared by compliance operator', 'success')
-      await live.refresh()
-      await autoRunCycle()
+      // Refresh panels and run cycle in parallel
+      await Promise.all([live.refresh(), autoRunCycle()])
     } catch (err) {
       addAuditEntry('error', `Clear failed: ${err.message}`, 'danger')
     }
