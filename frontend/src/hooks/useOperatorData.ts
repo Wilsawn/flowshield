@@ -8,6 +8,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { API } from '@/lib/api'
+import { authFetch } from '@/lib/utils'
 
 export default function useOperatorData(walletAddress) {
   const [data, setData] = useState({
@@ -41,25 +42,25 @@ export default function useOperatorData(walletAddress) {
     try {
       const [riskRes, monitorRes, complianceRes, ...jurisdictionResults] = await Promise.allSettled([
         // Risk score
-        fetch(`${API}/api/risk/score`, {
+        authFetch(`${API}/api/risk/score`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address }),
         }).then(r => r.json()),
 
         // Anomaly monitor
-        fetch(`${API}/api/risk/monitor`, {
+        authFetch(`${API}/api/risk/monitor`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address }),
         }).then(r => r.json()),
 
         // Compliance status
-        fetch(`${API}/api/compliance/status/${address}`).then(r => r.json()),
+        authFetch(`${API}/api/compliance/status/${address}`).then(r => r.json()),
 
         // Jurisdiction rules from on-chain
         ...['US', 'EU', 'UK', 'SG', 'CA'].map(code =>
-          fetch(`${API}/api/compliance/rules/${code}`).then(r => r.json())
+          authFetch(`${API}/api/compliance/rules/${code}`).then(r => r.json())
         ),
       ])
 

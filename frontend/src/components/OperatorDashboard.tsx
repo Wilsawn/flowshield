@@ -88,8 +88,8 @@ export default function OperatorDashboard() {
     try {
       await authFetch(`${API}/api/risk/monitor/clear`, { method: 'POST' })
       setDemoActive(false)
+      setCycleResults(null)
       addAuditEntry('resolve', 'Threats investigated and cleared by compliance operator', 'success')
-      // toast removed — no popup during demos
       await live.refresh()
       await autoRunCycle()
     } catch (err) {
