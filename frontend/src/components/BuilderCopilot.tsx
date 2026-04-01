@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search, CornerDownLeft } from 'lucide-react'
+import { Send, Copy, Check, ArrowDown, Shield, Code, BookOpen, Zap, Globe, Lock, ChevronRight, Upload, FileCode, Scan, AlertTriangle, Activity, X, Plus, MessageSquare, Trash2, Clock, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FlowShieldLogo from '@/components/FlowShieldLogo'
 import { API } from '@/lib/api'
@@ -1418,32 +1418,13 @@ export default function BuilderCopilot() {
                 )}
               </div>
 
-              <AnimatePresence mode="wait">
-                {(input.trim() || codeInput.trim()) ? (
-                  <motion.button
-                    key="send"
-                    onClick={() => sendMessage()}
-                    disabled={isLoading}
-                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-emerald-500 text-white hover:bg-emerald-400"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                  </motion.button>
-                ) : (
-                  <motion.div
-                    key="hint"
-                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-white/10"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <CornerDownLeft className="w-3.5 h-3.5" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <button
+                onClick={() => sendMessage()}
+                disabled={isLoading || (!input.trim() && !codeInput.trim())}
+                className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-20 disabled:cursor-not-allowed bg-emerald-500 text-white hover:bg-emerald-400"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
 
